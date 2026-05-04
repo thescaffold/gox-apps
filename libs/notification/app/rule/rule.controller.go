@@ -1,0 +1,15 @@
+package rule
+
+import "github.com/thescaffold/gox-packages-core/crud"
+
+type RuleController struct {
+	crud.CrudResource[Rule, CreateRuleDto, UpdateRuleDto]
+	entity *RuleEntity `inject:""`
+}
+
+func (c *RuleController) OnRegister() {
+	c.Hydrate(c.entity, crud.Config[Rule, CreateRuleDto, UpdateRuleDto]{
+		Name:       "NotificationRule",
+		Searchable: []string{"group", "key"},
+	})
+}

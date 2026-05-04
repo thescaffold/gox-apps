@@ -1,0 +1,111 @@
+package task
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/awesome-goose/goose/types"
+	healthlog "github.com/thescaffold/gox-apps-health/app/log"
+	healthsvc "github.com/thescaffold/gox-apps-health/app/service"
+	healthsum "github.com/thescaffold/gox-apps-health/app/summary"
+)
+
+type SummaryTask struct {
+	serviceEntity *healthsvc.ServiceEntity `inject:""`
+	logEntity     *healthlog.LogEntity     `inject:""`
+	summaryEntity *healthsum.SummaryEntity `inject:""`
+}
+
+// Boot starts the summary cron goroutine — runs every 10 minutes.
+func (t *SummaryTask) Boot(_ types.Kernel) error {
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			t.run()
+		}
+	}()
+	return nil
+}
+
+func (t *SummaryTask) run() {
+	toggle := os.Getenv("SUMMARY_TOGGLE")
+	if toggle != "" && toggle != "on" {
+		return
+	}
+
+	intervalSecs := 3600
+	if v := os.Getenv("SUMMARY_INTERVAL_SECS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			intervalSecs = n
+		}
+	}
+
+	expectedCount := 12
+	if v := os.Getenv("SUMMARY_EXPECTED_EVENT_COUNT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			expectedCount = n
+		}
+	}
+
+	from := time.Now().UTC().Add(-time.Duration(intervalSecs) * time.Second)
+	fromStr := from.Format("2006-01-02 15:04:05")
+
+	services, err := t.serviceEntity.All()
+	if err != nil {
+		return
+	}
+
+	for _, svc := range services {
+		count, err := t.logEntity.Count(
+			fmt.Sprintf(`"service_id" = ? AND "created_at" >= '%s'`, fromStr),
+			svc.Id,
+		)
+		if err != nil {
+			continue
+		}
+
+		received := int(count)
+		measure := 0.0
+		if expectedCount > 0 {
+			measure = float64(received) / float64(expectedCount)
+		}
+
+		outcomeType := outcomeFromMeasure(measure)
+
+		existing, _ := t.summaryEntity.First(`"service_id" = ?`, svc.Id)
+		if existing != nil {
+			existing.Type = outcomeType
+			existing.Received = received
+			existing.Measure = measure
+			existing.Note = nil
+			_, _ = t.summaryEntity.Update(existing, `"id" = ?`, existing.Id)
+		} else {
+			s := &healthsum.Summary{
+				ServiceId: svc.Id,
+				Type:      outcomeType,
+				Received:  received,
+				Measure:   measure,
+			}
+			_ = t.summaryEntity.Insert(s)
+		}
+
+		updatedSvc := &healthsvc.Service{Type: &outcomeType}
+		_, _ = t.serviceEntity.Update(updatedSvc, `"id" = ?`, svc.Id)
+	}
+}
+
+func outcomeFromMeasure(measure float64) string {
+	switch {
+	case measure <= 0:
+		return "down"
+	case measure < 0.5:
+		return "troubled"
+	case measure < 0.8:
+		return "possible_troubled"
+	default:
+		return "good"
+	}
+}

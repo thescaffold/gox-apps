@@ -1,0 +1,43 @@
+go 1.25.3
+
+// Goose framework (local development — matches published v0.0.6)
+use ../../awesome-goose/goose
+
+// Shared gox-packages
+use ../gox-packages/libs/core
+
+// App modules — uncomment as each go.mod is created in Phase 1
+use ./libs/statics
+use ./libs/audit
+use ./libs/assets
+use ./libs/figs
+use ./libs/cache
+use ./libs/blobs
+use ./libs/health
+use ./libs/cron
+use ./libs/queue
+use ./libs/fuss
+use ./libs/controller
+use ./libs/common
+use ./libs/flags
+use ./libs/forms
+use ./libs/notification
+use ./libs/polylog
+use ./libs/bridge
+use ./libs/capital
+use ./libs/identity
+// other apps (add as go.mod is created)
+// use ./libs/blobs
+// use ./libs/health
+// use ./libs/cron
+// use ./libs/queue
+// use ./libs/fuss
+// use ./libs/controller
+// use ./libs/common
+// use ./libs/flags
+// use ./libs/forms
+// use ./libs/notification
+// use ./libs/polylog
+// use ./libs/bridge
+// use ./libs/capital
+// use ./libs/identity

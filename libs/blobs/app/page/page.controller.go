@@ -1,0 +1,16 @@
+package page
+
+import "github.com/thescaffold/gox-packages-core/crud"
+
+type PageController struct {
+	crud.CrudResource[Page, CreatePageDto, UpdatePageDto]
+
+	entity *PageEntity `inject:""`
+}
+
+func (c *PageController) OnRegister() {
+	c.Hydrate(c.entity, crud.Config[Page, CreatePageDto, UpdatePageDto]{
+		Name:       "Page",
+		Searchable: []string{"file_id"},
+	})
+}

@@ -1,0 +1,39 @@
+package app
+
+import (
+	"github.com/awesome-goose/goose/modules/sql"
+	"github.com/awesome-goose/goose/types"
+	formsform "github.com/thescaffold/gox-apps-forms/app/form"
+	formsformfield "github.com/thescaffold/gox-apps-forms/app/formfield"
+	formsformlog "github.com/thescaffold/gox-apps-forms/app/formlog"
+	formsformtype "github.com/thescaffold/gox-apps-forms/app/formtype"
+	"github.com/thescaffold/gox-apps-forms/migrations"
+	"github.com/thescaffold/gox-packages-core/module"
+)
+
+var Migrations = []sql.Migration{
+	&migrations.CreateFormFormTypes{},
+	&migrations.CreateFormForms{},
+	&migrations.CreateFormFormFields{},
+	&migrations.CreateFormFormLogs{},
+}
+
+type AppModule struct{}
+
+func (m *AppModule) Imports() []types.Module {
+	return []types.Module{
+		module.New(module.CoreConfig{}),
+		sql.Child(&sql.Config{Migrations: Migrations}),
+		&formsformtype.FormTypeModule{},
+		&formsform.FormModule{},
+		&formsformfield.FormFieldModule{},
+		&formsformlog.FormLogModule{},
+		ROUTES,
+	}
+}
+
+func (m *AppModule) Exports() []any { return []any{&AppService{}} }
+
+func (m *AppModule) Declarations() []any {
+	return []any{&AppController{}, &AppService{}}
+}

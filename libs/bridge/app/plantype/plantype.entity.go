@@ -1,0 +1,28 @@
+package plantype
+
+import (
+	"encoding/json"
+	"github.com/awesome-goose/goose/modules/sql"
+)
+
+type PlanType struct {
+	sql.BaseEntity
+	LicenseId string          `gorm:"column:license_id;type:varchar(36);not null" json:"licenseId"`
+	Key       string          `gorm:"column:key;type:varchar(255);not null"       json:"key"`
+	Name      string          `gorm:"column:name;type:varchar(255);not null"      json:"name"`
+	Desc      *string         `gorm:"column:desc;type:varchar(255)"               json:"desc,omitempty"`
+	Detail    *string         `gorm:"column:detail;type:text"                     json:"detail,omitempty"`
+	Type      *string         `gorm:"column:type;type:varchar(255)"               json:"type,omitempty"`
+	Currency  string          `gorm:"column:currency;type:varchar(255);not null"  json:"currency"`
+	Daily     *float64        `gorm:"column:daily;type:decimal(18,2)"             json:"daily,omitempty"`
+	Weekly    *float64        `gorm:"column:weekly;type:decimal(18,2)"            json:"weekly,omitempty"`
+	Monthly   float64         `gorm:"column:monthly;type:decimal(18,2);not null"  json:"monthly"`
+	Yearly    *float64        `gorm:"column:yearly;type:decimal(18,2)"            json:"yearly,omitempty"`
+	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
+	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
+}
+func (PlanType) TableName() string { return "BridgePlanTypes" }
+type PlanTypeEntity struct{ *sql.Entity[PlanType] `inject:""` }
+func (e *PlanTypeEntity) OnRegister() {
+	e.Hydrate("BridgePlanTypes", []string{"license_id", "key", "name"}, nil, nil, nil, nil, nil, "created_at desc")
+}

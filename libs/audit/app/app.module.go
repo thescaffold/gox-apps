@@ -5,6 +5,7 @@ import (
 	"github.com/awesome-goose/goose/types"
 	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
 	"github.com/thescaffold/gox-apps-audit/migrations"
+	auditbatch "github.com/thescaffold/gox-apps-audit/pkg/batch"
 	"github.com/thescaffold/gox-packages-core/module"
 )
 
@@ -21,6 +22,7 @@ func (m *AppModule) Imports() []types.Module {
 			Migrations: Migrations,
 		}),
 		&auditlog.LogModule{},
+		&auditbatch.BatchModule{},
 		ROUTES,
 	}
 }

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - assets
+          - audit
+          - blobs
+          - bridge
+          - cache
+          - capital
+          - common
+          - controller
+          - cron
+          - figs
+          - flags
+          - forms
+          - fuss
+          - health
+          - identity
+          - notification
+          - polylog
+          - queue
+          - statics
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: libs/${{ matrix.service }}/go.mod
+          cache-dependency-path: libs/${{ matrix.service }}/go.sum
+
+      - name: Build
+        working-directory: libs/${{ matrix.service }}
+        run: go build ./...
+
+      - name: Test
+        working-directory: libs/${{ matrix.service }}
+        run: go test ./... -timeout 60s
+        env:
+          DATABASE_URL: ""   # tests use in-memory SQLite by default

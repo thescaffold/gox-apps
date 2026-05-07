@@ -2,6 +2,7 @@ package app
 
 import (
 	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
+	auditbatch "github.com/thescaffold/gox-apps-audit/pkg/batch"
 	"github.com/thescaffold/gox-packages-core/events"
 )
 
@@ -31,12 +32,13 @@ func handleEvent(_ string, payload any) {
 
 // Subscriptions maps event patterns to handlers for this app.
 var Subscriptions = map[string]events.EventHandler{
-	"*.*.*.after-insert":          handleEvent,
-	"*.*.*.after-update":          handleEvent,
-	"*.*.*.after-delete":          handleEvent,
-	"apps.cron.heartbeat.weekly":  handleEvent,
-	"apps.cron.heartbeat.monthly": handleEvent,
-	"apps.cron.heartbeat.yearly":  handleEvent,
+	"*.*.*.after-insert":           handleEvent,
+	"*.*.*.after-update":           handleEvent,
+	"*.*.*.after-delete":           handleEvent,
+	"apps.cron.heartbeat.hourly":   auditbatch.Trigger,
+	"apps.cron.heartbeat.weekly":   handleEvent,
+	"apps.cron.heartbeat.monthly":  handleEvent,
+	"apps.cron.heartbeat.yearly":   handleEvent,
 }
 
 // LogActionType aliases exported for host usage.

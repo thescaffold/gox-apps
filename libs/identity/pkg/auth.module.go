@@ -3,6 +3,9 @@ package pkg
 import (
 	"os"
 
+	identityattribute "github.com/thescaffold/gox-apps-identity/app/attribute"
+	identitypermission "github.com/thescaffold/gox-apps-identity/app/permission"
+	identityrole "github.com/thescaffold/gox-apps-identity/app/role"
 	identitytoken "github.com/thescaffold/gox-apps-identity/app/token"
 	identityuser "github.com/thescaffold/gox-apps-identity/app/user"
 	coreauth "github.com/thescaffold/gox-packages-core/auth"
@@ -39,6 +42,9 @@ func (m *AuthModule) Imports() []types.Module {
 		sql.Child(&sql.Config{}),
 		&identityuser.UserModule{},
 		&identitytoken.TokenModule{},
+		&identityrole.RoleModule{},
+		&identitypermission.PermissionModule{},
+		&identityattribute.AttributeModule{},
 	}
 }
 

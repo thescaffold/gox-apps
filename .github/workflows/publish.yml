@@ -3,33 +3,37 @@ name: Publish
 on:
   push:
     tags:
-      - "*/v*"           # e.g. audit/v1.2.3  or  capital/v0.5.0
+      - "libs/*/v*"        # e.g. libs/audit/v1.2.3  or  libs/capital/v0.5.0
 
 jobs:
   publish:
     name: Tag and publish module
     runs-on: ubuntu-latest
+    # go.work references paths outside the checkout — disable workspace mode.
+    env:
+      GOWORK: "off"
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
-      # Extract service name and version from the tag (e.g. "audit/v1.2.3")
+      # Extract service name and version from the tag (e.g. "libs/audit/v1.2.3")
       - name: Parse tag
         id: parse
         run: |
           TAG="${{ github.ref_name }}"
-          SERVICE="${TAG%%/*}"
+          SERVICE=$(echo "$TAG" | cut -d/ -f2)
           VERSION="${TAG##*/}"
           echo "service=$SERVICE" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "module=github.com/thescaffold/gox-apps-$SERVICE" >> "$GITHUB_OUTPUT"
+          echo "module=github.com/thescaffold/gox-apps/libs/$SERVICE" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: libs/${{ steps.parse.outputs.service }}/go.mod
+          cache-dependency-path: libs/${{ steps.parse.outputs.service }}/go.sum
 
       - name: Verify build
         working-directory: libs/${{ steps.parse.outputs.service }}

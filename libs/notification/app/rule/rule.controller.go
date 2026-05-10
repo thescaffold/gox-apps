@@ -1,6 +1,6 @@
 package rule
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RuleController struct {
 	crud.CrudResource[Rule, CreateRuleDto, UpdateRuleDto]

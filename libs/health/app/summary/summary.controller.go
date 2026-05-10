@@ -1,6 +1,6 @@
 package summary
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type SummaryController struct {
 	crud.CrudResource[Summary, CreateSummaryDto, UpdateSummaryDto]

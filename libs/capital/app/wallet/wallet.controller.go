@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"github.com/awesome-goose/goose/types"
-	"github.com/thescaffold/gox-packages-core/response"
+	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
 type WalletController struct {

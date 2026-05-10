@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-fuss/app"
-	fusshist "github.com/thescaffold/gox-apps-fuss/app/history"
-	fusstok "github.com/thescaffold/gox-apps-fuss/app/token"
-	fusstoklog "github.com/thescaffold/gox-apps-fuss/app/tokenlog"
+	"github.com/thescaffold/gox-apps/libs/fuss/app"
+	fusshist "github.com/thescaffold/gox-apps/libs/fuss/app/history"
+	fusstok "github.com/thescaffold/gox-apps/libs/fuss/app/token"
+	fusstoklog "github.com/thescaffold/gox-apps/libs/fuss/app/tokenlog"
 )
 
 func TestTokenEntity(t *testing.T) {

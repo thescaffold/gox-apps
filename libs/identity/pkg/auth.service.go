@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	identityattribute "github.com/thescaffold/gox-apps-identity/app/attribute"
-	identitypermission "github.com/thescaffold/gox-apps-identity/app/permission"
-	identityrole "github.com/thescaffold/gox-apps-identity/app/role"
-	"github.com/thescaffold/gox-apps-identity/app/token"
-	"github.com/thescaffold/gox-apps-identity/app/user"
-	"github.com/thescaffold/gox-packages-core/auth"
-	"github.com/thescaffold/gox-packages-core/security"
-	"github.com/thescaffold/gox-packages-core/utils"
+	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
+	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	"github.com/thescaffold/gox-apps/libs/identity/app/token"
+	"github.com/thescaffold/gox-apps/libs/identity/app/user"
+	"github.com/thescaffold/gox-packages/libs/core/auth"
+	"github.com/thescaffold/gox-packages/libs/core/security"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 const (

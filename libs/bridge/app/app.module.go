@@ -3,14 +3,14 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	bridgelicense "github.com/thescaffold/gox-apps-bridge/app/license"
-	bridgelicensetype "github.com/thescaffold/gox-apps-bridge/app/licensetype"
-	bridgeplantype "github.com/thescaffold/gox-apps-bridge/app/plantype"
-	bridgepreference "github.com/thescaffold/gox-apps-bridge/app/preference"
-	bridgewebhook "github.com/thescaffold/gox-apps-bridge/app/webhook"
-	bridgewebhooklog "github.com/thescaffold/gox-apps-bridge/app/webhooklog"
-	"github.com/thescaffold/gox-apps-bridge/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	bridgelicense "github.com/thescaffold/gox-apps/libs/bridge/app/license"
+	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
+	bridgeplantype "github.com/thescaffold/gox-apps/libs/bridge/app/plantype"
+	bridgepreference "github.com/thescaffold/gox-apps/libs/bridge/app/preference"
+	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
+	bridgewebhooklog "github.com/thescaffold/gox-apps/libs/bridge/app/webhooklog"
+	"github.com/thescaffold/gox-apps/libs/bridge/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

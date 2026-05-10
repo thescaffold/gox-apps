@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/thescaffold/gox-packages-core/crud"
+	"github.com/thescaffold/gox-packages/libs/core/crud"
 )
 
 type LogController struct {

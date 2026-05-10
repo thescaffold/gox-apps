@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-polylog/app"
-	polylogevent "github.com/thescaffold/gox-apps-polylog/app/event"
-	polylogsourcetype "github.com/thescaffold/gox-apps-polylog/app/sourcetype"
+	"github.com/thescaffold/gox-apps/libs/polylog/app"
+	polylogevent "github.com/thescaffold/gox-apps/libs/polylog/app/event"
+	polylogsourcetype "github.com/thescaffold/gox-apps/libs/polylog/app/sourcetype"
 )
 
 func TestSourceTypeEntity(t *testing.T) {

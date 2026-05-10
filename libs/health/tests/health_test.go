@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	test "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-health/app"
-	healthlog "github.com/thescaffold/gox-apps-health/app/log"
-	healthsvc "github.com/thescaffold/gox-apps-health/app/service"
-	healthsum "github.com/thescaffold/gox-apps-health/app/summary"
+	"github.com/thescaffold/gox-apps/libs/health/app"
+	healthlog "github.com/thescaffold/gox-apps/libs/health/app/log"
+	healthsvc "github.com/thescaffold/gox-apps/libs/health/app/service"
+	healthsum "github.com/thescaffold/gox-apps/libs/health/app/summary"
 )
 
 func TestLogEntity(t *testing.T) {

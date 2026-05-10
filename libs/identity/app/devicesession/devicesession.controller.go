@@ -1,6 +1,6 @@
 package devicesession
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type DeviceSessionController struct {
 	crud.CrudResource[DeviceSession, CreateDeviceSessionDto, UpdateDeviceSessionDto]

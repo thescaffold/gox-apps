@@ -1,6 +1,6 @@
 package formtype
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type FormTypeController struct {
 	crud.CrudResource[FormType, CreateFormTypeDto, UpdateFormTypeDto]

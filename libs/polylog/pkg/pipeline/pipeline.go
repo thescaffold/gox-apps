@@ -5,12 +5,12 @@ import (
 	"os"
 	"strings"
 
-	polylogchannel "github.com/thescaffold/gox-apps-polylog/app/channel"
-	polyloevent "github.com/thescaffold/gox-apps-polylog/app/event"
-	polylogeventlog "github.com/thescaffold/gox-apps-polylog/app/eventlog"
-	polylogsink "github.com/thescaffold/gox-apps-polylog/app/sink"
-	polylogsinktype "github.com/thescaffold/gox-apps-polylog/app/sinktype"
-	"github.com/thescaffold/gox-packages-core/utils"
+	polylogchannel "github.com/thescaffold/gox-apps/libs/polylog/app/channel"
+	polyloevent "github.com/thescaffold/gox-apps/libs/polylog/app/event"
+	polylogeventlog "github.com/thescaffold/gox-apps/libs/polylog/app/eventlog"
+	polylogsink "github.com/thescaffold/gox-apps/libs/polylog/app/sink"
+	polylogsinktype "github.com/thescaffold/gox-apps/libs/polylog/app/sinktype"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 const asterisk = "*"

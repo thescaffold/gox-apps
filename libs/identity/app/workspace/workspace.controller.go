@@ -1,6 +1,6 @@
 package workspace
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type WorkspaceController struct {
 	crud.CrudResource[Workspace, CreateWorkspaceDto, UpdateWorkspaceDto]

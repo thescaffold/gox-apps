@@ -1,6 +1,6 @@
 package userclientworkspace
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type UserClientWorkspaceController struct {
 	crud.CrudResource[UserClientWorkspace, CreateUserClientWorkspaceDto, UpdateUserClientWorkspaceDto]

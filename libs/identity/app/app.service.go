@@ -3,13 +3,13 @@ package app
 import (
 	"encoding/json"
 
-	identityattribute "github.com/thescaffold/gox-apps-identity/app/attribute"
-	identitydevicesession "github.com/thescaffold/gox-apps-identity/app/devicesession"
-	identityinvite "github.com/thescaffold/gox-apps-identity/app/invite"
-	identitypermission "github.com/thescaffold/gox-apps-identity/app/permission"
-	identityrole "github.com/thescaffold/gox-apps-identity/app/role"
-	identitytoken "github.com/thescaffold/gox-apps-identity/app/token"
-	"github.com/thescaffold/gox-packages-core/events"
+	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
+	identityinvite "github.com/thescaffold/gox-apps/libs/identity/app/invite"
+	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
+	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 // AppService is the public surface for identity event handlers.

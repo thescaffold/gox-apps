@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-bridge/app"
-	bridgelicense "github.com/thescaffold/gox-apps-bridge/app/license"
-	bridgelicensetype "github.com/thescaffold/gox-apps-bridge/app/licensetype"
+	"github.com/thescaffold/gox-apps/libs/bridge/app"
+	bridgelicense "github.com/thescaffold/gox-apps/libs/bridge/app/license"
+	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
 )
 
 func TestLicenseTypeEntity(t *testing.T) {

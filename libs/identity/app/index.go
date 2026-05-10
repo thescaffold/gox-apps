@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/thescaffold/gox-apps-identity/pkg"
-	"github.com/thescaffold/gox-packages-core/events"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "identity"

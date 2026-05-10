@@ -1,6 +1,6 @@
 package ip
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type IpController struct {
 	crud.CrudResource[Ip, CreateIpDto, UpdateIpDto]

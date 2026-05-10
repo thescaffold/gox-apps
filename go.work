@@ -5,39 +5,33 @@ use ../../awesome-goose/goose
 
 // Shared gox-packages
 use ../gox-packages/libs/core
+use ../gox-packages/libs/blobs
 
-// App modules — uncomment as each go.mod is created in Phase 1
-use ./libs/statics
-use ./libs/audit
-use ./libs/assets
-use ./libs/figs
-use ./libs/cache
-use ./libs/blobs
-use ./libs/health
-use ./libs/cron
-use ./libs/queue
-use ./libs/fuss
-use ./libs/controller
-use ./libs/common
-use ./libs/flags
-use ./libs/forms
-use ./libs/notification
-use ./libs/polylog
-use ./libs/bridge
-use ./libs/capital
-use ./libs/identity
-// other apps (add as go.mod is created)
-// use ./libs/blobs
-// use ./libs/health
-// use ./libs/cron
-// use ./libs/queue
-// use ./libs/fuss
-// use ./libs/controller
-// use ./libs/common
-// use ./libs/flags
-// use ./libs/forms
-// use ./libs/notification
-// use ./libs/polylog
-// use ./libs/bridge
-// use ./libs/capital
-// use ./libs/identity
+// App modules
+use (
+	./libs/assets
+	./libs/audit
+	./libs/blobs
+	./libs/bridge
+	./libs/cache
+	./libs/capital
+	./libs/common
+	./libs/controller
+	./libs/cron
+	./libs/figs
+	./libs/flags
+	./libs/forms
+	./libs/fuss
+	./libs/health
+	./libs/identity
+	./libs/notification
+	./libs/polylog
+	./libs/queue
+	./libs/statics
+)
+
+// Workspace-only overrides so local development resolves to the in-tree copies
+// of gox-packages libs before their tags are published. These are not used by
+// consumers of the published modules.
+replace github.com/thescaffold/gox-packages/libs/core v0.0.1 => ../gox-packages/libs/core
+replace github.com/thescaffold/gox-packages/libs/blobs v0.0.1 => ../gox-packages/libs/blobs

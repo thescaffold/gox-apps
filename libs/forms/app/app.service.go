@@ -3,10 +3,10 @@ package app
 import (
 	"fmt"
 
-	formpkg "github.com/thescaffold/gox-apps-forms/app/form"
-	formfieldpkg "github.com/thescaffold/gox-apps-forms/app/formfield"
-	formlogpkg "github.com/thescaffold/gox-apps-forms/app/formlog"
-	formtypepkg "github.com/thescaffold/gox-apps-forms/app/formtype"
+	formpkg "github.com/thescaffold/gox-apps/libs/forms/app/form"
+	formfieldpkg "github.com/thescaffold/gox-apps/libs/forms/app/formfield"
+	formlogpkg "github.com/thescaffold/gox-apps/libs/forms/app/formlog"
+	formtypepkg "github.com/thescaffold/gox-apps/libs/forms/app/formtype"
 )
 
 // AppService backs the /one/:id endpoints. Mirrors ntx-apps/libs/forms/src/app.controller.ts.

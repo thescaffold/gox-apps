@@ -1,6 +1,6 @@
 package job
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type JobController struct {
 	crud.CrudResource[Job, CreateJobDto, UpdateJobDto]

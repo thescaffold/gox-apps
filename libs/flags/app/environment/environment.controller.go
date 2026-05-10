@@ -1,6 +1,6 @@
 package environment
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type EnvironmentController struct {
 	crud.CrudResource[Environment, CreateEnvironmentDto, UpdateEnvironmentDto]

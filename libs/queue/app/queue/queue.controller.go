@@ -1,6 +1,6 @@
 package queue
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type QueueController struct {
 	crud.CrudResource[Queue, CreateQueueDto, UpdateQueueDto]

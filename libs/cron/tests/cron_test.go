@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	test "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-cron/app"
-	cronjob "github.com/thescaffold/gox-apps-cron/app/job"
-	cronlog "github.com/thescaffold/gox-apps-cron/app/log"
+	"github.com/thescaffold/gox-apps/libs/cron/app"
+	cronjob "github.com/thescaffold/gox-apps/libs/cron/app/job"
+	cronlog "github.com/thescaffold/gox-apps/libs/cron/app/log"
 )
 
 func TestJobEntity(t *testing.T) {

@@ -1,6 +1,6 @@
 package file
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type FileController struct {
 	crud.CrudResource[File, CreateFileDto, UpdateFileDto]

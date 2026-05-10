@@ -1,6 +1,6 @@
 package license
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type LicenseController struct {
 	crud.CrudResource[License, CreateLicenseDto, UpdateLicenseDto]

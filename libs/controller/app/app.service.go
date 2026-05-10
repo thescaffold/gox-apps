@@ -3,7 +3,7 @@ package app
 import (
 	"strings"
 
-	"github.com/thescaffold/gox-apps-controller/app/route"
+	"github.com/thescaffold/gox-apps/libs/controller/app/route"
 )
 
 type AppService struct {

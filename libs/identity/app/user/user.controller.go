@@ -1,6 +1,6 @@
 package user
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type UserController struct {
 	crud.CrudResource[User, CreateUserDto, UpdateUserDto]

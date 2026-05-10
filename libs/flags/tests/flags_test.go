@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-flags/app"
-	flagsenvironment "github.com/thescaffold/gox-apps-flags/app/environment"
-	flagsenvironmenttype "github.com/thescaffold/gox-apps-flags/app/environmenttype"
-	flagsflag "github.com/thescaffold/gox-apps-flags/app/flag"
-	flagsflaglog "github.com/thescaffold/gox-apps-flags/app/flaglog"
+	"github.com/thescaffold/gox-apps/libs/flags/app"
+	flagsenvironment "github.com/thescaffold/gox-apps/libs/flags/app/environment"
+	flagsenvironmenttype "github.com/thescaffold/gox-apps/libs/flags/app/environmenttype"
+	flagsflag "github.com/thescaffold/gox-apps/libs/flags/app/flag"
+	flagsflaglog "github.com/thescaffold/gox-apps/libs/flags/app/flaglog"
 )
 
 func TestEnvironmentTypeEntity(t *testing.T) {

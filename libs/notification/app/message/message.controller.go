@@ -1,6 +1,6 @@
 package message
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type MessageController struct {
 	crud.CrudResource[Message, CreateMessageDto, UpdateMessageDto]

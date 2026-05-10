@@ -1,6 +1,6 @@
 package payment
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type PaymentController struct {
 	crud.CrudResource[Payment, CreatePaymentDto, UpdatePaymentDto]

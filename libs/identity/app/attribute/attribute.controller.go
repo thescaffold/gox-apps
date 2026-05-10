@@ -1,6 +1,6 @@
 package attribute
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type AttributeController struct {
 	crud.CrudResource[Attribute, CreateAttributeDto, UpdateAttributeDto]

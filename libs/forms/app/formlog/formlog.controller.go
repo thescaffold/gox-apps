@@ -1,6 +1,6 @@
 package formlog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type FormLogController struct {
 	crud.CrudResource[FormLog, CreateFormLogDto, UpdateFormLogDto]

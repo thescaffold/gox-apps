@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
+	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
 )
 
 // UnsafeEntityNames lists entity table names whose events must not be re-logged

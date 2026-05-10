@@ -3,12 +3,12 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	formsform "github.com/thescaffold/gox-apps-forms/app/form"
-	formsformfield "github.com/thescaffold/gox-apps-forms/app/formfield"
-	formsformlog "github.com/thescaffold/gox-apps-forms/app/formlog"
-	formsformtype "github.com/thescaffold/gox-apps-forms/app/formtype"
-	"github.com/thescaffold/gox-apps-forms/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	formsform "github.com/thescaffold/gox-apps/libs/forms/app/form"
+	formsformfield "github.com/thescaffold/gox-apps/libs/forms/app/formfield"
+	formsformlog "github.com/thescaffold/gox-apps/libs/forms/app/formlog"
+	formsformtype "github.com/thescaffold/gox-apps/libs/forms/app/formtype"
+	"github.com/thescaffold/gox-apps/libs/forms/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

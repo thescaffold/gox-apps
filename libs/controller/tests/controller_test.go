@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-controller/app"
-	ctrlreq "github.com/thescaffold/gox-apps-controller/app/request"
-	ctrlroute "github.com/thescaffold/gox-apps-controller/app/route"
+	"github.com/thescaffold/gox-apps/libs/controller/app"
+	ctrlreq "github.com/thescaffold/gox-apps/libs/controller/app/request"
+	ctrlroute "github.com/thescaffold/gox-apps/libs/controller/app/route"
 )
 
 func TestRouteEntity(t *testing.T) {

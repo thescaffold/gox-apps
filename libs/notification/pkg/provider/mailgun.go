@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	ntxhttp "github.com/thescaffold/gox-packages-core/http"
+	ntxhttp "github.com/thescaffold/gox-packages/libs/core/http"
 )
 
 type MailgunProvider struct {

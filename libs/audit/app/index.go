@@ -1,8 +1,8 @@
 package app
 
 import (
-	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
-	"github.com/thescaffold/gox-packages-core/events"
+	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "audit"

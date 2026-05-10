@@ -3,11 +3,11 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	fusshist "github.com/thescaffold/gox-apps-fuss/app/history"
-	fusstok "github.com/thescaffold/gox-apps-fuss/app/token"
-	fusstoklog "github.com/thescaffold/gox-apps-fuss/app/tokenlog"
-	"github.com/thescaffold/gox-apps-fuss/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	fusshist "github.com/thescaffold/gox-apps/libs/fuss/app/history"
+	fusstok "github.com/thescaffold/gox-apps/libs/fuss/app/token"
+	fusstoklog "github.com/thescaffold/gox-apps/libs/fuss/app/tokenlog"
+	"github.com/thescaffold/gox-apps/libs/fuss/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

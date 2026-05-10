@@ -5,8 +5,8 @@ import (
 
 	"github.com/awesome-goose/goose/io/output"
 	"github.com/awesome-goose/goose/types"
-	ntxctx "github.com/thescaffold/gox-packages-core/context"
-	"github.com/thescaffold/gox-packages-core/response"
+	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
+	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
 type AppController struct {

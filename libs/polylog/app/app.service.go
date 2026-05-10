@@ -3,9 +3,9 @@ package app
 import (
 	"encoding/json"
 
-	polylogconfig "github.com/thescaffold/gox-apps-polylog/app/config"
-	"github.com/thescaffold/gox-apps-polylog/pkg/pipeline"
-	ntxctx "github.com/thescaffold/gox-packages-core/context"
+	polylogconfig "github.com/thescaffold/gox-apps/libs/polylog/app/config"
+	"github.com/thescaffold/gox-apps/libs/polylog/pkg/pipeline"
+	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
 
 // AppService surfaces polylog ingest/config operations.

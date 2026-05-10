@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/thescaffold/gox-apps-blobs/app/file"
-	"github.com/thescaffold/gox-apps-blobs/app/page"
+	"github.com/thescaffold/gox-apps/libs/blobs/app/file"
+	"github.com/thescaffold/gox-apps/libs/blobs/app/page"
 )
 
 // AppService implements the blobs init/batch/verify/upload pipeline.

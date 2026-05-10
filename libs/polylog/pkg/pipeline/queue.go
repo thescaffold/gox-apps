@@ -1,7 +1,7 @@
 package pipeline
 
 import (
-	polyloevent "github.com/thescaffold/gox-apps-polylog/app/event"
+	polyloevent "github.com/thescaffold/gox-apps/libs/polylog/app/event"
 )
 
 // QueuePusher dispatches an event for asynchronous, durable processing.

@@ -3,9 +3,9 @@ package app
 import (
 	"time"
 
-	bridgelicense "github.com/thescaffold/gox-apps-bridge/app/license"
-	bridgelicensetype "github.com/thescaffold/gox-apps-bridge/app/licensetype"
-	bridgewebhook "github.com/thescaffold/gox-apps-bridge/app/webhook"
+	bridgelicense "github.com/thescaffold/gox-apps/libs/bridge/app/license"
+	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
+	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
 )
 
 // AppService is the public surface for bridge event handlers.

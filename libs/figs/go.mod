@@ -1,10 +1,10 @@
-module github.com/thescaffold/gox-apps-figs
+module github.com/thescaffold/gox-apps/libs/figs
 
 go 1.25.3
 
 require github.com/awesome-goose/goose v0.0.6
 
-require github.com/thescaffold/gox-packages-core v0.0.0
+require github.com/thescaffold/gox-packages/libs/core v0.0.1
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.7 // indirect
@@ -55,4 +55,3 @@ require (
 	gorm.io/gorm v1.25.12 // indirect
 )
 
-replace github.com/thescaffold/gox-packages-core v0.0.0 => ../../../gox-packages/libs/core

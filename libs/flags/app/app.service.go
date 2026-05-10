@@ -1,8 +1,8 @@
 package app
 
 import (
-	flagpkg "github.com/thescaffold/gox-apps-flags/app/flag"
-	flaglogpkg "github.com/thescaffold/gox-apps-flags/app/flaglog"
+	flagpkg "github.com/thescaffold/gox-apps/libs/flags/app/flag"
+	flaglogpkg "github.com/thescaffold/gox-apps/libs/flags/app/flaglog"
 )
 
 // AppService implements register/log/status/limit, mirroring

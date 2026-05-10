@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	healthlog "github.com/thescaffold/gox-apps-health/app/log"
-	healthsvc "github.com/thescaffold/gox-apps-health/app/service"
+	healthlog "github.com/thescaffold/gox-apps/libs/health/app/log"
+	healthsvc "github.com/thescaffold/gox-apps/libs/health/app/service"
 )
 
 type AppService struct {

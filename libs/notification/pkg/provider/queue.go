@@ -1,7 +1,7 @@
 package provider
 
 import (
-	notificationlog "github.com/thescaffold/gox-apps-notification/app/log"
+	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
 )
 
 // QueuePusher dispatches a notification log for asynchronous, durable provider

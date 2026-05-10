@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/thescaffold/gox-apps-statics/app/list"
-	"github.com/thescaffold/gox-packages-core/events"
+	"github.com/thescaffold/gox-apps/libs/statics/app/list"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "statics"

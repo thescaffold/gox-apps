@@ -3,7 +3,7 @@ package provider
 import (
 	"time"
 
-	notificationlog "github.com/thescaffold/gox-apps-notification/app/log"
+	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
 )
 
 // enrichRenderContext layers identity context + a `now` block onto the data

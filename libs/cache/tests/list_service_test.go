@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	test "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-cache/app"
-	"github.com/thescaffold/gox-apps-cache/app/list"
+	"github.com/thescaffold/gox-apps/libs/cache/app"
+	"github.com/thescaffold/gox-apps/libs/cache/app/list"
 )
 
 func TestListEntity(t *testing.T) {

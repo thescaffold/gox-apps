@@ -2,10 +2,10 @@ package provider
 
 import (
 	"github.com/awesome-goose/goose/types"
-	notificationlog "github.com/thescaffold/gox-apps-notification/app/log"
-	notificationmessage "github.com/thescaffold/gox-apps-notification/app/message"
-	notificationrule "github.com/thescaffold/gox-apps-notification/app/rule"
-	notificationtemplate "github.com/thescaffold/gox-apps-notification/app/template"
+	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
+	notificationmessage "github.com/thescaffold/gox-apps/libs/notification/app/message"
+	notificationrule "github.com/thescaffold/gox-apps/libs/notification/app/rule"
+	notificationtemplate "github.com/thescaffold/gox-apps/libs/notification/app/template"
 )
 
 type ProviderModule struct{}

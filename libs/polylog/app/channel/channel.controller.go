@@ -1,6 +1,6 @@
 package channel
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type ChannelController struct {
 	crud.CrudResource[Channel, CreateChannelDto, UpdateChannelDto]

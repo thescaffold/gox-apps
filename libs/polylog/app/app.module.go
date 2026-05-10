@@ -3,12 +3,12 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	polylogconfig "github.com/thescaffold/gox-apps-polylog/app/config"
-	polylogsource "github.com/thescaffold/gox-apps-polylog/app/source"
-	polylogsourcetype "github.com/thescaffold/gox-apps-polylog/app/sourcetype"
-	"github.com/thescaffold/gox-apps-polylog/migrations"
-	polylogpipeline "github.com/thescaffold/gox-apps-polylog/pkg/pipeline"
-	"github.com/thescaffold/gox-packages-core/module"
+	polylogconfig "github.com/thescaffold/gox-apps/libs/polylog/app/config"
+	polylogsource "github.com/thescaffold/gox-apps/libs/polylog/app/source"
+	polylogsourcetype "github.com/thescaffold/gox-apps/libs/polylog/app/sourcetype"
+	"github.com/thescaffold/gox-apps/libs/polylog/migrations"
+	polylogpipeline "github.com/thescaffold/gox-apps/libs/polylog/pkg/pipeline"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

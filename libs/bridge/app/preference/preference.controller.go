@@ -1,6 +1,6 @@
 package preference
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type PreferenceController struct {
 	crud.CrudResource[Preference, CreatePreferenceDto, UpdatePreferenceDto]

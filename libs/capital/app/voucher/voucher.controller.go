@@ -1,6 +1,6 @@
 package voucher
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type VoucherController struct {
 	crud.CrudResource[Voucher, CreateVoucherDto, UpdateVoucherDto]

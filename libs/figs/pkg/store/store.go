@@ -1,6 +1,6 @@
 package store
 
-import "github.com/thescaffold/gox-apps-figs/pkg/converter"
+import "github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
 
 type ProviderType string
 

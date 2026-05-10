@@ -1,6 +1,6 @@
 package request
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RequestController struct {
 	crud.CrudResource[Request, CreateRequestDto, UpdateRequestDto]

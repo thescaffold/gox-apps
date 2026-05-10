@@ -3,8 +3,8 @@ package app
 import (
 	"encoding/json"
 
-	"github.com/thescaffold/gox-apps-polylog/pkg/pipeline"
-	ntxctx "github.com/thescaffold/gox-packages-core/context"
+	"github.com/thescaffold/gox-apps/libs/polylog/pkg/pipeline"
+	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
 
 type HealthDto struct{}

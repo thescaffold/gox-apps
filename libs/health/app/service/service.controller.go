@@ -1,6 +1,6 @@
 package service
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type ServiceController struct {
 	crud.CrudResource[Service, CreateServiceDto, UpdateServiceDto]

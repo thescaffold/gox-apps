@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/thescaffold/gox-apps-common/app/ip"
-	"github.com/thescaffold/gox-apps-common/app/rate"
+	"github.com/thescaffold/gox-apps/libs/common/app/ip"
+	"github.com/thescaffold/gox-apps/libs/common/app/rate"
 )
 
 var geoClient = &http.Client{Timeout: 5 * time.Second}

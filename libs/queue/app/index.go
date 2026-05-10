@@ -3,7 +3,7 @@ package app
 import (
 	goqueues "github.com/awesome-goose/goose/modules/queues"
 	"github.com/awesome-goose/goose/modules/sql"
-	"github.com/thescaffold/gox-packages-core/events"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "queue"

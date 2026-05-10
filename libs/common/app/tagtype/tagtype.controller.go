@@ -1,6 +1,6 @@
 package tagtype
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type TagTypeController struct {
 	crud.CrudResource[TagType, CreateTagTypeDto, UpdateTagTypeDto]

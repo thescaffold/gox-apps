@@ -3,7 +3,7 @@ package app
 import (
 	gocron "github.com/awesome-goose/goose/modules/cron"
 	"github.com/awesome-goose/goose/types"
-	"github.com/thescaffold/gox-packages-core/response"
+	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
 type AppController struct {

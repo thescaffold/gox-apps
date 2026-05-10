@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	"github.com/thescaffold/gox-apps-statics/app/list"
-	"github.com/thescaffold/gox-apps-statics/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	"github.com/thescaffold/gox-apps/libs/statics/app/list"
+	"github.com/thescaffold/gox-apps/libs/statics/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 // Migrations contains schema migrations run by this app.

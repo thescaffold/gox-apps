@@ -1,6 +1,6 @@
 package flag
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type FlagController struct {
 	crud.CrudResource[Flag, CreateFlagDto, UpdateFlagDto]

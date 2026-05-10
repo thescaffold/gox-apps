@@ -1,6 +1,6 @@
 package role
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RoleController struct {
 	crud.CrudResource[Role, CreateRoleDto, UpdateRoleDto]

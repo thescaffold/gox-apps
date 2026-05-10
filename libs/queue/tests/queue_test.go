@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-queue/app"
-	queuejob "github.com/thescaffold/gox-apps-queue/app/job"
-	queuelog "github.com/thescaffold/gox-apps-queue/app/log"
-	queuequeue "github.com/thescaffold/gox-apps-queue/app/queue"
+	"github.com/thescaffold/gox-apps/libs/queue/app"
+	queuejob "github.com/thescaffold/gox-apps/libs/queue/app/job"
+	queuelog "github.com/thescaffold/gox-apps/libs/queue/app/log"
+	queuequeue "github.com/thescaffold/gox-apps/libs/queue/app/queue"
 )
 
 func TestQueueEntity(t *testing.T) {

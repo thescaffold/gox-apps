@@ -1,6 +1,6 @@
 package ratelog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RateLogController struct {
 	crud.CrudResource[RateLog, CreateRateLogDto, UpdateRateLogDto]

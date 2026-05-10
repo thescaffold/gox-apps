@@ -3,13 +3,13 @@ package app
 import (
 	"time"
 
-	capitalpayment "github.com/thescaffold/gox-apps-capital/app/payment"
-	capitalpaymentlog "github.com/thescaffold/gox-apps-capital/app/paymentlog"
-	capitalplan "github.com/thescaffold/gox-apps-capital/app/plan"
-	capitalplantype "github.com/thescaffold/gox-apps-capital/app/plantype"
-	capitalrate "github.com/thescaffold/gox-apps-capital/app/rate"
-	capitalusage "github.com/thescaffold/gox-apps-capital/app/usage"
-	capitalwallet "github.com/thescaffold/gox-apps-capital/app/wallet"
+	capitalpayment "github.com/thescaffold/gox-apps/libs/capital/app/payment"
+	capitalpaymentlog "github.com/thescaffold/gox-apps/libs/capital/app/paymentlog"
+	capitalplan "github.com/thescaffold/gox-apps/libs/capital/app/plan"
+	capitalplantype "github.com/thescaffold/gox-apps/libs/capital/app/plantype"
+	capitalrate "github.com/thescaffold/gox-apps/libs/capital/app/rate"
+	capitalusage "github.com/thescaffold/gox-apps/libs/capital/app/usage"
+	capitalwallet "github.com/thescaffold/gox-apps/libs/capital/app/wallet"
 )
 
 // AppService surfaces capital event handlers. Mirrors

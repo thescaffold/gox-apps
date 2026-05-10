@@ -1,6 +1,6 @@
 package device
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type DeviceController struct {
 	crud.CrudResource[Device, CreateDeviceDto, UpdateDeviceDto]

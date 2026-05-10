@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/thescaffold/gox-apps-fuss/app/history"
-	"github.com/thescaffold/gox-apps-fuss/app/token"
-	"github.com/thescaffold/gox-apps-fuss/app/tokenlog"
+	"github.com/thescaffold/gox-apps/libs/fuss/app/history"
+	"github.com/thescaffold/gox-apps/libs/fuss/app/token"
+	"github.com/thescaffold/gox-apps/libs/fuss/app/tokenlog"
 )
 
 var unsafeEntities = []string{"fusshistories", "fusstokens", "fusstokenlogs"}

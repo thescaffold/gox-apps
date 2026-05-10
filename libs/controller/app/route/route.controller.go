@@ -1,6 +1,6 @@
 package route
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RouteController struct {
 	crud.CrudResource[Route, CreateRouteDto, UpdateRouteDto]

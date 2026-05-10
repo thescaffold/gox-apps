@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type ProviderController struct {
 	crud.CrudResource[Provider, CreateProviderDto, UpdateProviderDto]

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/thescaffold/gox-apps-notification/app/message"
-	"github.com/thescaffold/gox-apps-notification/app/rule"
+	"github.com/thescaffold/gox-apps/libs/notification/app/message"
+	"github.com/thescaffold/gox-apps/libs/notification/app/rule"
 )
 
 // AppService implements the notification scope/priority/subscription queries.

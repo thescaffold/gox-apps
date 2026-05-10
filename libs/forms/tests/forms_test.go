@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-forms/app"
-	formsform "github.com/thescaffold/gox-apps-forms/app/form"
-	formsformfield "github.com/thescaffold/gox-apps-forms/app/formfield"
-	formsformlog "github.com/thescaffold/gox-apps-forms/app/formlog"
-	formsformtype "github.com/thescaffold/gox-apps-forms/app/formtype"
+	"github.com/thescaffold/gox-apps/libs/forms/app"
+	formsform "github.com/thescaffold/gox-apps/libs/forms/app/form"
+	formsformfield "github.com/thescaffold/gox-apps/libs/forms/app/formfield"
+	formsformlog "github.com/thescaffold/gox-apps/libs/forms/app/formlog"
+	formsformtype "github.com/thescaffold/gox-apps/libs/forms/app/formtype"
 )
 
 func TestFormTypeEntity(t *testing.T) {

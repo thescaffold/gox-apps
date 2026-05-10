@@ -3,15 +3,15 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	commonip "github.com/thescaffold/gox-apps-common/app/ip"
-	commonproject "github.com/thescaffold/gox-apps-common/app/project"
-	commonprojecttype "github.com/thescaffold/gox-apps-common/app/projecttype"
-	commonrate "github.com/thescaffold/gox-apps-common/app/rate"
-	commonratelog "github.com/thescaffold/gox-apps-common/app/ratelog"
-	commontag "github.com/thescaffold/gox-apps-common/app/tag"
-	commontagtype "github.com/thescaffold/gox-apps-common/app/tagtype"
-	"github.com/thescaffold/gox-apps-common/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	commonip "github.com/thescaffold/gox-apps/libs/common/app/ip"
+	commonproject "github.com/thescaffold/gox-apps/libs/common/app/project"
+	commonprojecttype "github.com/thescaffold/gox-apps/libs/common/app/projecttype"
+	commonrate "github.com/thescaffold/gox-apps/libs/common/app/rate"
+	commonratelog "github.com/thescaffold/gox-apps/libs/common/app/ratelog"
+	commontag "github.com/thescaffold/gox-apps/libs/common/app/tag"
+	commontagtype "github.com/thescaffold/gox-apps/libs/common/app/tagtype"
+	"github.com/thescaffold/gox-apps/libs/common/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

@@ -1,6 +1,6 @@
 package app
 
-import ntxctx "github.com/thescaffold/gox-packages-core/context"
+import ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 
 type HealthDto struct{}
 

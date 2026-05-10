@@ -3,10 +3,10 @@ package app
 import (
 	goqueues "github.com/awesome-goose/goose/modules/queues"
 	"github.com/awesome-goose/goose/types"
-	queuejob "github.com/thescaffold/gox-apps-queue/app/job"
-	queuelog "github.com/thescaffold/gox-apps-queue/app/log"
-	queuequeue "github.com/thescaffold/gox-apps-queue/app/queue"
-	"github.com/thescaffold/gox-packages-core/module"
+	queuejob "github.com/thescaffold/gox-apps/libs/queue/app/job"
+	queuelog "github.com/thescaffold/gox-apps/libs/queue/app/log"
+	queuequeue "github.com/thescaffold/gox-apps/libs/queue/app/queue"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 type AppModule struct{}

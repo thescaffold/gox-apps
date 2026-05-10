@@ -3,10 +3,10 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	ctrlreq "github.com/thescaffold/gox-apps-controller/app/request"
-	ctrlroute "github.com/thescaffold/gox-apps-controller/app/route"
-	"github.com/thescaffold/gox-apps-controller/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	ctrlreq "github.com/thescaffold/gox-apps/libs/controller/app/request"
+	ctrlroute "github.com/thescaffold/gox-apps/libs/controller/app/route"
+	"github.com/thescaffold/gox-apps/libs/controller/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

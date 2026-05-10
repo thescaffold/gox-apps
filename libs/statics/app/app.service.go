@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/thescaffold/gox-apps-statics/app/list"
+	"github.com/thescaffold/gox-apps/libs/statics/app/list"
 )
 
 type AppService struct {

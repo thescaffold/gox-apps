@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	ntxhttp "github.com/thescaffold/gox-packages-core/http"
+	ntxhttp "github.com/thescaffold/gox-packages/libs/core/http"
 )
 
 type WebhookSink struct {

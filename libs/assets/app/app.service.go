@@ -3,9 +3,9 @@ package app
 import (
 	"strings"
 
-	"github.com/thescaffold/gox-apps-assets/app/file"
-	"github.com/thescaffold/gox-packages-core/image"
-	"github.com/thescaffold/gox-packages-core/utils"
+	"github.com/thescaffold/gox-apps/libs/assets/app/file"
+	"github.com/thescaffold/gox-packages/libs/core/image"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 // AppService is the public assets service. Mirrors ntx-apps/libs/assets/src/app.service.ts.

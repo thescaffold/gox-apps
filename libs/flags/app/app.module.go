@@ -3,12 +3,12 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	flagsenvironment "github.com/thescaffold/gox-apps-flags/app/environment"
-	flagsenvironmenttype "github.com/thescaffold/gox-apps-flags/app/environmenttype"
-	flagsflag "github.com/thescaffold/gox-apps-flags/app/flag"
-	flagsflaglog "github.com/thescaffold/gox-apps-flags/app/flaglog"
-	"github.com/thescaffold/gox-apps-flags/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	flagsenvironment "github.com/thescaffold/gox-apps/libs/flags/app/environment"
+	flagsenvironmenttype "github.com/thescaffold/gox-apps/libs/flags/app/environmenttype"
+	flagsflag "github.com/thescaffold/gox-apps/libs/flags/app/flag"
+	flagsflaglog "github.com/thescaffold/gox-apps/libs/flags/app/flaglog"
+	"github.com/thescaffold/gox-apps/libs/flags/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-notification/app"
-	notificationlog "github.com/thescaffold/gox-apps-notification/app/log"
-	notificationmessage "github.com/thescaffold/gox-apps-notification/app/message"
-	notificationrule "github.com/thescaffold/gox-apps-notification/app/rule"
-	notificationtemplate "github.com/thescaffold/gox-apps-notification/app/template"
+	"github.com/thescaffold/gox-apps/libs/notification/app"
+	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
+	notificationmessage "github.com/thescaffold/gox-apps/libs/notification/app/message"
+	notificationrule "github.com/thescaffold/gox-apps/libs/notification/app/rule"
+	notificationtemplate "github.com/thescaffold/gox-apps/libs/notification/app/template"
 )
 
 func TestTemplateEntity(t *testing.T) {

@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	"github.com/thescaffold/gox-apps-health/migrations"
-	healthtask "github.com/thescaffold/gox-apps-health/pkg/task"
-	"github.com/thescaffold/gox-packages-core/module"
+	"github.com/thescaffold/gox-apps/libs/health/migrations"
+	healthtask "github.com/thescaffold/gox-apps/libs/health/pkg/task"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

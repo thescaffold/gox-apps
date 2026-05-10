@@ -1,6 +1,6 @@
 package rate
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type RateController struct {
 	crud.CrudResource[Rate, CreateRateDto, UpdateRateDto]

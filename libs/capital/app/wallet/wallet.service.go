@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	gooErrors "github.com/awesome-goose/goose/errors"
-	capitalaccount "github.com/thescaffold/gox-apps-capital/app/account"
-	capitaltransaction "github.com/thescaffold/gox-apps-capital/app/transaction"
-	"github.com/thescaffold/gox-packages-core/utils"
+	capitalaccount "github.com/thescaffold/gox-apps/libs/capital/app/account"
+	capitaltransaction "github.com/thescaffold/gox-apps/libs/capital/app/transaction"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 type WalletService struct {

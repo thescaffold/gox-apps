@@ -1,6 +1,6 @@
 package client
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type ClientController struct {
 	crud.CrudResource[Client, CreateClientDto, UpdateClientDto]

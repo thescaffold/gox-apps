@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/thescaffold/gox-apps-figs/pkg/converter"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
 )
 
 // ObjectProvider stores files in an S3-compatible bucket.

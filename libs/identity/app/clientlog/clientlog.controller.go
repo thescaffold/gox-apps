@@ -1,6 +1,6 @@
 package clientlog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type ClientLogController struct {
 	crud.CrudResource[ClientLog, CreateClientLogDto, UpdateClientLogDto]

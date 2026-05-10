@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	test "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-assets/app"
-	assetsfile "github.com/thescaffold/gox-apps-assets/app/file"
+	"github.com/thescaffold/gox-apps/libs/assets/app"
+	assetsfile "github.com/thescaffold/gox-apps/libs/assets/app/file"
 )
 
 func TestFileEntity(t *testing.T) {

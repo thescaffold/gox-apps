@@ -1,6 +1,6 @@
 package devicelog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type DeviceLogController struct {
 	crud.CrudResource[DeviceLog, CreateDeviceLogDto, UpdateDeviceLogDto]

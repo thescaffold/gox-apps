@@ -1,6 +1,6 @@
 package app
 
-import "github.com/thescaffold/gox-packages-core/events"
+import "github.com/thescaffold/gox-packages/libs/core/events"
 
 const Name = "cache"
 

@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
-	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
-	"github.com/thescaffold/gox-apps-audit/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
+	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
+	"github.com/thescaffold/gox-apps/libs/audit/migrations"
+	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
 var Migrations = []sql.Migration{

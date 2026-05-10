@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	goosetest "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-common/app"
-	commonip "github.com/thescaffold/gox-apps-common/app/ip"
-	commonproject "github.com/thescaffold/gox-apps-common/app/project"
-	commonrate "github.com/thescaffold/gox-apps-common/app/rate"
-	commontag "github.com/thescaffold/gox-apps-common/app/tag"
+	"github.com/thescaffold/gox-apps/libs/common/app"
+	commonip "github.com/thescaffold/gox-apps/libs/common/app/ip"
+	commonproject "github.com/thescaffold/gox-apps/libs/common/app/project"
+	commonrate "github.com/thescaffold/gox-apps/libs/common/app/rate"
+	commontag "github.com/thescaffold/gox-apps/libs/common/app/tag"
 )
 
 func TestIpEntity(t *testing.T) {

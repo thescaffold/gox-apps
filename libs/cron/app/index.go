@@ -5,7 +5,7 @@ import (
 
 	gocron "github.com/awesome-goose/goose/modules/cron"
 	"github.com/awesome-goose/goose/modules/sql"
-	"github.com/thescaffold/gox-packages-core/events"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "cron"

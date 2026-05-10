@@ -1,6 +1,6 @@
 package history
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type HistoryController struct {
 	crud.CrudResource[History, CreateHistoryDto, UpdateHistoryDto]

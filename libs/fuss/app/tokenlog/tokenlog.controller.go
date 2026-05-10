@@ -1,6 +1,6 @@
 package tokenlog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type TokenLogController struct {
 	crud.CrudResource[TokenLog, CreateTokenLogDto, UpdateTokenLogDto]

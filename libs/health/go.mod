@@ -1,10 +1,10 @@
-module github.com/thescaffold/gox-apps-health
+module github.com/thescaffold/gox-apps/libs/health
 
 go 1.25.3
 
 require github.com/awesome-goose/goose v0.0.6
 
-require github.com/thescaffold/gox-packages-core v0.0.0
+require github.com/thescaffold/gox-packages/libs/core v0.0.1
 
 require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
@@ -25,4 +25,3 @@ require (
 	gorm.io/gorm v1.25.12 // indirect
 )
 
-replace github.com/thescaffold/gox-packages-core v0.0.0 => ../../../gox-packages/libs/core

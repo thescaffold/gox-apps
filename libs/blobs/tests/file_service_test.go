@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	test "github.com/awesome-goose/goose/testing"
-	"github.com/thescaffold/gox-apps-blobs/app"
-	"github.com/thescaffold/gox-apps-blobs/app/file"
-	"github.com/thescaffold/gox-apps-blobs/app/page"
+	"github.com/thescaffold/gox-apps/libs/blobs/app"
+	"github.com/thescaffold/gox-apps/libs/blobs/app/file"
+	"github.com/thescaffold/gox-apps/libs/blobs/app/page"
 )
 
 func TestFileEntity(t *testing.T) {

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/cbroglie/mustache"
-	notificationlog "github.com/thescaffold/gox-apps-notification/app/log"
-	notificationmessage "github.com/thescaffold/gox-apps-notification/app/message"
-	notificationrule "github.com/thescaffold/gox-apps-notification/app/rule"
-	notificationtemplate "github.com/thescaffold/gox-apps-notification/app/template"
+	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
+	notificationmessage "github.com/thescaffold/gox-apps/libs/notification/app/message"
+	notificationrule "github.com/thescaffold/gox-apps/libs/notification/app/rule"
+	notificationtemplate "github.com/thescaffold/gox-apps/libs/notification/app/template"
 )
 
 type ProviderService struct {

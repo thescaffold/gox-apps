@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/awesome-goose/goose/types"
-	healthlog "github.com/thescaffold/gox-apps-health/app/log"
-	healthsvc "github.com/thescaffold/gox-apps-health/app/service"
-	healthsum "github.com/thescaffold/gox-apps-health/app/summary"
+	healthlog "github.com/thescaffold/gox-apps/libs/health/app/log"
+	healthsvc "github.com/thescaffold/gox-apps/libs/health/app/service"
+	healthsum "github.com/thescaffold/gox-apps/libs/health/app/summary"
 )
 
 type SummaryTask struct {

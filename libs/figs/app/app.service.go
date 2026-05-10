@@ -3,11 +3,11 @@ package app
 import (
 	"encoding/json"
 
-	"github.com/thescaffold/gox-apps-figs/app/file"
-	"github.com/thescaffold/gox-apps-figs/pkg/converter"
-	"github.com/thescaffold/gox-apps-figs/pkg/mapper"
-	"github.com/thescaffold/gox-apps-figs/pkg/store"
-	"github.com/thescaffold/gox-apps-figs/pkg/validator"
+	"github.com/thescaffold/gox-apps/libs/figs/app/file"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/mapper"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/store"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/validator"
 )
 
 type AppService struct {

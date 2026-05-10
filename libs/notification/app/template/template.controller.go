@@ -1,6 +1,6 @@
 package template
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type TemplateController struct {
 	crud.CrudResource[Template, CreateTemplateDto, UpdateTemplateDto]

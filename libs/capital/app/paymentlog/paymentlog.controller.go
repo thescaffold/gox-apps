@@ -1,6 +1,6 @@
 package paymentlog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type PaymentLogController struct {
 	crud.CrudResource[PaymentLog, CreatePaymentLogDto, UpdatePaymentLogDto]

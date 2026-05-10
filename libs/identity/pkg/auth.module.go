@@ -3,12 +3,12 @@ package pkg
 import (
 	"os"
 
-	identityattribute "github.com/thescaffold/gox-apps-identity/app/attribute"
-	identitypermission "github.com/thescaffold/gox-apps-identity/app/permission"
-	identityrole "github.com/thescaffold/gox-apps-identity/app/role"
-	identitytoken "github.com/thescaffold/gox-apps-identity/app/token"
-	identityuser "github.com/thescaffold/gox-apps-identity/app/user"
-	coreauth "github.com/thescaffold/gox-packages-core/auth"
+	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
+	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
+	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 
 	"github.com/awesome-goose/goose/modules/router"
 	"github.com/awesome-goose/goose/modules/sql"

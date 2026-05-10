@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/thescaffold/gox-apps-cache/app/list"
+	"github.com/thescaffold/gox-apps/libs/cache/app/list"
 )
 
 type AppService struct {

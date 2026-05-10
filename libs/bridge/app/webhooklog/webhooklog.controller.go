@@ -1,6 +1,6 @@
 package webhooklog
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type WebhookLogController struct {
 	crud.CrudResource[WebhookLog, CreateWebhookLogDto, UpdateWebhookLogDto]

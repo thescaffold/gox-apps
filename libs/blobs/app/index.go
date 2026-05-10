@@ -1,9 +1,9 @@
 package app
 
 import (
-	filepkg "github.com/thescaffold/gox-apps-blobs/app/file"
-	pagepkg "github.com/thescaffold/gox-apps-blobs/app/page"
-	"github.com/thescaffold/gox-packages-core/events"
+	filepkg "github.com/thescaffold/gox-apps/libs/blobs/app/file"
+	pagepkg "github.com/thescaffold/gox-apps/libs/blobs/app/page"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 const Name = "blobs"

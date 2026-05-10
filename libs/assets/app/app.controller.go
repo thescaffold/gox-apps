@@ -5,8 +5,8 @@ import (
 
 	"github.com/awesome-goose/goose/io/output"
 	"github.com/awesome-goose/goose/types"
-	"github.com/thescaffold/gox-apps-assets/app/file"
-	"github.com/thescaffold/gox-packages-core/response"
+	"github.com/thescaffold/gox-apps/libs/assets/app/file"
+	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
 type AppController struct {

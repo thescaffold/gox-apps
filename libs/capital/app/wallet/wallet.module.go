@@ -2,8 +2,8 @@ package wallet
 
 import (
 	"github.com/awesome-goose/goose/types"
-	capitalaccount "github.com/thescaffold/gox-apps-capital/app/account"
-	capitaltransaction "github.com/thescaffold/gox-apps-capital/app/transaction"
+	capitalaccount "github.com/thescaffold/gox-apps/libs/capital/app/account"
+	capitaltransaction "github.com/thescaffold/gox-apps/libs/capital/app/transaction"
 )
 
 type WalletModule struct{}

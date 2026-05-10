@@ -1,6 +1,6 @@
 package token
 
-import "github.com/thescaffold/gox-packages-core/crud"
+import "github.com/thescaffold/gox-packages/libs/core/crud"
 
 type TokenController struct {
 	crud.CrudResource[Token, CreateTokenDto, UpdateTokenDto]

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/thescaffold/gox-apps-figs/pkg/converter"
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
 )
 
 type LocalProvider struct{}

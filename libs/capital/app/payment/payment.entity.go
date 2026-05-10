@@ -2,8 +2,8 @@ package payment
 
 import (
 	"encoding/json"
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Payment struct {
@@ -28,8 +28,13 @@ type Payment struct {
 	EndAt       *time.Time      `gorm:"column:end_at;type:timestamp"                  json:"endAt,omitempty"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Payment) TableName() string { return "CapitalPayments" }
-type PaymentEntity struct{ *sql.Entity[Payment] `inject:""` }
+
+type PaymentEntity struct {
+	*sql.Entity[Payment] `inject:""`
+}
+
 func (e *PaymentEntity) OnRegister() {
 	e.Hydrate("CapitalPayments", []string{"user_id", "workspace_id", "plan_id", "reference"}, nil, nil, nil, nil, nil, "created_at desc")
 }

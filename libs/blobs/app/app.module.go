@@ -24,13 +24,14 @@ func (m *AppModule) Imports() []types.Module {
 		}),
 		&file.FileModule{},
 		&page.PageModule{},
+		ROUTES,
 	}
 }
 
 func (m *AppModule) Exports() []any {
-	return []any{}
+	return []any{&AppService{}}
 }
 
 func (m *AppModule) Declarations() []any {
-	return []any{}
+	return []any{&AppService{}}
 }

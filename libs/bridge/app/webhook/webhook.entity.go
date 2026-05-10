@@ -13,8 +13,13 @@ type Webhook struct {
 	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (Webhook) TableName() string { return "BridgeWebhooks" }
-type WebhookEntity struct{ *sql.Entity[Webhook] `inject:""` }
+
+type WebhookEntity struct {
+	*sql.Entity[Webhook] `inject:""`
+}
+
 func (e *WebhookEntity) OnRegister() {
 	e.Hydrate("BridgeWebhooks", []string{"license_id", "type"}, nil, nil, nil, nil, nil, "created_at desc")
 }

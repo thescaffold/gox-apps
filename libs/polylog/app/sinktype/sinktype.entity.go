@@ -18,8 +18,13 @@ type SinkType struct {
 	Tags         json.RawMessage `gorm:"column:tags;type:jsonb"                      json:"tags,omitempty"`
 	Meta         json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 }
+
 func (SinkType) TableName() string { return "PolylogSinkTypes" }
-type SinkTypeEntity struct{ *sql.Entity[SinkType] `inject:""` }
+
+type SinkTypeEntity struct {
+	*sql.Entity[SinkType] `inject:""`
+}
+
 func (e *SinkTypeEntity) OnRegister() {
 	e.Hydrate("PolylogSinkTypes", []string{"category", "name"}, nil, nil, nil, nil, nil, "created_at desc")
 }

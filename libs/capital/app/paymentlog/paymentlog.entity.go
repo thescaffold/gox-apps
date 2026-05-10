@@ -13,8 +13,13 @@ type PaymentLog struct {
 	Response  json.RawMessage `gorm:"column:response;type:jsonb"                  json:"response,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (PaymentLog) TableName() string { return "CapitalPaymentLogs" }
-type PaymentLogEntity struct{ *sql.Entity[PaymentLog] `inject:""` }
+
+type PaymentLogEntity struct {
+	*sql.Entity[PaymentLog] `inject:""`
+}
+
 func (e *PaymentLogEntity) OnRegister() {
 	e.Hydrate("CapitalPaymentLogs", []string{"payment_id", "type"}, nil, nil, nil, nil, nil, "created_at desc")
 }

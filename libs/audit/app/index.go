@@ -2,7 +2,6 @@ package app
 
 import (
 	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
-	auditbatch "github.com/thescaffold/gox-apps-audit/pkg/batch"
 	"github.com/thescaffold/gox-packages-core/events"
 )
 
@@ -31,15 +30,35 @@ func handleEvent(_ string, payload any) {
 }
 
 // Subscriptions maps event patterns to handlers for this app.
+// Mirrors ntx-apps/libs/audit/src/index.ts subscriptions exactly (6 entries).
 var Subscriptions = map[string]events.EventHandler{
-	"*.*.*.after-insert":           handleEvent,
-	"*.*.*.after-update":           handleEvent,
-	"*.*.*.after-delete":           handleEvent,
-	"apps.cron.heartbeat.hourly":   auditbatch.Trigger,
-	"apps.cron.heartbeat.weekly":   handleEvent,
-	"apps.cron.heartbeat.monthly":  handleEvent,
-	"apps.cron.heartbeat.yearly":   handleEvent,
+	"*.*.*.after-insert":          handleEvent,
+	"*.*.*.after-update":          handleEvent,
+	"*.*.*.after-delete":          handleEvent,
+	"apps.cron.heartbeat.weekly":  handleEvent,
+	"apps.cron.heartbeat.monthly": handleEvent,
+	"apps.cron.heartbeat.yearly":  handleEvent,
 }
 
 // LogActionType aliases exported for host usage.
 type LogActionType = auditlog.LogActionType
+
+// Top-level exports mirroring ntx-apps/libs/audit/src/index.ts.
+
+// Entities is the list of entity types this app exposes for migration/registry.
+var Entities = []any{auditlog.Log{}}
+
+// Messages declares cross-app message handlers (TS messages = {}).
+var Messages = map[string]any{}
+
+// UnsafeEventList lists event names the app must not emit on (parity with TS).
+var UnsafeEventList = []string{}
+
+// Paths lists the i18n translation YAML files this app contributes.
+var Paths = []string{"translations/en/ntx/apps/audit.yaml"}
+
+// Jobs declares background jobs (TS jobs = []).
+var Jobs = []any{}
+
+// Crons declares cron schedules (TS crons = []).
+var Crons = []any{}

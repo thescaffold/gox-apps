@@ -23,8 +23,10 @@ func (m *CreatePolylogEventLogs) Run(q *sql.Query) error {
 	}
 	for _, idx := range []string{
 		`CREATE INDEX IF NOT EXISTS "idx_polylog_event_logs_created_at" ON "PolylogEventLogs" ("created_at")`,
+		`CREATE INDEX IF NOT EXISTS "idx_polylog_event_logs_updated_at" ON "PolylogEventLogs" ("updated_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_polylog_event_logs_deleted_at" ON "PolylogEventLogs" ("deleted_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_polylog_event_logs_event_id"   ON "PolylogEventLogs" ("event_id")`,
+		`CREATE INDEX IF NOT EXISTS "idx_polylog_event_logs_status"     ON "PolylogEventLogs" ("status")`,
 	} {
 		if _, err := q.Exec(idx); err != nil {
 			return err

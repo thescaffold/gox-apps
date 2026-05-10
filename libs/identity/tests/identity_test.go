@@ -30,7 +30,9 @@ import (
 func TestUserEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &UserEntitySuite{}).Run()
 }
+
 type UserEntitySuite struct{ goosetest.Suite }
+
 func (s *UserEntitySuite) TestTableName() {
 	s.T.Expect(identityuser.User{}.TableName()).ToEqual("IdentityUsers")
 }
@@ -38,7 +40,9 @@ func (s *UserEntitySuite) TestTableName() {
 func TestClientEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &ClientEntitySuite{}).Run()
 }
+
 type ClientEntitySuite struct{ goosetest.Suite }
+
 func (s *ClientEntitySuite) TestTableName() {
 	s.T.Expect(identityclient.Client{}.TableName()).ToEqual("IdentityClients")
 }
@@ -46,7 +50,9 @@ func (s *ClientEntitySuite) TestTableName() {
 func TestClientLogEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &ClientLogEntitySuite{}).Run()
 }
+
 type ClientLogEntitySuite struct{ goosetest.Suite }
+
 func (s *ClientLogEntitySuite) TestTableName() {
 	s.T.Expect(identityclientlog.ClientLog{}.TableName()).ToEqual("IdentityClientLogs")
 }
@@ -54,7 +60,9 @@ func (s *ClientLogEntitySuite) TestTableName() {
 func TestWorkspaceEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &WorkspaceEntitySuite{}).Run()
 }
+
 type WorkspaceEntitySuite struct{ goosetest.Suite }
+
 func (s *WorkspaceEntitySuite) TestTableName() {
 	s.T.Expect(identityworkspace.Workspace{}.TableName()).ToEqual("IdentityWorkspaces")
 }
@@ -62,7 +70,9 @@ func (s *WorkspaceEntitySuite) TestTableName() {
 func TestUserClientWorkspaceEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &UserClientWorkspaceEntitySuite{}).Run()
 }
+
 type UserClientWorkspaceEntitySuite struct{ goosetest.Suite }
+
 func (s *UserClientWorkspaceEntitySuite) TestTableName() {
 	s.T.Expect(identityucw.UserClientWorkspace{}.TableName()).ToEqual("IdentityUserClientWorkspaces")
 }
@@ -70,7 +80,9 @@ func (s *UserClientWorkspaceEntitySuite) TestTableName() {
 func TestRoleTypeEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &RoleTypeEntitySuite{}).Run()
 }
+
 type RoleTypeEntitySuite struct{ goosetest.Suite }
+
 func (s *RoleTypeEntitySuite) TestTableName() {
 	s.T.Expect(identityroletype.RoleType{}.TableName()).ToEqual("IdentityRoleTypes")
 }
@@ -78,7 +90,9 @@ func (s *RoleTypeEntitySuite) TestTableName() {
 func TestRoleEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &RoleEntitySuite{}).Run()
 }
+
 type RoleEntitySuite struct{ goosetest.Suite }
+
 func (s *RoleEntitySuite) TestTableName() {
 	s.T.Expect(identityrole.Role{}.TableName()).ToEqual("IdentityRoles")
 }
@@ -86,7 +100,9 @@ func (s *RoleEntitySuite) TestTableName() {
 func TestPermissionTypeEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &PermissionTypeEntitySuite{}).Run()
 }
+
 type PermissionTypeEntitySuite struct{ goosetest.Suite }
+
 func (s *PermissionTypeEntitySuite) TestTableName() {
 	s.T.Expect(identitypermissiontype.PermissionType{}.TableName()).ToEqual("IdentityPermissionTypes")
 }
@@ -94,7 +110,9 @@ func (s *PermissionTypeEntitySuite) TestTableName() {
 func TestPermissionEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &PermissionEntitySuite{}).Run()
 }
+
 type PermissionEntitySuite struct{ goosetest.Suite }
+
 func (s *PermissionEntitySuite) TestTableName() {
 	s.T.Expect(identitypermission.Permission{}.TableName()).ToEqual("IdentityPermissions")
 }
@@ -102,7 +120,9 @@ func (s *PermissionEntitySuite) TestTableName() {
 func TestTokenEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &TokenEntitySuite{}).Run()
 }
+
 type TokenEntitySuite struct{ goosetest.Suite }
+
 func (s *TokenEntitySuite) TestTableName() {
 	s.T.Expect(identitytoken.Token{}.TableName()).ToEqual("IdentityTokens")
 }
@@ -110,7 +130,9 @@ func (s *TokenEntitySuite) TestTableName() {
 func TestDeviceEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &DeviceEntitySuite{}).Run()
 }
+
 type DeviceEntitySuite struct{ goosetest.Suite }
+
 func (s *DeviceEntitySuite) TestTableName() {
 	s.T.Expect(identitydevice.Device{}.TableName()).ToEqual("IdentityDevices")
 }
@@ -118,7 +140,9 @@ func (s *DeviceEntitySuite) TestTableName() {
 func TestDeviceLogEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &DeviceLogEntitySuite{}).Run()
 }
+
 type DeviceLogEntitySuite struct{ goosetest.Suite }
+
 func (s *DeviceLogEntitySuite) TestTableName() {
 	s.T.Expect(identitydevicelog.DeviceLog{}.TableName()).ToEqual("IdentityDeviceLogs")
 }
@@ -126,7 +150,9 @@ func (s *DeviceLogEntitySuite) TestTableName() {
 func TestDeviceSessionEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &DeviceSessionEntitySuite{}).Run()
 }
+
 type DeviceSessionEntitySuite struct{ goosetest.Suite }
+
 func (s *DeviceSessionEntitySuite) TestTableName() {
 	s.T.Expect(identitydevicesession.DeviceSession{}.TableName()).ToEqual("IdentityDeviceSessions")
 }
@@ -134,7 +160,9 @@ func (s *DeviceSessionEntitySuite) TestTableName() {
 func TestAttributeEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &AttributeEntitySuite{}).Run()
 }
+
 type AttributeEntitySuite struct{ goosetest.Suite }
+
 func (s *AttributeEntitySuite) TestTableName() {
 	s.T.Expect(identityattribute.Attribute{}.TableName()).ToEqual("IdentityAttributes")
 }
@@ -142,7 +170,9 @@ func (s *AttributeEntitySuite) TestTableName() {
 func TestInviteEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &InviteEntitySuite{}).Run()
 }
+
 type InviteEntitySuite struct{ goosetest.Suite }
+
 func (s *InviteEntitySuite) TestTableName() {
 	s.T.Expect(identityinvite.Invite{}.TableName()).ToEqual("IdentityInvites")
 }
@@ -150,7 +180,9 @@ func (s *InviteEntitySuite) TestTableName() {
 func TestProviderEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &ProviderEntitySuite{}).Run()
 }
+
 type ProviderEntitySuite struct{ goosetest.Suite }
+
 func (s *ProviderEntitySuite) TestTableName() {
 	s.T.Expect(identityprovider.Provider{}.TableName()).ToEqual("IdentityProviders")
 }
@@ -158,7 +190,9 @@ func (s *ProviderEntitySuite) TestTableName() {
 func TestProviderLogEntity(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &ProviderLogEntitySuite{}).Run()
 }
+
 type ProviderLogEntitySuite struct{ goosetest.Suite }
+
 func (s *ProviderLogEntitySuite) TestTableName() {
 	s.T.Expect(identityproviderlog.ProviderLog{}.TableName()).ToEqual("IdentityProviderLogs")
 }
@@ -166,7 +200,9 @@ func (s *ProviderLogEntitySuite) TestTableName() {
 func TestAppModule(t *testing.T) {
 	goosetest.NewSuiteRunner(t, &AppModuleSuite{}).Run()
 }
+
 type AppModuleSuite struct{ goosetest.Suite }
+
 func (s *AppModuleSuite) TestMigrations_Count() {
 	s.T.Expect(len(app.Migrations)).ToEqual(17)
 }

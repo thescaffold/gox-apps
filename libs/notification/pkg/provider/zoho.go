@@ -21,7 +21,7 @@ func (p *ZohoProvider) Email(msg EmailMessage) bool {
 		from = msg.From
 	}
 
-	ok, _, _, _ := p.client.External(
+	ok, _, _, _, _ := p.client.External(
 		"POST",
 		baseurl+"/v1.1/email",
 		map[string]any{
@@ -48,5 +48,5 @@ func (p *ZohoProvider) Email(msg EmailMessage) bool {
 	return ok
 }
 
-func (p *ZohoProvider) SMS(_ SMSMessage) bool    { return false }
+func (p *ZohoProvider) SMS(_ SMSMessage) bool       { return false }
 func (p *ZohoProvider) Mobile(_ MobileMessage) bool { return false }

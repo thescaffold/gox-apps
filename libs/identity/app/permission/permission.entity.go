@@ -14,8 +14,13 @@ type Permission struct {
 	Action      string  `gorm:"column:action;type:varchar(255);not null" json:"action"`
 	Status      *string `gorm:"column:status;type:varchar(255)"       json:"status,omitempty"`
 }
+
 func (Permission) TableName() string { return "IdentityPermissions" }
-type PermissionEntity struct{ *sql.Entity[Permission] `inject:""` }
+
+type PermissionEntity struct {
+	*sql.Entity[Permission] `inject:""`
+}
+
 func (e *PermissionEntity) OnRegister() {
 	e.Hydrate("IdentityPermissions", []string{"user_id", "client_id", "workspace_id", "role_id", "key"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -3,11 +3,11 @@ package tests
 import (
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-health/app"
 	healthlog "github.com/thescaffold/gox-apps-health/app/log"
 	healthsvc "github.com/thescaffold/gox-apps-health/app/service"
 	healthsum "github.com/thescaffold/gox-apps-health/app/summary"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestLogEntity(t *testing.T) {

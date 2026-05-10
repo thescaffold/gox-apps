@@ -1,2 +1,5 @@
 package channel
-type ChannelService struct{ entity *ChannelEntity `inject:""` }
+
+type ChannelService struct {
+	entity *ChannelEntity `inject:""`
+}

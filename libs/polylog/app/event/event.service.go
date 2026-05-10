@@ -1,2 +1,5 @@
 package event
-type EventService struct{ entity *EventEntity `inject:""` }
+
+type EventService struct {
+	entity *EventEntity `inject:""`
+}

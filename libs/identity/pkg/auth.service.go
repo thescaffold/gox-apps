@@ -25,11 +25,11 @@ const (
 )
 
 type AuthService struct {
-	userEntity       *user.UserEntity                                  `inject:""`
-	tokenEntity      *token.TokenEntity                                `inject:""`
-	roleEntity       *identityrole.RoleEntity                         `inject:""`
-	permissionEntity *identitypermission.PermissionEntity             `inject:""`
-	attributeEntity  *identityattribute.AttributeEntity               `inject:""`
+	userEntity       *user.UserEntity                     `inject:""`
+	tokenEntity      *token.TokenEntity                   `inject:""`
+	roleEntity       *identityrole.RoleEntity             `inject:""`
+	permissionEntity *identitypermission.PermissionEntity `inject:""`
+	attributeEntity  *identityattribute.AttributeEntity   `inject:""`
 }
 
 func (s *AuthService) jwtSecret() string {
@@ -70,10 +70,10 @@ func (s *AuthService) Login(email, password, clientId string) (accessToken, refr
 
 	expiresAt := time.Now().Add(refreshExpiry)
 	_ = s.tokenEntity.Insert(&token.Token{
-		UserId:   u.Id,
-		ClientId: clientId,
-		Type:     tokenTypeRefresh,
-		Token:    refreshToken,
+		UserId:    u.Id,
+		ClientId:  clientId,
+		Type:      tokenTypeRefresh,
+		Token:     refreshToken,
 		ExpiresAt: &expiresAt,
 	})
 

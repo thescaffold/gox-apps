@@ -14,8 +14,13 @@ type WebhookLog struct {
 	Response  json.RawMessage `gorm:"column:response;type:jsonb"                  json:"response,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (WebhookLog) TableName() string { return "BridgeWebhookLogs" }
-type WebhookLogEntity struct{ *sql.Entity[WebhookLog] `inject:""` }
+
+type WebhookLogEntity struct {
+	*sql.Entity[WebhookLog] `inject:""`
+}
+
 func (e *WebhookLogEntity) OnRegister() {
 	e.Hydrate("BridgeWebhookLogs", []string{"webhook_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

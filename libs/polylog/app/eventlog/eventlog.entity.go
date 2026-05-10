@@ -13,8 +13,13 @@ type EventLog struct {
 	Response json.RawMessage `gorm:"column:response;type:jsonb"                json:"response,omitempty"`
 	Status   *string         `gorm:"column:status;type:varchar(255)"           json:"status,omitempty"`
 }
+
 func (EventLog) TableName() string { return "PolylogEventLogs" }
-type EventLogEntity struct{ *sql.Entity[EventLog] `inject:""` }
+
+type EventLogEntity struct {
+	*sql.Entity[EventLog] `inject:""`
+}
+
 func (e *EventLogEntity) OnRegister() {
 	e.Hydrate("PolylogEventLogs", []string{"event_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

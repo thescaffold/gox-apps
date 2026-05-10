@@ -1,8 +1,8 @@
 package token
 
 import (
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Token struct {
@@ -16,8 +16,13 @@ type Token struct {
 	ExpiresAt   *time.Time `gorm:"column:expires_at;type:timestamp"              json:"expiresAt,omitempty"`
 	Status      *string    `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Token) TableName() string { return "IdentityTokens" }
-type TokenEntity struct{ *sql.Entity[Token] `inject:""` }
+
+type TokenEntity struct {
+	*sql.Entity[Token] `inject:""`
+}
+
 func (e *TokenEntity) OnRegister() {
 	e.Hydrate("IdentityTokens", []string{"user_id", "client_id", "type"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -21,5 +21,6 @@ type RouteEntity struct {
 }
 
 func (e *RouteEntity) OnRegister() {
-	e.Hydrate("ControllerRoutes", []string{"group", "service", "name", "type"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS route.controller.ts:19 searchable = ['name','desc'].
+	e.Hydrate("ControllerRoutes", []string{"name", "desc"}, nil, nil, nil, nil, nil, "created_at desc")
 }

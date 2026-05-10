@@ -23,8 +23,13 @@ func (m *CreateHealthSummaries) Run(q *sql.Query) error {
 	}
 	for _, idx := range []string{
 		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_created_at"  ON "HealthSummaries" ("created_at")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_updated_at"  ON "HealthSummaries" ("updated_at")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_deleted_at"  ON "HealthSummaries" ("deleted_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_service_id"  ON "HealthSummaries" ("service_id")`,
 		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_type"        ON "HealthSummaries" ("type")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_received"    ON "HealthSummaries" ("received")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_measure"     ON "HealthSummaries" ("measure")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_summaries_note"        ON "HealthSummaries" ("note")`,
 	} {
 		if _, err := q.Exec(idx); err != nil {
 			return err

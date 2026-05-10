@@ -3,6 +3,6 @@ package app
 import "github.com/awesome-goose/goose/modules/router"
 
 var ROUTES = router.ForRoutes(
-	router.Get("/",          []any{AppController{}, "Health"}),
-	router.Post("/:name",    []any{AppController{}, "SaveFile"}),
+	router.Get("/", []any{AppController{}, "Health"}),
+	router.Post("/:name", []any{AppController{}, "SaveFile"}),
 )

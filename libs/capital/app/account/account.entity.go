@@ -1,8 +1,8 @@
 package account
 
 import (
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Account struct {
@@ -24,8 +24,13 @@ type Account struct {
 	SuspendedAt      *time.Time `gorm:"column:suspended_at;type:timestamp"             json:"suspendedAt,omitempty"`
 	ClosedAt         *time.Time `gorm:"column:closed_at;type:timestamp"                json:"closedAt,omitempty"`
 }
+
 func (Account) TableName() string { return "CapitalAccounts" }
-type AccountEntity struct{ *sql.Entity[Account] `inject:""` }
+
+type AccountEntity struct {
+	*sql.Entity[Account] `inject:""`
+}
+
 func (e *AccountEntity) OnRegister() {
 	e.Hydrate("CapitalAccounts", []string{"user_id", "workspace_id", "currency", "reference"}, nil, nil, nil, nil, nil, "created_at desc")
 }

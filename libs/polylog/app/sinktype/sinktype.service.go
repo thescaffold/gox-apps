@@ -1,2 +1,5 @@
 package sinktype
-type SinkTypeService struct{ entity *SinkTypeEntity `inject:""` }
+
+type SinkTypeService struct {
+	entity *SinkTypeEntity `inject:""`
+}

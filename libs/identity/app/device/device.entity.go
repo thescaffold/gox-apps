@@ -14,8 +14,13 @@ type Device struct {
 	Meta        json.RawMessage `gorm:"column:meta;type:jsonb"                        json:"meta,omitempty"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Device) TableName() string { return "IdentityDevices" }
-type DeviceEntity struct{ *sql.Entity[Device] `inject:""` }
+
+type DeviceEntity struct {
+	*sql.Entity[Device] `inject:""`
+}
+
 func (e *DeviceEntity) OnRegister() {
 	e.Hydrate("IdentityDevices", []string{"user_id", "fingerprint"}, nil, nil, nil, nil, nil, "created_at desc")
 }

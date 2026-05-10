@@ -36,7 +36,8 @@ func TestAppModule(t *testing.T) {
 type AppModuleSuite struct{ goosetest.Suite }
 
 func (s *AppModuleSuite) TestMigrations_Count() {
-	s.T.Expect(len(app.Migrations)).ToEqual(7)
+	// 8 = source-types, sources, sink-types, sinks, channels, events, event-logs, configs.
+	s.T.Expect(len(app.Migrations)).ToEqual(8)
 }
 
 func (s *AppModuleSuite) TestName() {

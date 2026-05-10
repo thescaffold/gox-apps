@@ -4,8 +4,8 @@ import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
 	"github.com/thescaffold/gox-apps-notification/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
 	notificationprovider "github.com/thescaffold/gox-apps-notification/pkg/provider"
+	"github.com/thescaffold/gox-packages-core/module"
 )
 
 var Migrations = []sql.Migration{

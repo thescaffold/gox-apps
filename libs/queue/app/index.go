@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/awesome-goose/goose/modules/sql"
 	goqueues "github.com/awesome-goose/goose/modules/queues"
+	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/thescaffold/gox-packages-core/events"
 )
 
@@ -31,3 +31,11 @@ func handleHourlyHeartbeat(_ string, _ any) {
 var Subscriptions = map[string]events.EventHandler{
 	"apps.cron.heartbeat.hourly": handleHourlyHeartbeat,
 }
+
+// Top-level exports mirroring ntx-apps/libs/queue/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/queue.yaml"}
+	Crons           = []any{}
+)

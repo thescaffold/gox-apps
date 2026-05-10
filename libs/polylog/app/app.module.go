@@ -3,11 +3,12 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
+	polylogconfig "github.com/thescaffold/gox-apps-polylog/app/config"
 	polylogsource "github.com/thescaffold/gox-apps-polylog/app/source"
 	polylogsourcetype "github.com/thescaffold/gox-apps-polylog/app/sourcetype"
 	"github.com/thescaffold/gox-apps-polylog/migrations"
-	"github.com/thescaffold/gox-packages-core/module"
 	polylogpipeline "github.com/thescaffold/gox-apps-polylog/pkg/pipeline"
+	"github.com/thescaffold/gox-packages-core/module"
 )
 
 var Migrations = []sql.Migration{
@@ -18,6 +19,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreatePolylogChannels{},
 	&migrations.CreatePolylogEvents{},
 	&migrations.CreatePolylogEventLogs{},
+	&migrations.CreatePolylogConfigs{},
 }
 
 type AppModule struct{}
@@ -28,6 +30,7 @@ func (m *AppModule) Imports() []types.Module {
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&polylogsourcetype.SourceTypeModule{},
 		&polylogsource.SourceModule{},
+		&polylogconfig.ConfigModule{},
 		&polylogpipeline.PipelineModule{},
 		ROUTES,
 	}

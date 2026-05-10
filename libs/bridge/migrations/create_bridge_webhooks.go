@@ -25,6 +25,8 @@ func (m *CreateBridgeWebhooks) Run(q *sql.Query) error {
 		`CREATE INDEX IF NOT EXISTS "idx_bridge_webhooks_created_at" ON "BridgeWebhooks" ("created_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_bridge_webhooks_deleted_at" ON "BridgeWebhooks" ("deleted_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_bridge_webhooks_license_id" ON "BridgeWebhooks" ("license_id")`,
+		// Mirrors TS BridgeWebhook migration: index on status for filtering.
+		`CREATE INDEX IF NOT EXISTS "idx_bridge_webhooks_status"     ON "BridgeWebhooks" ("status")`,
 	} {
 		if _, err := q.Exec(idx); err != nil {
 			return err

@@ -47,12 +47,16 @@ type Item struct {
 }
 
 type PipelineService struct {
-	eventEntity    *polyloevent.EventEntity    `inject:""`
-	channelEntity  *polylogchannel.ChannelEntity  `inject:""`
+	eventEntity    *polyloevent.EventEntity        `inject:""`
+	channelEntity  *polylogchannel.ChannelEntity   `inject:""`
 	eventlogEntity *polylogeventlog.EventLogEntity `inject:""`
-	sinkEntity     *polylogsink.SinkEntity     `inject:""`
+	sinkEntity     *polylogsink.SinkEntity         `inject:""`
 	sinkTypeEntity *polylogsinktype.SinkTypeEntity `inject:""`
-	webhookSink    *WebhookSink                 `inject:""`
+	webhookSink    *WebhookSink                    `inject:""`
+
+	// queuePusher, when non-nil, is preferred over in-process goroutine
+	// dispatch — see queue.go.
+	queuePusher QueuePusher
 }
 
 // Ingest saves the event and processes it synchronously (gox has no queue).
@@ -112,7 +116,7 @@ func (s *PipelineService) Ingest(item Item, userId, clientId, workspaceId string
 	}
 
 	if shouldQueue {
-		go func() { _ = s.Process(ev) }()
+		s.dispatch(ev)
 	}
 
 	return ev, nil

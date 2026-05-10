@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	"github.com/thescaffold/gox-apps-cron/app"
-	cronlog "github.com/thescaffold/gox-apps-cron/app/log"
-	cronjob "github.com/thescaffold/gox-apps-cron/app/job"
 	test "github.com/awesome-goose/goose/testing"
+	"github.com/thescaffold/gox-apps-cron/app"
+	cronjob "github.com/thescaffold/gox-apps-cron/app/job"
+	cronlog "github.com/thescaffold/gox-apps-cron/app/log"
 )
 
 func TestJobEntity(t *testing.T) {

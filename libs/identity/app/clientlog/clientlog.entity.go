@@ -14,8 +14,13 @@ type ClientLog struct {
 	Meta     json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status   *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (ClientLog) TableName() string { return "IdentityClientLogs" }
-type ClientLogEntity struct{ *sql.Entity[ClientLog] `inject:""` }
+
+type ClientLogEntity struct {
+	*sql.Entity[ClientLog] `inject:""`
+}
+
 func (e *ClientLogEntity) OnRegister() {
 	e.Hydrate("IdentityClientLogs", []string{"client_id", "event"}, nil, nil, nil, nil, nil, "created_at desc")
 }

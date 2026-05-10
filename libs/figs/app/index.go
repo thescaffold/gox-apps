@@ -52,3 +52,12 @@ func toMap(v any) map[string]any {
 var Subscriptions = map[string]events.EventHandler{
 	"apps.figs.message.new": handleFigsEvent,
 }
+
+// Top-level exports mirroring ntx-apps/libs/figs/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/figs.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

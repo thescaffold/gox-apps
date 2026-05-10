@@ -1,5 +1,7 @@
 package event
+
 import "encoding/json"
+
 type CreateEventDto struct {
 	UserId      string          `json:"userId"      binding:"required"`
 	ClientId    string          `json:"clientId"    binding:"required"`

@@ -20,8 +20,13 @@ type Channel struct {
 	Meta        json.RawMessage `gorm:"column:meta;type:jsonb"                        json:"meta,omitempty"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Channel) TableName() string { return "PolylogChannels" }
-type ChannelEntity struct{ *sql.Entity[Channel] `inject:""` }
+
+type ChannelEntity struct {
+	*sql.Entity[Channel] `inject:""`
+}
+
 func (e *ChannelEntity) OnRegister() {
 	e.Hydrate("PolylogChannels", []string{"user_id", "workspace_id", "category", "source_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

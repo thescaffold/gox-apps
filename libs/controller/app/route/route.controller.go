@@ -10,7 +10,8 @@ type RouteController struct {
 
 func (c *RouteController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Route, CreateRouteDto, UpdateRouteDto]{
-		Name:       "ControllerRoute",
-		Searchable: []string{"group", "service", "name", "type"},
+		Name: "route",
+		// Mirrors TS route.controller.ts:19 searchable = ['name','desc'].
+		Searchable: []string{"name", "desc"},
 	})
 }

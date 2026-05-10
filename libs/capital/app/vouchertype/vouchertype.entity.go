@@ -15,8 +15,13 @@ type VoucherType struct {
 	Rules    json.RawMessage `gorm:"column:rules;type:jsonb"                    json:"rules,omitempty"`
 	Status   *string         `gorm:"column:status;type:varchar(255)"            json:"status,omitempty"`
 }
+
 func (VoucherType) TableName() string { return "CapitalVoucherTypes" }
-type VoucherTypeEntity struct{ *sql.Entity[VoucherType] `inject:""` }
+
+type VoucherTypeEntity struct {
+	*sql.Entity[VoucherType] `inject:""`
+}
+
 func (e *VoucherTypeEntity) OnRegister() {
 	e.Hydrate("CapitalVoucherTypes", []string{"name", "token"}, nil, nil, nil, nil, nil, "created_at desc")
 }

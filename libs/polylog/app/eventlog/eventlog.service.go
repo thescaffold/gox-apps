@@ -1,2 +1,5 @@
 package eventlog
-type EventLogService struct{ entity *EventLogEntity `inject:""` }
+
+type EventLogService struct {
+	entity *EventLogEntity `inject:""`
+}

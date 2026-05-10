@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-audit/app"
 	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestLogEntity(t *testing.T) {

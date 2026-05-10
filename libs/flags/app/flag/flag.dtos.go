@@ -14,10 +14,10 @@ type CreateFlagDto struct {
 }
 
 type UpdateFlagDto struct {
-	Name          *string `json:"name,omitempty"`
-	Limit         *int    `json:"limit,omitempty"`
-	Priority      *int    `json:"priority,omitempty"`
-	Level         *string `json:"level,omitempty"`
-	Meta          *string `json:"meta,omitempty"`
-	Status        *string `json:"status,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	Limit    *int    `json:"limit,omitempty"`
+	Priority *int    `json:"priority,omitempty"`
+	Level    *string `json:"level,omitempty"`
+	Meta     *string `json:"meta,omitempty"`
+	Status   *string `json:"status,omitempty"`
 }

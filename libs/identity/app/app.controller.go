@@ -5,7 +5,9 @@ import (
 	"github.com/thescaffold/gox-packages-core/response"
 )
 
-type AppController struct{ appService *AppService `inject:""` }
+type AppController struct {
+	appService *AppService `inject:""`
+}
 
 func (c *AppController) Health(dto *HealthDto) types.Output {
 	return response.Success(map[string]any{"status": c.appService.GetHello()}, "identity", "ok", nil)

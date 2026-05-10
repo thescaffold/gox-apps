@@ -19,8 +19,13 @@ type Event struct {
 	Payload     json.RawMessage `gorm:"column:payload;type:jsonb;not null"            json:"payload"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Event) TableName() string { return "PolylogEvents" }
-type EventEntity struct{ *sql.Entity[Event] `inject:""` }
+
+type EventEntity struct {
+	*sql.Entity[Event] `inject:""`
+}
+
 func (e *EventEntity) OnRegister() {
 	e.Hydrate("PolylogEvents", []string{"user_id", "workspace_id", "entity_name", "category", "reference"}, nil, nil, nil, nil, nil, "created_at desc")
 }

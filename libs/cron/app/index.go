@@ -34,12 +34,12 @@ func heartbeatHandler(eventType string) gocron.CronHandlerFn {
 }
 
 var Jobs = []*gocron.CronHandler{
-	gocron.NewHandler("apps.cron", "heartbeat.minute",  "0 * * * * *", heartbeatHandler("apps.cron.heartbeat.minute")),
-	gocron.NewHandler("apps.cron", "heartbeat.hourly",  "0 0 * * * *", heartbeatHandler("apps.cron.heartbeat.hourly")),
-	gocron.NewHandler("apps.cron", "heartbeat.daily",   "0 0 0 * * *", heartbeatHandler("apps.cron.heartbeat.daily")),
-	gocron.NewHandler("apps.cron", "heartbeat.weekly",  "0 0 0 * * 0", heartbeatHandler("apps.cron.heartbeat.weekly")),
+	gocron.NewHandler("apps.cron", "heartbeat.minute", "0 * * * * *", heartbeatHandler("apps.cron.heartbeat.minute")),
+	gocron.NewHandler("apps.cron", "heartbeat.hourly", "0 0 * * * *", heartbeatHandler("apps.cron.heartbeat.hourly")),
+	gocron.NewHandler("apps.cron", "heartbeat.daily", "0 0 0 * * *", heartbeatHandler("apps.cron.heartbeat.daily")),
+	gocron.NewHandler("apps.cron", "heartbeat.weekly", "0 0 0 * * 0", heartbeatHandler("apps.cron.heartbeat.weekly")),
 	gocron.NewHandler("apps.cron", "heartbeat.monthly", "0 0 0 1 * *", heartbeatHandler("apps.cron.heartbeat.monthly")),
-	gocron.NewHandler("apps.cron", "heartbeat.yearly",  "0 0 0 1 1 *", heartbeatHandler("apps.cron.heartbeat.yearly")),
+	gocron.NewHandler("apps.cron", "heartbeat.yearly", "0 0 0 1 1 *", heartbeatHandler("apps.cron.heartbeat.yearly")),
 }
 
 func handleHourlyHeartbeat(_ string, _ any) {
@@ -49,3 +49,11 @@ func handleHourlyHeartbeat(_ string, _ any) {
 var Subscriptions = map[string]events.EventHandler{
 	"apps.cron.heartbeat.hourly": handleHourlyHeartbeat,
 }
+
+// Top-level exports mirroring ntx-apps/libs/cron/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/cron.yaml"}
+	Crons           = []any{}
+)

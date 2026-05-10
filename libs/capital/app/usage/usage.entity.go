@@ -2,8 +2,8 @@ package usage
 
 import (
 	"encoding/json"
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Usage struct {
@@ -20,8 +20,13 @@ type Usage struct {
 	Meta        json.RawMessage `gorm:"column:meta;type:jsonb"                        json:"meta,omitempty"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Usage) TableName() string { return "CapitalUsages" }
-type UsageEntity struct{ *sql.Entity[Usage] `inject:""` }
+
+type UsageEntity struct {
+	*sql.Entity[Usage] `inject:""`
+}
+
 func (e *UsageEntity) OnRegister() {
 	e.Hydrate("CapitalUsages", []string{"user_id", "client_id", "workspace_id", "rate_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

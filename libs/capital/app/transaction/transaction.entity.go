@@ -1,8 +1,8 @@
 package transaction
 
 import (
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Transaction struct {
@@ -23,8 +23,13 @@ type Transaction struct {
 	InvoicedAt       *time.Time `gorm:"column:invoiced_at;type:timestamp"              json:"invoicedAt,omitempty"`
 	PaidAt           *time.Time `gorm:"column:paid_at;type:timestamp"                  json:"paidAt,omitempty"`
 }
+
 func (Transaction) TableName() string { return "CapitalTransactions" }
-type TransactionEntity struct{ *sql.Entity[Transaction] `inject:""` }
+
+type TransactionEntity struct {
+	*sql.Entity[Transaction] `inject:""`
+}
+
 func (e *TransactionEntity) OnRegister() {
 	e.Hydrate("CapitalTransactions", []string{"user_id", "account_id", "currency", "reference"}, nil, nil, nil, nil, nil, "created_at desc")
 }

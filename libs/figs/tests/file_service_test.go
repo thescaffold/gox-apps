@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-figs/app"
 	"github.com/thescaffold/gox-apps-figs/app/file"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestFileEntity(t *testing.T) {

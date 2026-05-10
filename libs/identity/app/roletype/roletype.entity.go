@@ -8,8 +8,13 @@ type RoleType struct {
 	Desc   *string `gorm:"column:desc;type:varchar(255)"           json:"desc,omitempty"`
 	Status *string `gorm:"column:status;type:varchar(255)"         json:"status,omitempty"`
 }
+
 func (RoleType) TableName() string { return "IdentityRoleTypes" }
-type RoleTypeEntity struct{ *sql.Entity[RoleType] `inject:""` }
+
+type RoleTypeEntity struct {
+	*sql.Entity[RoleType] `inject:""`
+}
+
 func (e *RoleTypeEntity) OnRegister() {
 	e.Hydrate("IdentityRoleTypes", []string{"name"}, nil, nil, nil, nil, nil, "created_at desc")
 }

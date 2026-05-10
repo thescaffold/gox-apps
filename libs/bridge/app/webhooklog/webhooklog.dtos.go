@@ -1,5 +1,7 @@
 package webhooklog
+
 import "encoding/json"
+
 type CreateWebhookLogDto struct {
 	WebhookId string          `json:"webhookId" binding:"required"`
 	Type      *string         `json:"type,omitempty"`
@@ -8,4 +10,6 @@ type CreateWebhookLogDto struct {
 	Response  json.RawMessage `json:"response,omitempty"`
 	Status    *string         `json:"status,omitempty"`
 }
-type UpdateWebhookLogDto struct{ Status *string `json:"status,omitempty"` }
+type UpdateWebhookLogDto struct {
+	Status *string `json:"status,omitempty"`
+}

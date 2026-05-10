@@ -10,8 +10,13 @@ type Role struct {
 	Type        string  `gorm:"column:type;type:varchar(255);not null"      json:"type"`
 	Status      *string `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (Role) TableName() string { return "IdentityRoles" }
-type RoleEntity struct{ *sql.Entity[Role] `inject:""` }
+
+type RoleEntity struct {
+	*sql.Entity[Role] `inject:""`
+}
+
 func (e *RoleEntity) OnRegister() {
 	e.Hydrate("IdentityRoles", []string{"client_id", "name", "type"}, nil, nil, nil, nil, nil, "created_at desc")
 }

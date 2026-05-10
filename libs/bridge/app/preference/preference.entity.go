@@ -14,8 +14,13 @@ type Preference struct {
 	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (Preference) TableName() string { return "BridgePreferences" }
-type PreferenceEntity struct{ *sql.Entity[Preference] `inject:""` }
+
+type PreferenceEntity struct {
+	*sql.Entity[Preference] `inject:""`
+}
+
 func (e *PreferenceEntity) OnRegister() {
 	e.Hydrate("BridgePreferences", []string{"license_id", "key"}, nil, nil, nil, nil, nil, "created_at desc")
 }

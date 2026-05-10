@@ -1,4 +1,5 @@
 package plantype
+
 type CreatePlanTypeDto struct {
 	LicenseId string   `json:"licenseId" binding:"required"`
 	Key       string   `json:"key"       binding:"required"`

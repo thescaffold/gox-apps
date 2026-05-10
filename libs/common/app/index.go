@@ -17,3 +17,12 @@ var DefaultPermissions = map[string][]string{
 var Subscriptions = map[string]events.EventHandler{
 	"apps.cron.heartbeat.weekly": func(_ string, _ any) {},
 }
+
+// Top-level exports mirroring ntx-apps/libs/common/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/common.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-statics/app"
 	"github.com/thescaffold/gox-apps-statics/app/list"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestListEntity(t *testing.T) {
@@ -58,9 +58,10 @@ func (s *AppServiceSuite) TestGetHello_NotEmpty() {
 	s.T.Expect(svc.GetHello()).Not().ToBeEmpty()
 }
 
-func (s *AppServiceSuite) TestGetHello_ContainsStatics() {
+func (s *AppServiceSuite) TestGetHello_MatchesTSLiteral() {
+	// Mirrors TS app.service.ts which returns "Hello World!".
 	svc := &app.AppService{}
-	s.T.Expect(svc.GetHello()).ToContainString("statics")
+	s.T.Expect(svc.GetHello()).ToEqual("Hello World!")
 }
 
 func TestAppModule(t *testing.T) {

@@ -31,6 +31,7 @@ func (m *CreateFussTokens) Run(q *sql.Query) error {
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_updated_at"   ON "FussTokens" ("updated_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_deleted_at"   ON "FussTokens" ("deleted_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_user_id"      ON "FussTokens" ("user_id")`,
+		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_client_id"    ON "FussTokens" ("client_id")`,
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_workspace_id" ON "FussTokens" ("workspace_id")`,
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_group"        ON "FussTokens" ("group")`,
 		`CREATE INDEX IF NOT EXISTS "idx_fuss_tokens_service"      ON "FussTokens" ("service")`,

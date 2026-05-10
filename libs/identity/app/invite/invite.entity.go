@@ -1,8 +1,8 @@
 package invite
 
 import (
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type Invite struct {
@@ -16,8 +16,13 @@ type Invite struct {
 	ExpiresAt   *time.Time `gorm:"column:expires_at;type:timestamp"              json:"expiresAt,omitempty"`
 	Status      *string    `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (Invite) TableName() string { return "IdentityInvites" }
-type InviteEntity struct{ *sql.Entity[Invite] `inject:""` }
+
+type InviteEntity struct {
+	*sql.Entity[Invite] `inject:""`
+}
+
 func (e *InviteEntity) OnRegister() {
 	e.Hydrate("IdentityInvites", []string{"user_id", "client_id", "workspace_id", "email"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -1,2 +1,5 @@
 package preference
-type PreferenceService struct{ entity *PreferenceEntity `inject:""` }
+
+type PreferenceService struct {
+	entity *PreferenceEntity `inject:""`
+}

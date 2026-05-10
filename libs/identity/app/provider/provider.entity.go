@@ -16,8 +16,13 @@ type Provider struct {
 	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                     json:"meta,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"            json:"status,omitempty"`
 }
+
 func (Provider) TableName() string { return "IdentityProviders" }
-type ProviderEntity struct{ *sql.Entity[Provider] `inject:""` }
+
+type ProviderEntity struct {
+	*sql.Entity[Provider] `inject:""`
+}
+
 func (e *ProviderEntity) OnRegister() {
 	e.Hydrate("IdentityProviders", []string{"user_id", "type", "reference"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -3,8 +3,8 @@ package app
 import (
 	gocron "github.com/awesome-goose/goose/modules/cron"
 	"github.com/awesome-goose/goose/types"
-	cronlog "github.com/thescaffold/gox-apps-cron/app/log"
 	cronjob "github.com/thescaffold/gox-apps-cron/app/job"
+	cronlog "github.com/thescaffold/gox-apps-cron/app/log"
 	"github.com/thescaffold/gox-packages-core/module"
 )
 

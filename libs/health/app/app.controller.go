@@ -21,3 +21,20 @@ func (c *AppController) Check(dto *CheckDto) types.Output {
 	}
 	return response.Success(entry, "health", "ok", nil)
 }
+
+// Ping handles POST /ping. Mirrors TS AppController.ping().
+func (c *AppController) Ping(dto *PingDto) types.Output {
+	if err := c.appService.Ping(dto.Name, dto.State, dto.Meta); err != nil {
+		return response.NotFound("health", err.Error())
+	}
+	return response.Success(nil, "health", "ok", nil)
+}
+
+// Register handles POST /register. Mirrors TS AppController.register().
+func (c *AppController) Register(dto *RegisterServiceDto) types.Output {
+	svc, err := c.appService.Register(dto.Name, dto.Desc, dto.Status)
+	if err != nil {
+		return response.InternalServerError("health", err.Error())
+	}
+	return response.Success(svc, "health", "ok", nil)
+}

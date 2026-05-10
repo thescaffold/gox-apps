@@ -1,2 +1,5 @@
 package webhooklog
-type WebhookLogService struct{ entity *WebhookLogEntity `inject:""` }
+
+type WebhookLogService struct {
+	entity *WebhookLogEntity `inject:""`
+}

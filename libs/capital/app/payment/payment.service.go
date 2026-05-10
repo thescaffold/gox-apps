@@ -1,2 +1,5 @@
 package payment
-type PaymentService struct{ entity *PaymentEntity `inject:""` }
+
+type PaymentService struct {
+	entity *PaymentEntity `inject:""`
+}

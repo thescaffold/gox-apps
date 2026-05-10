@@ -10,8 +10,13 @@ type User struct {
 	Secret *string `gorm:"column:secret;type:text"                  json:"-"`
 	Status *string `gorm:"column:status;type:varchar(255)"          json:"status,omitempty"`
 }
+
 func (User) TableName() string { return "IdentityUsers" }
-type UserEntity struct{ *sql.Entity[User] `inject:""` }
+
+type UserEntity struct {
+	*sql.Entity[User] `inject:""`
+}
+
 func (e *UserEntity) OnRegister() {
 	e.Hydrate("IdentityUsers", []string{"email", "phone"}, nil, nil, nil, nil, nil, "created_at desc")
 }

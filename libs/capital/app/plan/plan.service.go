@@ -1,2 +1,5 @@
 package plan
-type PlanService struct{ entity *PlanEntity `inject:""` }
+
+type PlanService struct {
+	entity *PlanEntity `inject:""`
+}

@@ -17,8 +17,13 @@ type Workspace struct {
 	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (Workspace) TableName() string { return "IdentityWorkspaces" }
-type WorkspaceEntity struct{ *sql.Entity[Workspace] `inject:""` }
+
+type WorkspaceEntity struct {
+	*sql.Entity[Workspace] `inject:""`
+}
+
 func (e *WorkspaceEntity) OnRegister() {
 	e.Hydrate("IdentityWorkspaces", []string{"user_id", "client_id", "slug"}, nil, nil, nil, nil, nil, "created_at desc")
 }

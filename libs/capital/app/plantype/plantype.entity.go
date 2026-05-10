@@ -21,8 +21,13 @@ type PlanType struct {
 	Meta     json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status   *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
 }
+
 func (PlanType) TableName() string { return "CapitalPlanTypes" }
-type PlanTypeEntity struct{ *sql.Entity[PlanType] `inject:""` }
+
+type PlanTypeEntity struct {
+	*sql.Entity[PlanType] `inject:""`
+}
+
 func (e *PlanTypeEntity) OnRegister() {
 	e.Hydrate("CapitalPlanTypes", []string{"client_id", "key", "name"}, nil, nil, nil, nil, nil, "created_at desc")
 }

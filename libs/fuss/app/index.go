@@ -54,3 +54,12 @@ var Subscriptions = map[string]events.EventHandler{
 	"*.*.*.after-update": handleAfterUpdate,
 	"*.*.*.after-delete": handleAfterDelete,
 }
+
+// Top-level exports mirroring ntx-apps/libs/fuss/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/fuss.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

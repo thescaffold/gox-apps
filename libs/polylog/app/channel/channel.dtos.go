@@ -1,4 +1,5 @@
 package channel
+
 type CreateChannelDto struct {
 	UserId      string  `json:"userId"      binding:"required"`
 	ClientId    string  `json:"clientId"    binding:"required"`

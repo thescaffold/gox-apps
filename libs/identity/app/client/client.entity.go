@@ -11,8 +11,13 @@ type Client struct {
 	Desc   *string `gorm:"column:desc;type:varchar(255)"           json:"desc,omitempty"`
 	Status *string `gorm:"column:status;type:varchar(255)"         json:"status,omitempty"`
 }
+
 func (Client) TableName() string { return "IdentityClients" }
-type ClientEntity struct{ *sql.Entity[Client] `inject:""` }
+
+type ClientEntity struct {
+	*sql.Entity[Client] `inject:""`
+}
+
 func (e *ClientEntity) OnRegister() {
 	e.Hydrate("IdentityClients", []string{"key", "name"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -12,7 +12,8 @@ type ListController struct {
 
 func (c *ListController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[List, CreateListDto, UpdateListDto]{
-		Name:       "List",
-		Searchable: []string{"value", "code", "key"},
+		Name: "List",
+		// Mirrors TS list.controller.ts:19 searchable = ['value'].
+		Searchable: []string{"value"},
 	})
 }

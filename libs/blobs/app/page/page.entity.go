@@ -25,7 +25,8 @@ type PageEntity struct {
 func (e *PageEntity) OnRegister() {
 	e.Hydrate(
 		"BlobsPages",
-		[]string{"file_id"},
+		// Mirrors TS page.controller.ts:19 searchable = [] (no search).
+		[]string{},
 		[]string{},
 		nil,
 		func(p *Page) (any, []any) {

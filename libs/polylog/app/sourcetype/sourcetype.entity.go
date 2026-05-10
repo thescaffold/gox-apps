@@ -18,8 +18,13 @@ type SourceType struct {
 	Tags         json.RawMessage `gorm:"column:tags;type:jsonb"                      json:"tags,omitempty"`
 	Meta         json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 }
+
 func (SourceType) TableName() string { return "PolylogSourceTypes" }
-type SourceTypeEntity struct{ *sql.Entity[SourceType] `inject:""` }
+
+type SourceTypeEntity struct {
+	*sql.Entity[SourceType] `inject:""`
+}
+
 func (e *SourceTypeEntity) OnRegister() {
 	e.Hydrate("PolylogSourceTypes", []string{"category", "name"}, nil, nil, nil, nil, nil, "created_at desc")
 }

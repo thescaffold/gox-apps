@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-assets/app"
 	assetsfile "github.com/thescaffold/gox-apps-assets/app/file"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestFileEntity(t *testing.T) {
@@ -53,16 +53,19 @@ func (s *AppServiceSuite) TestGenerateSVG_ContainsSVGTag() {
 	s.T.Expect(svg).ToContainString("</svg>")
 }
 
-func (s *AppServiceSuite) TestGenerateSVG_ContainsName() {
+func (s *AppServiceSuite) TestGenerateSVG_NameAppearsInTitle() {
+	// The new core image.Service inserts the name into <title>, mirroring
+	// ntx-apps assets ImageService.new().
 	svc := &app.AppService{}
-	svg := svc.GenerateDynamicSVG("hello", "pixel", nil, 100, false)
-	s.T.Expect(svg).ToContainString("H") // initial letter uppercased
+	svg := svc.GenerateDynamicSVG("hello", "shapes", nil, 100, false)
+	s.T.Expect(svg).ToContainString("<title>hello</title>")
 }
 
 func (s *AppServiceSuite) TestGenerateSVG_DefaultSize() {
 	svc := &app.AppService{}
 	svg := svc.GenerateDynamicSVG("x", "pixel", nil, 0, false)
-	s.T.Expect(svg).ToContainString("100")
+	// Default size = 80 (matches TS imageService default).
+	s.T.Expect(svg).ToContainString(`width="80"`)
 }
 
 func (s *AppServiceSuite) TestGenerateSVG_CustomColor() {

@@ -1,4 +1,5 @@
 package preference
+
 type CreatePreferenceDto struct {
 	LicenseId string  `json:"licenseId" binding:"required"`
 	Key       string  `json:"key"       binding:"required"`

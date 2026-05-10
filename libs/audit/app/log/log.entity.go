@@ -40,7 +40,7 @@ type LogEntity struct {
 func (e *LogEntity) OnRegister() {
 	e.Hydrate(
 		"AuditLogs",
-		[]string{"desc", "entity_name", "service", "group"},
+		[]string{"desc"}, // mirrors TS log.controller.ts searchable
 		[]string{},
 		nil,
 		nil,

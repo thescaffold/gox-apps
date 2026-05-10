@@ -28,3 +28,12 @@ var Subscriptions = map[string]events.EventHandler{
 	"apps.health.service.ping":     func(_ string, _ any) {},
 	"apps.cron.heartbeat.hourly":   handleHeartbeat,
 }
+
+// Top-level exports mirroring ntx-apps/libs/health/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/health.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

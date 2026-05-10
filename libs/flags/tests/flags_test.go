@@ -65,7 +65,10 @@ func (s *AppModuleSuite) TestName() {
 	s.T.Expect(app.Name).ToEqual("flags")
 }
 
-func (s *AppModuleSuite) TestSubscriptions_HasHourly() {
-	_, ok := app.Subscriptions["apps.cron.heartbeat.hourly"]
-	s.T.Expect(ok).ToEqual(true)
+func (s *AppModuleSuite) TestSubscriptions_HasFlagEvents() {
+	// Mirrors TS subscriptions: 'apps.flags.flag.register', 'apps.flags.flag.log'.
+	_, hasReg := app.Subscriptions["apps.flags.flag.register"]
+	_, hasLog := app.Subscriptions["apps.flags.flag.log"]
+	s.T.Expect(hasReg).ToEqual(true)
+	s.T.Expect(hasLog).ToEqual(true)
 }

@@ -26,3 +26,13 @@ var Subscriptions = map[string]events.EventHandler{}
 
 // ListKeyType aliases exported for host usage.
 type ListKeyType = list.ListKeyType
+
+// Top-level exports mirroring ntx-apps/libs/statics/src/index.ts.
+var (
+	Entities        = []any{list.List{}}
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/statics.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

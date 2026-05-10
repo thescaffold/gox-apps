@@ -1,8 +1,8 @@
 package devicesession
 
 import (
-	"time"
 	"github.com/awesome-goose/goose/modules/sql"
+	"time"
 )
 
 type DeviceSession struct {
@@ -13,8 +13,13 @@ type DeviceSession struct {
 	ExpiresAt *time.Time `gorm:"column:expires_at;type:timestamp"           json:"expiresAt,omitempty"`
 	Status    *string    `gorm:"column:status;type:varchar(255)"            json:"status,omitempty"`
 }
+
 func (DeviceSession) TableName() string { return "IdentityDeviceSessions" }
-type DeviceSessionEntity struct{ *sql.Entity[DeviceSession] `inject:""` }
+
+type DeviceSessionEntity struct {
+	*sql.Entity[DeviceSession] `inject:""`
+}
+
 func (e *DeviceSessionEntity) OnRegister() {
 	e.Hydrate("IdentityDeviceSessions", []string{"device_id", "user_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

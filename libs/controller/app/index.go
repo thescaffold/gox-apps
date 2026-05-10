@@ -18,3 +18,12 @@ var Subscriptions = map[string]events.EventHandler{
 	"apps.controller.route.register": func(_ string, _ any) {},
 	"apps.cron.heartbeat.hourly":     func(_ string, _ any) {},
 }
+
+// Top-level exports mirroring ntx-apps/libs/controller/src/index.ts.
+var (
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/controller.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

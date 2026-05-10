@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"strings"
 
 	auditlog "github.com/thescaffold/gox-apps-audit/app/log"
@@ -59,7 +60,15 @@ func (s *AppService) HandleEvent(payload map[string]any) error {
 
 	desc := buildDescription(entityName, action, meta)
 
-	delete(meta, "meta") // strip sensitive nested meta
+	delete(meta, "meta") // strip nested sensitive meta
+
+	// Mirror TS app.controller.ts which persists meta + context together.
+	combined := map[string]any{}
+	for k, v := range meta {
+		combined[k] = v
+	}
+	combined["context"] = ctx
+	metaBytes, _ := json.Marshal(combined)
 
 	entry := &auditlog.Log{
 		UserId:      userId,
@@ -71,6 +80,7 @@ func (s *AppService) HandleEvent(payload map[string]any) error {
 		EntityName:  entityName,
 		Action:      action,
 		Desc:        desc,
+		Meta:        metaBytes,
 	}
 
 	return s.logService.Create(entry)

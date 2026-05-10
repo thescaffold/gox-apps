@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
+	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps-blobs/app"
 	"github.com/thescaffold/gox-apps-blobs/app/file"
 	"github.com/thescaffold/gox-apps-blobs/app/page"
-	test "github.com/awesome-goose/goose/testing"
 )
 
 func TestFileEntity(t *testing.T) {
@@ -18,15 +18,22 @@ type FileEntitySuite struct {
 }
 
 func (s *FileEntitySuite) TestFile_Initialization() {
-	f := &file.File{Name: "photo.jpg", Type: "image", Bucket: "avatars"}
+	f := &file.File{
+		Name: "photo.jpg", Type: "image",
+		UserId: "u-1", ClientId: "c-1", WorkspaceId: "w-1",
+		Size: 1024, Mime: "image/jpeg",
+	}
 	s.T.Expect(f.Name).ToEqual("photo.jpg")
 	s.T.Expect(f.Type).ToEqual("image")
-	s.T.Expect(f.Bucket).ToEqual("avatars")
+	s.T.Expect(f.WorkspaceId).ToEqual("w-1")
 }
 
 func (s *FileEntitySuite) TestFile_NullableFields() {
-	f := &file.File{Name: "doc.pdf", Type: "document", Bucket: "docs"}
-	s.T.Expect(f.Url).ToBeNil()
+	f := &file.File{
+		Name: "doc.pdf", Type: "document",
+		UserId: "u-1", ClientId: "c-1", WorkspaceId: "w-1",
+		Size: 100, Mime: "application/pdf",
+	}
 	s.T.Expect(f.ParentId).ToBeNil()
 	s.T.Expect(f.Status).ToBeNil()
 }

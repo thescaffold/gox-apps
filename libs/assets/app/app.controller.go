@@ -52,16 +52,16 @@ func (c *AppController) DynamicFile(dto *DynamicFileDto) types.Output {
 	svgContent := c.appService.GenerateDynamicSVG(name, variant, colors, dto.Size, dto.Square)
 
 	if dto.Store {
-		f, err := c.appService.StoreDynamicFile(name, svgContent, "")
+		// TODO: inject ASSETS_BASE_URL via config when available.
+		f, url, err := c.appService.StoreDynamicFile(name, svgContent, "")
 		if err != nil {
 			return response.InternalServerError("assets", "Failed to store dynamic file")
 		}
-		return response.Success(f, "assets", "ok", nil)
+		// Mirrors TS: returns file + computed URL.
+		return response.Success(map[string]any{"file": f, "url": url}, "assets", "ok", nil)
 	}
 
-	if dto.Raw {
-		return response.Success(map[string]any{"svg": svgContent}, "assets", "ok", nil)
-	}
-
+	// raw=true and the default both return the SVG body directly,
+	// matching TS where the flag controls headers, not envelope.
 	return output.HTML(svgContent)
 }

@@ -25,6 +25,9 @@ func (m *CreateHealthServices) Run(q *sql.Query) error {
 		`CREATE INDEX IF NOT EXISTS "idx_health_services_created_at" ON "HealthServices" ("created_at")`,
 		`CREATE INDEX IF NOT EXISTS "idx_health_services_name"       ON "HealthServices" ("name")`,
 		`CREATE INDEX IF NOT EXISTS "idx_health_services_state"      ON "HealthServices" ("state")`,
+		// Mirrors TS HealthServices migration: indexes on type and status.
+		`CREATE INDEX IF NOT EXISTS "idx_health_services_type"       ON "HealthServices" ("type")`,
+		`CREATE INDEX IF NOT EXISTS "idx_health_services_status"     ON "HealthServices" ("status")`,
 	} {
 		if _, err := q.Exec(idx); err != nil {
 			return err

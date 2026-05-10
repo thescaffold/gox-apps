@@ -22,7 +22,7 @@ func (p *MailgunProvider) Email(msg EmailMessage) bool {
 	}
 
 	creds := base64.StdEncoding.EncodeToString([]byte("api:" + token))
-	ok, _, _, _ := p.client.External(
+	ok, _, _, _, _ := p.client.External(
 		"POST",
 		fmt.Sprintf("%s/v3/%s/messages", baseurl, domain),
 		map[string]any{
@@ -42,5 +42,5 @@ func (p *MailgunProvider) Email(msg EmailMessage) bool {
 	return ok
 }
 
-func (p *MailgunProvider) SMS(_ SMSMessage) bool    { return false }
+func (p *MailgunProvider) SMS(_ SMSMessage) bool       { return false }
 func (p *MailgunProvider) Mobile(_ MobileMessage) bool { return false }

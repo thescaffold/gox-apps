@@ -10,7 +10,7 @@ import (
 )
 
 type WalletService struct {
-	accountEntity     *capitalaccount.AccountEntity     `inject:""`
+	accountEntity     *capitalaccount.AccountEntity         `inject:""`
 	transactionEntity *capitaltransaction.TransactionEntity `inject:""`
 }
 

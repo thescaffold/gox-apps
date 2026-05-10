@@ -13,6 +13,6 @@ type LogController struct {
 func (c *LogController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Log, CreateLogDto, UpdateLogDto]{
 		Name:       "Log",
-		Searchable: []string{"group", "service", "entity_name", "action"},
+		Searchable: []string{"desc"}, // mirrors TS log.controller.ts:20
 	})
 }

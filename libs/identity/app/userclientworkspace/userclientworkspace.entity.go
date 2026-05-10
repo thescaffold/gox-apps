@@ -10,8 +10,13 @@ type UserClientWorkspace struct {
 	RoleId      *string `gorm:"column:role_id;type:varchar(36)"               json:"roleId,omitempty"`
 	Status      *string `gorm:"column:status;type:varchar(255)"               json:"status,omitempty"`
 }
+
 func (UserClientWorkspace) TableName() string { return "IdentityUserClientWorkspaces" }
-type UserClientWorkspaceEntity struct{ *sql.Entity[UserClientWorkspace] `inject:""` }
+
+type UserClientWorkspaceEntity struct {
+	*sql.Entity[UserClientWorkspace] `inject:""`
+}
+
 func (e *UserClientWorkspaceEntity) OnRegister() {
 	e.Hydrate("IdentityUserClientWorkspaces", []string{"user_id", "client_id", "workspace_id"}, nil, nil, nil, nil, nil, "created_at desc")
 }

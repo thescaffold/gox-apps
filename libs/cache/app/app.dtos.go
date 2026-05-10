@@ -22,3 +22,15 @@ type DelDto struct {
 type FlushDto struct {
 	Group string `query:"group"`
 }
+
+// TTLDto carries the key for the /ttl endpoint.
+type TTLDto struct {
+	Key   string `query:"key"   binding:"required"`
+	Group string `query:"group"`
+}
+
+// IncrDto carries the key for the /incr endpoint.
+type IncrDto struct {
+	Key   string `json:"key"   binding:"required"`
+	Group string `json:"group"`
+}

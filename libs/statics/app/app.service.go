@@ -8,8 +8,9 @@ type AppService struct {
 	listService *list.ListService `inject:""`
 }
 
+// GetHello mirrors TS app.service.ts AppService.getHello().
 func (s *AppService) GetHello() string {
-	return "Hello from statics"
+	return "Hello World!"
 }
 
 func (s *AppService) FilterByKey(key string, parentId *string) ([]list.List, error) {

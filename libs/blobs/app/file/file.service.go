@@ -1,24 +1,14 @@
 package file
 
-import (
-	"io"
-
-	"github.com/thescaffold/gox-packages-blobs/files"
-)
-
+// FileService is the per-file CRUD service. Mirrors TS FileService which
+// extends BaseRepository<File> with permission-scope filters and adds no
+// custom methods of its own. Upload/download responsibilities belong to the
+// gox-packages-blobs FilesService HTTP client; controllers inject it directly.
 type FileService struct {
-	entity      *FileEntity      `inject:""`
-	blobsFiles  *files.FilesService `inject:""`
+	entity *FileEntity `inject:""`
 }
 
+// FindById is a convenience over the underlying entity.
 func (s *FileService) FindById(id string) (*File, error) {
 	return s.entity.First(id)
-}
-
-func (s *FileService) Upload(r io.Reader, name, bucket string, tags []string) (string, error) {
-	return s.blobsFiles.UploadReader(r, name, bucket, tags)
-}
-
-func (s *FileService) Download(id string) (io.ReadCloser, error) {
-	return s.blobsFiles.Download(id)
 }

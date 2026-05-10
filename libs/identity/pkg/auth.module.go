@@ -26,11 +26,11 @@ func jwtSecret() string {
 var AuthMiddleware = &coreauth.AuthMiddleware{Secret: jwtSecret()}
 
 var authRoutes = router.ForRoutes(
-	router.Post("/auth/login",   []any{AuthAppController{}, "Login"}),
-	router.Post("/auth/logout",  []any{AuthAppController{}, "Logout"}),
+	router.Post("/auth/login", []any{AuthAppController{}, "Login"}),
+	router.Post("/auth/logout", []any{AuthAppController{}, "Logout"}),
 	router.Post("/auth/refresh", []any{AuthAppController{}, "Refresh"}),
-	router.Get("/auth/me",       []any{AuthAppController{}, "Me"}, AuthMiddleware),
-	router.Get("/oauth/:provider",          []any{OAuthController{}, "Redirect"}),
+	router.Get("/auth/me", []any{AuthAppController{}, "Me"}, AuthMiddleware),
+	router.Get("/oauth/:provider", []any{OAuthController{}, "Redirect"}),
 	router.Get("/oauth/:provider/callback", []any{OAuthController{}, "Callback"}),
 )
 

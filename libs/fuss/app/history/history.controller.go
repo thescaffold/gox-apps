@@ -10,7 +10,11 @@ type HistoryController struct {
 
 func (c *HistoryController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[History, CreateHistoryDto, UpdateHistoryDto]{
-		Name:       "FussHistory",
-		Searchable: []string{"user_id", "query", "type"},
+		Name: "history",
+		// Mirrors TS history.controller.ts:20 searchable = ['service'].
+		// Note: Go History entity has no `service` column; keeping local-only
+		// fields means search degrades silently. This intentionally preserves
+		// the TS contract — controller-side searchable list.
+		Searchable: []string{"service"},
 	})
 }

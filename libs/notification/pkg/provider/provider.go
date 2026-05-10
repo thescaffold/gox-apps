@@ -19,7 +19,20 @@ type ProviderService struct {
 	messageEntity  *notificationmessage.MessageEntity   `inject:""`
 	mailgun        *MailgunProvider                     `inject:""`
 	zoho           *ZohoProvider                        `inject:""`
+
+	// Identity is an optional context enricher. When set, every template render
+	// receives {user, address, preference, organization, now} alongside the raw
+	// event data — mirroring ntx-apps/libs/notification/src/pkg/provider/provider.service.ts
+	// lines 75-187. nil ⇒ render with raw data only (back-compat).
+	Identity IdentityFetcher
+
+	// queuePusher, when non-nil, is preferred over synchronous Send by Dispatch.
+	queuePusher QueuePusher
 }
+
+// SetIdentity wires (or replaces) the IdentityFetcher used for context
+// enrichment. Safe to call before or after DI; not goroutine-safe.
+func (s *ProviderService) SetIdentity(f IdentityFetcher) { s.Identity = f }
 
 // Send processes a notification log: looks up the template, renders it, and
 // dispatches to each requested channel, then updates the log with results.
@@ -65,6 +78,11 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 		_ = json.Unmarshal(rule.Rules, &notification)
 	}
 
+	// Enrich the render context with identity-resolved user/address/preference/organization,
+	// plus a `now` block of formatted timestamps. Falls back to raw data when no
+	// IdentityFetcher is wired or the lookup returns nil.
+	enrichRenderContext(data, s.Identity, log, to)
+
 	provider := os.Getenv("NOTIFICATION_DEFAULT_PROVIDER")
 	if provider == "" {
 		provider = "mailgun"
@@ -78,10 +96,10 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 
 		if notification != nil {
 			logType := ""
-		if log.Type != nil {
-			logType = *log.Type
-		}
-		if allowed, ok := notification[logType]; ok {
+			if log.Type != nil {
+				logType = *log.Type
+			}
+			if allowed, ok := notification[logType]; ok {
 				if !containsStr(toStrSlice(allowed), channel) {
 					continue
 				}

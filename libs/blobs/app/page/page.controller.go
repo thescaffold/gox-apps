@@ -10,7 +10,8 @@ type PageController struct {
 
 func (c *PageController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Page, CreatePageDto, UpdatePageDto]{
-		Name:       "Page",
-		Searchable: []string{"file_id"},
+		Name: "Page",
+		// Mirrors TS page.controller.ts:19 searchable = [].
+		Searchable: []string{},
 	})
 }

@@ -10,7 +10,8 @@ type TokenController struct {
 
 func (c *TokenController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Token, CreateTokenDto, UpdateTokenDto]{
-		Name:       "FussToken",
-		Searchable: []string{"user_id", "group", "service", "entity_name"},
+		Name: "token",
+		// Mirrors TS token.controller.ts:20 searchable = ['service'].
+		Searchable: []string{"service"},
 	})
 }

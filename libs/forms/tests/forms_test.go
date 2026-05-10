@@ -65,7 +65,7 @@ func (s *AppModuleSuite) TestName() {
 	s.T.Expect(app.Name).ToEqual("forms")
 }
 
-func (s *AppModuleSuite) TestSubscriptions_HasHourly() {
-	_, ok := app.Subscriptions["apps.cron.heartbeat.hourly"]
-	s.T.Expect(ok).ToEqual(true)
+func (s *AppModuleSuite) TestSubscriptions_Empty() {
+	// Mirrors TS subscriptions = [].
+	s.T.Expect(len(app.Subscriptions)).ToEqual(0)
 }

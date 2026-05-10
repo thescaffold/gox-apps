@@ -32,7 +32,7 @@ func (w *WebhookSink) Sink(payload SinkPayload) error {
 		return nil
 	}
 
-	ok, status, _, _ := w.client.External(method, url, event, nil, nil, 0)
+	ok, status, _, _, _ := w.client.External(method, url, event, nil, nil, 0)
 	if !ok {
 		return fmt.Errorf("webhook sink failed for %s with status %d", url, status)
 	}

@@ -1,71 +1,79 @@
 package app
 
 import (
-	"encoding/json"
-	"fmt"
-	"math/rand"
 	"strings"
 
 	"github.com/thescaffold/gox-apps-assets/app/file"
+	"github.com/thescaffold/gox-packages-core/image"
+	"github.com/thescaffold/gox-packages-core/utils"
 )
 
+// AppService is the public assets service. Mirrors ntx-apps/libs/assets/src/app.service.ts.
 type AppService struct {
-	fileService *file.FileService `inject:""`
+	fileService  *file.FileService `inject:""`
+	imageService *image.Service    `inject:""`
 }
 
 func (s *AppService) GetHello() string {
-	return "Hello from assets"
+	return "Hello World!"
 }
 
-// GenerateDynamicSVG produces a simple placeholder SVG.
-// The TS version used ntx-core's ImageService; this is a faithful stub.
+// GenerateDynamicSVG produces an SVG using the core ImageService variants.
+// Mirrors TS app.service.ts which calls imageService.new(name, variant, colors, size, square).
+//
+// variant: "pixel" (default), "shapes", "gradient", or "solid".
+// When colors is empty, falls back to the same default palette TS uses.
 func (s *AppService) GenerateDynamicSVG(name, variant string, colors []string, size int, square bool) string {
 	if size <= 0 {
-		size = 100
+		size = 80
 	}
-	color := "#6366f1"
-	if len(colors) > 0 {
-		color = colors[0]
+	if len(colors) == 0 {
+		colors = []string{"#92A1C6", "#146A7C", "#F0AB3D", "#C271B4", "#C20D90"}
 	}
-	initial := strings.ToUpper(name[:1])
-	width := size
-	height := size
-	if !square {
-		height = size * 2 / 3
+
+	v := image.VariantPixel
+	switch strings.ToLower(variant) {
+	case "shapes":
+		v = image.VariantShapes
+	case "gradient":
+		v = image.VariantGradient
+	case "solid":
+		v = image.VariantSolid
 	}
-	_ = variant // variant affects style in TS; stub ignores it
-	return fmt.Sprintf(
-		`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">`+
-			`<rect width="%d" height="%d" fill="%s"/>`+
-			`<text x="50%%" y="50%%" dominant-baseline="middle" text-anchor="middle" `+
-			`font-family="sans-serif" font-size="%d" fill="#fff">%s</text>`+
-			`</svg>`,
-		width, height, width, height,
-		width, height, color,
-		size/3, initial,
-	)
+
+	svc := s.imageService
+	if svc == nil {
+		// Allow construction without DI (tests). image.Service is stateless.
+		svc = &image.Service{}
+	}
+	out := svc.New(image.Options{
+		Variant:  v,
+		Width:    size,
+		Height:   size,
+		Colors:   colors,
+		Name:     name,
+		IsSquare: square,
+	})
+	return string(out)
 }
 
-// RandomName generates a random hyphen-separated name (mirrors TS TextService.name).
+// RandomName generates a random name (mirrors TS TextService.username()).
 func RandomName() string {
-	words := []string{"swift", "calm", "bright", "bold", "keen", "vast", "pure", "deep"}
-	return words[rand.Intn(len(words))] + "-" + words[rand.Intn(len(words))]
+	return utils.RandomUsername()
 }
 
-// StoreDynamicFile saves a generated SVG as a file record and returns it with its URL.
-func (s *AppService) StoreDynamicFile(name, svgContent, baseURL string) (*file.File, error) {
-	tags, _ := json.Marshal([]string{name, "svg", "dynamic"})
+// StoreDynamicFile saves a generated SVG and returns the file with its computed URL.
+func (s *AppService) StoreDynamicFile(name, svgContent, baseURL string) (*file.File, string, error) {
 	f := &file.File{
 		Type:   "svg",
 		Bucket: "dynamic",
 		Name:   name,
-		Tags:   tags,
+		Tags:   []string{name, "svg", "dynamic"},
 		Raw:    &svgContent,
 	}
 	if err := s.fileService.Save(f); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	url := baseURL + "/dynamic?id=" + f.Id
-	_ = url
-	return f, nil
+	return f, url, nil
 }

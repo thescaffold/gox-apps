@@ -12,5 +12,5 @@ type QueueEntity struct {
 }
 
 func (e *QueueEntity) OnRegister() {
-	e.Hydrate("queue_queues", []string{"name", "status"}, nil, nil, nil, nil, nil, "created_at desc")
+	e.Hydrate(`"QueueQueues"`, []string{"name", "status"}, nil, nil, nil, nil, nil, "created_at desc")
 }

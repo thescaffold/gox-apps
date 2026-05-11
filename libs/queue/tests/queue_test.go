@@ -17,7 +17,7 @@ func TestQueueEntity(t *testing.T) {
 type QueueEntitySuite struct{ goosetest.Suite }
 
 func (s *QueueEntitySuite) TestQueue_TableName() {
-	s.T.Expect(queuequeue.Queue{}.TableName()).ToEqual("queue_queues")
+	s.T.Expect(queuequeue.Queue{}.TableName()).ToEqual("QueueQueues")
 }
 
 func (s *QueueEntitySuite) TestQueue_DefaultStatus() {
@@ -32,7 +32,7 @@ func TestJobEntity(t *testing.T) {
 type JobEntitySuite struct{ goosetest.Suite }
 
 func (s *JobEntitySuite) TestJob_TableName() {
-	s.T.Expect(queuejob.Job{}.TableName()).ToEqual("queue_jobs")
+	s.T.Expect(queuejob.Job{}.TableName()).ToEqual("QueueJobs")
 }
 
 func (s *JobEntitySuite) TestJob_QueueId() {
@@ -47,7 +47,7 @@ func TestLogEntity(t *testing.T) {
 type LogEntitySuite struct{ goosetest.Suite }
 
 func (s *LogEntitySuite) TestLog_TableName() {
-	s.T.Expect(queuelog.Log{}.TableName()).ToEqual("queue_logs")
+	s.T.Expect(queuelog.Log{}.TableName()).ToEqual("QueueLogs")
 }
 
 func (s *LogEntitySuite) TestLog_JobId() {

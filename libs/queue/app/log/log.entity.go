@@ -12,5 +12,5 @@ type LogEntity struct {
 }
 
 func (e *LogEntity) OnRegister() {
-	e.Hydrate("queue_logs", []string{"queue_id", "job_id", "status"}, nil, nil, nil, nil, nil, "created_at desc")
+	e.Hydrate(`"QueueLogs"`, []string{"queue_id", "job_id", "status"}, nil, nil, nil, nil, nil, "created_at desc")
 }

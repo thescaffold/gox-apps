@@ -16,7 +16,7 @@ func TestJobEntity(t *testing.T) {
 type JobEntitySuite struct{ test.Suite }
 
 func (s *JobEntitySuite) TestJob_TableName() {
-	s.T.Expect(cronjob.Job{}.TableName()).ToEqual("cron_jobs")
+	s.T.Expect(cronjob.Job{}.TableName()).ToEqual("CronJobs")
 }
 
 func (s *JobEntitySuite) TestJob_DefaultStatus() {
@@ -31,7 +31,7 @@ func TestLogEntity(t *testing.T) {
 type LogEntitySuite struct{ test.Suite }
 
 func (s *LogEntitySuite) TestLog_TableName() {
-	s.T.Expect(cronlog.Log{}.TableName()).ToEqual("cron_logs")
+	s.T.Expect(cronlog.Log{}.TableName()).ToEqual("CronLogs")
 }
 
 func (s *LogEntitySuite) TestLog_JobId() {

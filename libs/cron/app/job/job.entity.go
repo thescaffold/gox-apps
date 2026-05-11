@@ -12,5 +12,5 @@ type JobEntity struct {
 }
 
 func (e *JobEntity) OnRegister() {
-	e.Hydrate("cron_jobs", []string{"group", "name", "pattern", "status"}, nil, nil, nil, nil, nil, "created_at desc")
+	e.Hydrate(`"CronJobs"`, []string{"group", "name", "pattern", "status"}, nil, nil, nil, nil, nil, "created_at desc")
 }

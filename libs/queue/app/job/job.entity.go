@@ -12,5 +12,5 @@ type JobEntity struct {
 }
 
 func (e *JobEntity) OnRegister() {
-	e.Hydrate("queue_jobs", []string{"queue_id", "name", "status"}, nil, nil, nil, nil, nil, "created_at desc")
+	e.Hydrate(`"QueueJobs"`, []string{"queue_id", "name", "status"}, nil, nil, nil, nil, nil, "created_at desc")
 }

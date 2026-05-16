@@ -8,7 +8,7 @@ require github.com/thescaffold/gox-apps/libs/assets v0.0.1
 
 require github.com/thescaffold/gox-apps/libs/statics v0.0.1
 
-require github.com/thescaffold/gox-packages/libs/core v0.0.2
+require github.com/thescaffold/gox-packages/libs/core v0.0.3
 
 require (
 	github.com/cbroglie/mustache v1.4.0 // indirect

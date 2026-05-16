@@ -19,5 +19,6 @@ type SummaryEntity struct {
 }
 
 func (e *SummaryEntity) OnRegister() {
-	e.Hydrate("HealthSummaries", []string{"service_id", "type"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS summary.controller.ts:19 searchable = ['note'].
+	e.Hydrate("HealthSummaries", []string{"note"}, nil, nil, nil, nil, nil, "created_at desc")
 }

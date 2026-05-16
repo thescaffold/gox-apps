@@ -9,6 +9,9 @@ import (
 	"github.com/thescaffold/gox-apps/libs/cache/app/list"
 )
 
+// AppService backs the cache endpoints. Mirrors ntx-apps/libs/cache/src/app.service.ts
+// plus the additional helpers (setnx/getset/ttl/incr) that TS keeps directly
+// on the controller.
 type AppService struct {
 	listService *list.ListService `inject:""`
 }
@@ -16,56 +19,48 @@ type AppService struct {
 // GetHello mirrors TS app.service.ts AppService.getHello().
 func (s *AppService) GetHello() string { return "Hello World!" }
 
-func (s *AppService) Get(key, group string) (*list.List, error) {
-	return s.listService.Get(key, group)
+// Get retrieves the entry for key, applying the (buggy) TS expiry filter.
+func (s *AppService) Get(key string) (*list.List, error) {
+	return s.listService.Get(key)
 }
 
-func (s *AppService) Set(key string, value any, group string, ttlSecs int64) (*list.List, error) {
-	var ttl time.Duration
-	if ttlSecs > 0 {
-		ttl = time.Duration(ttlSecs) * time.Second
-	}
-	return s.listService.Set(key, value, group, ttl)
+// Set upserts key→value with duration in MILLISECONDS — TS passes `duration`
+// to dayjs `.add(duration)` which defaults to the millisecond unit.
+func (s *AppService) Set(key string, value any, durationMs int64) (*list.List, error) {
+	return s.listService.Set(key, value, asDuration(durationMs))
 }
 
-// SetNx attempts to set the key only when it doesn't already exist.
-// Returns 1 on insert, 0 when the key was already present.
-// Mirrors TS app.controller.ts setNx() which uses INSERT … OR IGNORE.
-func (s *AppService) SetNx(key string, value any, group string, ttlSecs int64) (int, error) {
-	existing, _ := s.listService.GetAny(key, group)
+// SetNx attempts to insert the entry only when key does not exist.
+// Returns 1 on insert, 0 when the key was already present. Mirrors TS
+// setNx() which uses INSERT … orIgnore() and reads result.identifiers.length.
+func (s *AppService) SetNx(key string, value any, durationMs int64) (int, error) {
+	existing, _ := s.listService.GetAny(key)
 	if existing != nil {
 		return 0, nil
 	}
-	var ttl time.Duration
-	if ttlSecs > 0 {
-		ttl = time.Duration(ttlSecs) * time.Second
-	}
-	if _, err := s.listService.Set(key, value, group, ttl); err != nil {
+	if _, err := s.listService.Set(key, value, asDuration(durationMs)); err != nil {
 		return 0, err
 	}
 	return 1, nil
 }
 
-// GetSet atomically retrieves the previous list entry then overwrites it.
-// Mirrors TS app.controller.ts getSet() (transaction + pessimistic lock).
-// The atomicity guarantee is provided by ListService.GetSet's mutex.
-func (s *AppService) GetSet(key string, value any, group string, ttlSecs int64) (*list.List, error) {
-	var ttl time.Duration
-	if ttlSecs > 0 {
-		ttl = time.Duration(ttlSecs) * time.Second
-	}
-	return s.listService.GetSet(key, value, group, ttl)
+// GetSet atomically retrieves the previous entry then overwrites it. Mirrors
+// TS getSet() (transaction + pessimistic_write lock); atomicity is provided
+// by ListService.GetSet's mutex.
+func (s *AppService) GetSet(key string, value any, durationMs int64) (*list.List, error) {
+	return s.listService.GetSet(key, value, asDuration(durationMs))
 }
 
 // TTL returns remaining lifetime in seconds for key.
 //
-//	-2: key not found
+//	-2: key not found OR expired
 //	-1: key has no expiry
 //	>=0: seconds until expiry
 //
-// Mirrors TS app.controller.ts ttl().
-func (s *AppService) TTL(key, group string) (int64, error) {
-	record, _ := s.listService.GetAny(key, group)
+// Mirrors TS app.controller.ts ttl(): floor((expiredAt - now) / 1000), and
+// translates any negative seconds back to -2.
+func (s *AppService) TTL(key string) (int64, error) {
+	record, _ := s.listService.GetAny(key)
 	if record == nil {
 		return -2, nil
 	}
@@ -79,13 +74,14 @@ func (s *AppService) TTL(key, group string) (int64, error) {
 	return seconds, nil
 }
 
-// Incr atomically increments the integer value at key.
-// Missing key → 1. Non-numeric value → 0 (matches TS NaN behaviour).
-// Mirrors TS app.controller.ts incr().
-func (s *AppService) Incr(key, group string) (int64, error) {
-	record, _ := s.listService.GetAny(key, group)
+// Incr atomically increments the integer value at key. A missing key starts at
+// 1; a non-numeric value yields 0 (matching TS NaN behaviour). TS clears the
+// expiry on every Incr (`expiredAt: null`), which this implementation mirrors
+// by passing a zero duration through.
+func (s *AppService) Incr(key string) (int64, error) {
+	record, _ := s.listService.GetAny(key)
 	if record == nil {
-		if _, err := s.listService.Set(key, 1, group, 0); err != nil {
+		if _, err := s.listService.Set(key, 1, 0); err != nil {
 			return 0, err
 		}
 		return 1, nil
@@ -100,10 +96,26 @@ func (s *AppService) Incr(key, group string) (int64, error) {
 		return 0, nil
 	}
 	current++
-	if _, err := s.listService.Set(key, current, group, 0); err != nil {
+	if _, err := s.listService.Set(key, current, 0); err != nil {
 		return 0, err
 	}
 	return current, nil
+}
+
+// Del removes the entry at key and returns the number of rows affected
+// (0 when nothing matched). Mirrors TS `deleteResult.affected || 0`.
+func (s *AppService) Del(key string) (int64, error) {
+	return s.listService.Del(key)
+}
+
+// asDuration converts a millisecond count from the wire DTO into time.Duration.
+// A zero or negative input yields zero (i.e. no expiry), matching TS where a
+// falsy `duration` short-circuits to `expiredAt: null`.
+func asDuration(ms int64) time.Duration {
+	if ms <= 0 {
+		return 0
+	}
+	return time.Duration(ms) * time.Millisecond
 }
 
 func coerceInt(v any) (int64, bool) {
@@ -122,12 +134,4 @@ func coerceInt(v any) (int64, bool) {
 		return n, true
 	}
 	return 0, false
-}
-
-func (s *AppService) Del(key, group string) error {
-	return s.listService.Del(key, group)
-}
-
-func (s *AppService) Flush(group string) error {
-	return s.listService.Flush(group)
 }

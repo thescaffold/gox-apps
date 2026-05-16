@@ -1,6 +1,23 @@
 package app
 
 import (
+	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
+	identityclientlog "github.com/thescaffold/gox-apps/libs/identity/app/clientlog"
+	identitydevice "github.com/thescaffold/gox-apps/libs/identity/app/device"
+	identitydevicelog "github.com/thescaffold/gox-apps/libs/identity/app/devicelog"
+	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
+	identityinvite "github.com/thescaffold/gox-apps/libs/identity/app/invite"
+	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
+	identitypermissiontype "github.com/thescaffold/gox-apps/libs/identity/app/permissiontype"
+	identityprovider "github.com/thescaffold/gox-apps/libs/identity/app/provider"
+	identityproviderlog "github.com/thescaffold/gox-apps/libs/identity/app/providerlog"
+	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
+	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
+	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
+	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg"
 	"github.com/thescaffold/gox-packages/libs/core/events"
 )
@@ -173,6 +190,25 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/identity/src/index.ts.
 var (
+	Entities = []any{
+		identityattribute.Attribute{},
+		identitydevice.Device{},
+		identitydevicelog.DeviceLog{},
+		identitydevicesession.DeviceSession{},
+		identityprovider.Provider{},
+		identityproviderlog.ProviderLog{},
+		identitypermission.Permission{},
+		identitypermissiontype.PermissionType{},
+		identityrole.Role{},
+		identityroletype.RoleType{},
+		identitytoken.Token{},
+		identityuser.User{},
+		identityclient.Client{},
+		identityclientlog.ClientLog{},
+		identityucw.UserClientWorkspace{},
+		identityworkspace.Workspace{},
+		identityinvite.Invite{},
+	}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/identity.yaml"}

@@ -26,5 +26,6 @@ type EnvironmentTypeEntity struct {
 }
 
 func (e *EnvironmentTypeEntity) OnRegister() {
-	e.Hydrate("FlagEnvironmentTypes", []string{"category", "name"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS environment-type.controller.ts:19 searchable = ['name','desc','tags'].
+	e.Hydrate("FlagEnvironmentTypes", []string{"name", "desc", "tags"}, nil, nil, nil, nil, nil, "created_at desc")
 }

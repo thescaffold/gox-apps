@@ -2,6 +2,7 @@ package token
 
 import "github.com/awesome-goose/goose/modules/router"
 
+// ROUTES mirrors TS @Controller('token') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("tokens", TokenController{}).All(),
+	router.Resource("token", TokenController{}).All(),
 )

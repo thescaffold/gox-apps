@@ -2,6 +2,7 @@ package tag
 
 import "github.com/awesome-goose/goose/modules/router"
 
+// ROUTES mirrors TS @Controller('tag') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("tags", TagController{}).All(),
+	router.Resource("tag", TagController{}).All(),
 )

@@ -22,7 +22,11 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings.
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&flagsenvironmenttype.EnvironmentTypeModule{},
 		&flagsenvironment.EnvironmentModule{},
@@ -35,5 +39,7 @@ func (m *AppModule) Imports() []types.Module {
 func (m *AppModule) Exports() []any { return []any{&AppService{}} }
 
 func (m *AppModule) Declarations() []any {
-	return []any{&AppController{}, &AppService{}}
+	svc := &AppService{}
+	flagsAppSvc = svc
+	return []any{&AppController{}, svc}
 }

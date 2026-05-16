@@ -3,6 +3,8 @@ package pkg
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
+	mrand "math/rand"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +15,9 @@ import (
 	"github.com/thescaffold/gox-apps/libs/identity/app/token"
 	"github.com/thescaffold/gox-apps/libs/identity/app/user"
 	"github.com/thescaffold/gox-packages/libs/core/auth"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 	"github.com/thescaffold/gox-packages/libs/core/security"
+	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
@@ -22,6 +26,8 @@ const (
 	tokenTypeAPI     = "api"
 	accessExpiry     = 15 * time.Minute
 	refreshExpiry    = 30 * 24 * time.Hour
+	otpExpiry        = 10 * time.Minute
+	otpCachePrefix   = "identity:otp:"
 )
 
 type AuthService struct {
@@ -30,6 +36,75 @@ type AuthService struct {
 	roleEntity       *identityrole.RoleEntity             `inject:""`
 	permissionEntity *identitypermission.PermissionEntity `inject:""`
 	attributeEntity  *identityattribute.AttributeEntity   `inject:""`
+	cache            services.CacheBackend                `inject:""`
+	tracker          *events.TrackerService               `inject:""`
+}
+
+// GenerateOTP produces a 6-digit numeric one-time code and stores it under
+// `identity:otp:<handle>` in CacheBackend for otpExpiry. Returns the code so
+// caller (controller) can wrap it in an event for the email/SMS dispatch.
+// nil-cache tolerance: returns the code but doesn't persist it — handy for
+// tests that want determinism without setting up the cache.
+func (s *AuthService) GenerateOTP(handle string) string {
+	code := fmt.Sprintf("%06d", mrand.Intn(1_000_000))
+	if s.cache != nil && handle != "" {
+		s.cache.Set(otpCachePrefix+handle, code, otpExpiry)
+	}
+	if s.tracker != nil && handle != "" {
+		// Mirror TS trackerService.message dispatch on initiate — the
+		// notification handler reads `key:'auth-initiate'` and routes the
+		// code over the user's preferred channel (email/SMS).
+		s.tracker.Message("apps.notification.message.new", map[string]any{
+			"reference": handle,
+			"key":       "auth-initiate",
+			"channels":  []string{"email"},
+			"data":      map[string]any{"code": code, "handle": handle},
+			"subject":   "Your one-time verification code",
+			"type":      "system",
+			"priority":  "high",
+			"scope":     "user",
+		})
+	}
+	return code
+}
+
+// IssueTokensByHandle issues an access+refresh pair for the user identified
+// by `handle` (ref OR email). Used by the OTP-verify path which has already
+// validated the user out-of-band — no password check.
+func (s *AuthService) IssueTokensByHandle(handle, clientId string) (string, string, error) {
+	u, err := s.userEntity.First(`"ref" = ? OR "email" = ?`, handle, handle)
+	if err != nil || u == nil {
+		return "", "", errors.New("invalid credentials")
+	}
+	claims := s.buildClaims(u, clientId, "")
+	access, err := auth.Sign(claims, s.jwtSecret(), accessExpiry)
+	if err != nil {
+		return "", "", err
+	}
+	refresh, err := auth.Sign(claims, s.jwtSecret(), refreshExpiry)
+	if err != nil {
+		return "", "", err
+	}
+	expiresAt := time.Now().Add(refreshExpiry)
+	_ = s.tokenEntity.Insert(&token.Token{
+		UserId: u.Id, ClientId: clientId, Type: tokenTypeRefresh,
+		Token: refresh, ExpiresAt: &expiresAt,
+	})
+	return access, refresh, nil
+}
+
+// VerifyOTP returns true when the stored code for `handle` matches `code`.
+// On a successful verify the stored code is removed (single-use semantics).
+func (s *AuthService) VerifyOTP(handle, code string) bool {
+	if s.cache == nil || handle == "" || code == "" {
+		return false
+	}
+	stored, ok := s.cache.Get(otpCachePrefix + handle)
+	if !ok || stored != code {
+		return false
+	}
+	s.cache.Del(otpCachePrefix + handle)
+	return true
 }
 
 func (s *AuthService) jwtSecret() string {
@@ -49,8 +124,11 @@ func (s *AuthService) hmacKey() string {
 // --- Auth methods ---
 
 // Login validates credentials and returns signed access + refresh tokens.
-func (s *AuthService) Login(email, password, clientId string) (accessToken, refreshToken string, err error) {
-	u, err := s.userEntity.First(`"email" = ?`, email)
+// Accepts either the new `ref` column (TS-aligned, Phase H) or the legacy
+// `email`. Lookup is OR'd so existing accounts keep working while new ones
+// can be created with ref-only identifiers.
+func (s *AuthService) Login(handle, password, clientId string) (accessToken, refreshToken string, err error) {
+	u, err := s.userEntity.First(`"ref" = ? OR "email" = ?`, handle, handle)
 	if err != nil || u == nil {
 		return "", "", errors.New("invalid credentials")
 	}
@@ -99,9 +177,9 @@ func (s *AuthService) BasicAuth(encoded, clientId string) (map[string]any, error
 	if len(parts) != 2 {
 		return nil, errors.New("malformed basic auth: expected user:password")
 	}
-	email, password := parts[0], parts[1]
+	handle, password := parts[0], parts[1]
 
-	u, err := s.userEntity.First(`"email" = ?`, email)
+	u, err := s.userEntity.First(`"ref" = ? OR "email" = ?`, handle, handle)
 	if err != nil || u == nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -176,15 +254,22 @@ func (s *AuthService) ValidateToken(tokenStr string) (map[string]any, error) {
 	return auth.Verify(tokenStr, s.jwtSecret())
 }
 
-// RegisterUser creates a new user with a bcrypt-hashed password.
+// RegisterUser creates a new user with a bcrypt-hashed password. Mirrors TS:
+// `ref` is set to the supplied email (the canonical handle going forward),
+// `type` is set to "email" so identity-level dispatchers know which channel
+// to route OTPs through. Both legacy email + new ref columns are populated.
 func (s *AuthService) RegisterUser(name, email, password string) (*user.User, error) {
 	hashed, err := security.Hash(password)
 	if err != nil {
 		return nil, err
 	}
+	ref := email
+	refType := "email"
 	u := &user.User{
 		Name:   name,
 		Email:  email,
+		Ref:    &ref,
+		Type:   &refType,
 		Secret: &hashed,
 	}
 	u.Id = utils.UUID()

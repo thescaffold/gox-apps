@@ -2,4 +2,7 @@ package webhooklog
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("webhooklogs", WebhookLogController{}).All())
+// ROUTES mirrors TS @Controller('webhook-log') — singular kebab-case segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("webhook-log", WebhookLogController{}).All(),
+)

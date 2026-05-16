@@ -4,7 +4,7 @@ import "github.com/awesome-goose/goose/modules/router"
 
 // ROUTES mirrors ntx-apps/libs/polylog/src/app.controller.ts route paths:
 //
-//	GET    /                   → Health
+//	GET    /                   → GetHello
 //	POST   /ingest/batch       → IngestBatch
 //	POST   /ingest             → Ingest
 //	POST   /ingest/:id         → IngestSourceAlt
@@ -13,8 +13,10 @@ import "github.com/awesome-goose/goose/modules/router"
 //	POST   /config             → SetConfig
 //	GET    /config             → GetConfig
 //	PATCH  /config/:id         → UpdateConfig
+//	POST   /root-source        → UpsertRootSource
+//	POST   /root-sink          → UpsertRootSink
 var ROUTES = router.ForRoutes(
-	router.Get("/", []any{AppController{}, "Health"}),
+	router.Get("/", []any{AppController{}, "GetHello"}),
 	router.Post("/ingest/batch", []any{AppController{}, "IngestBatch"}),
 	router.Post("/ingest", []any{AppController{}, "Ingest"}),
 	router.Post("/ingest/:id", []any{AppController{}, "IngestSourceAlt"}),
@@ -23,4 +25,6 @@ var ROUTES = router.ForRoutes(
 	router.Post("/config", []any{AppController{}, "SetConfig"}),
 	router.Get("/config", []any{AppController{}, "GetConfig"}),
 	router.Patch("/config/:id", []any{AppController{}, "UpdateConfig"}),
+	router.Post("/root-source", []any{AppController{}, "UpsertRootSource"}),
+	router.Post("/root-sink", []any{AppController{}, "UpsertRootSink"}),
 )

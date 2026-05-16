@@ -28,5 +28,6 @@ type FlagEntity struct {
 }
 
 func (e *FlagEntity) OnRegister() {
-	e.Hydrate("FlagFlags", []string{"name", "workspace_id", "environment_id", "level"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS flag.controller.ts:20 searchable = [] — Flag is not query-filtered.
+	e.Hydrate("FlagFlags", nil, nil, nil, nil, nil, nil, "created_at desc")
 }

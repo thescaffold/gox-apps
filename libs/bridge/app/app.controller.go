@@ -5,10 +5,15 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
+// AppController mirrors ntx-apps/libs/bridge/src/app.controller.ts. The TS
+// controller has no public endpoints beyond `@Get() getHello` — everything
+// else is driven via subscriptions (see index.go).
 type AppController struct {
 	appService *AppService `inject:""`
 }
 
-func (c *AppController) Health(dto *HealthDto) types.Output {
-	return response.Success(map[string]any{"status": c.appService.GetHello()}, "bridge", "ok", nil)
+// GetHello mirrors TS @Get() getHello(): success(getHello()) — plain string,
+// no envelope title/message.
+func (c *AppController) GetHello(dto *HelloDto) types.Output {
+	return response.Success(c.appService.GetHello(), "", "", nil)
 }

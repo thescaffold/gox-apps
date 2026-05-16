@@ -21,5 +21,6 @@ type LogEntity struct {
 }
 
 func (e *LogEntity) OnRegister() {
-	e.Hydrate("HealthLogs", []string{"service_id", "state"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS log.controller.ts:19 searchable = [] — Log is not query-filtered.
+	e.Hydrate("HealthLogs", nil, nil, nil, nil, nil, nil, "created_at desc")
 }

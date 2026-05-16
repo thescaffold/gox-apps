@@ -1,6 +1,10 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	ctrlreq "github.com/thescaffold/gox-apps/libs/controller/app/request"
+	ctrlroute "github.com/thescaffold/gox-apps/libs/controller/app/route"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "controller"
 
@@ -21,6 +25,7 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/controller/src/index.ts.
 var (
+	Entities        = []any{ctrlroute.Route{}, ctrlreq.Request{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/controller.yaml"}

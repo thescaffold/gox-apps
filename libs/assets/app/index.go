@@ -1,6 +1,9 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	"github.com/thescaffold/gox-apps/libs/assets/app/file"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "assets"
 
@@ -17,4 +20,12 @@ var DefaultPermissions = map[string][]string{
 // Subscriptions — assets has no event subscriptions.
 var Subscriptions = map[string]events.EventHandler{}
 
-// TODO: i18n — translation path: translations/en/ntx/apps/assets.yaml
+// Top-level exports mirroring ntx-apps/libs/assets/src/index.ts.
+var (
+	Entities        = []any{file.File{}}
+	Messages        = map[string]any{}
+	UnsafeEventList = []string{}
+	Paths           = []string{"translations/en/ntx/apps/assets.yaml"}
+	Jobs            = []any{}
+	Crons           = []any{}
+)

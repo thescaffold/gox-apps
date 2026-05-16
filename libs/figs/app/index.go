@@ -1,6 +1,9 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	figsfile "github.com/thescaffold/gox-apps/libs/figs/app/file"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "figs"
 
@@ -55,6 +58,7 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/figs/src/index.ts.
 var (
+	Entities        = []any{figsfile.File{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/figs.yaml"}

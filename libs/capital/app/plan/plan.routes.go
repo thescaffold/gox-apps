@@ -2,4 +2,7 @@ package plan
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("plans", PlanController{}).All())
+// ROUTES mirrors TS @Controller('plan') — singular path segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("plan", PlanController{}).All(),
+)

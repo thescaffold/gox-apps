@@ -5,6 +5,8 @@ import (
 
 	gocron "github.com/awesome-goose/goose/modules/cron"
 	"github.com/awesome-goose/goose/modules/sql"
+	cronjob "github.com/thescaffold/gox-apps/libs/cron/app/job"
+	cronlog "github.com/thescaffold/gox-apps/libs/cron/app/log"
 	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
@@ -51,7 +53,13 @@ var Subscriptions = map[string]events.EventHandler{
 }
 
 // Top-level exports mirroring ntx-apps/libs/cron/src/index.ts.
+//
+// NOTE: gox cron's `Jobs` slice (declared above) holds `*gocron.CronHandler`
+// values — semantically this is the TS `crons` export. Keeping the gox slice
+// named `Jobs` for backwards compatibility with the goose cron wiring; the
+// `Crons` slice below stays empty because the cron handlers live in `Jobs`.
 var (
+	Entities        = []any{cronjob.Job{}, cronlog.Log{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/cron.yaml"}

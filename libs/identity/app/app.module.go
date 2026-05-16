@@ -42,13 +42,23 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityInvites{},
 	&migrations.CreateIdentityProviders{},
 	&migrations.CreateIdentityProviderLogs{},
+	// Phase 4 schema alignment — adds TS-side columns alongside existing gox
+	// columns (User.ref+type, Permission.role_type_id+permission_type_id,
+	// Provider.key+name+desc+..., Device.os+agent+engine+cpu, DeviceLog.ip+
+	// country+region+city+area). Idempotent ALTER TABLE ADD COLUMN IF NOT
+	// EXISTS — safe to rerun against partially-aligned databases.
+	&migrations.AlignIdentityWithNtx{},
 }
 
 type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings.
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&identityuser.UserModule{},
 		&identityclient.ClientModule{},

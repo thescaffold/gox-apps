@@ -16,7 +16,12 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them into MediaService before the first request,
+		// matching the TS app bootstrap calling mediaService.load(paths).
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{
 			Migrations: Migrations,
 		}),
@@ -29,8 +34,11 @@ func (m *AppModule) Exports() []any {
 	return []any{&AppService{}}
 }
 
+// AppController is declared so goose registers it and the routes referencing
+// AppController{} in app.routes.go resolve to the same DI-managed instance.
 func (m *AppModule) Declarations() []any {
 	return []any{
+		&AppController{},
 		&AppService{},
 	}
 }

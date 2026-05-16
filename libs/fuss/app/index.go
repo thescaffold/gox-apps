@@ -1,6 +1,11 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	fusshistory "github.com/thescaffold/gox-apps/libs/fuss/app/history"
+	fusstoken "github.com/thescaffold/gox-apps/libs/fuss/app/token"
+	fusstokenlog "github.com/thescaffold/gox-apps/libs/fuss/app/tokenlog"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "fuss"
 
@@ -57,6 +62,7 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/fuss/src/index.ts.
 var (
+	Entities        = []any{fusshistory.History{}, fusstoken.Token{}, fusstokenlog.TokenLog{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/fuss.yaml"}

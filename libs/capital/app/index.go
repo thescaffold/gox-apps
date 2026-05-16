@@ -1,6 +1,20 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	goqueues "github.com/awesome-goose/goose/modules/queues"
+	capitalaccount "github.com/thescaffold/gox-apps/libs/capital/app/account"
+	capitalpayment "github.com/thescaffold/gox-apps/libs/capital/app/payment"
+	capitalpaymentlog "github.com/thescaffold/gox-apps/libs/capital/app/paymentlog"
+	capitalplan "github.com/thescaffold/gox-apps/libs/capital/app/plan"
+	capitalplantype "github.com/thescaffold/gox-apps/libs/capital/app/plantype"
+	capitalprovider "github.com/thescaffold/gox-apps/libs/capital/app/provider"
+	capitalrate "github.com/thescaffold/gox-apps/libs/capital/app/rate"
+	capitaltransaction "github.com/thescaffold/gox-apps/libs/capital/app/transaction"
+	capitalusage "github.com/thescaffold/gox-apps/libs/capital/app/usage"
+	capitalvoucher "github.com/thescaffold/gox-apps/libs/capital/app/voucher"
+	capitalvouchertype "github.com/thescaffold/gox-apps/libs/capital/app/vouchertype"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "capital"
 
@@ -119,6 +133,16 @@ var Subscriptions = map[string]events.EventHandler{
 			_ = capitalAppSvc.OnUsageStop(decodeUsage(payloadOf(raw)))
 		}
 	},
+	"apps.cron.heartbeat.daily": func(_ string, _ any) {
+		if capitalAppSvc != nil {
+			_ = capitalAppSvc.OnDailyHeartbeat()
+		}
+	},
+	"apps.cron.heartbeat.weekly": func(_ string, _ any) {
+		if capitalAppSvc != nil {
+			_ = capitalAppSvc.OnWeeklyHeartbeat()
+		}
+	},
 	"apps.cron.heartbeat.monthly": func(_ string, _ any) {
 		if capitalAppSvc != nil {
 			_ = capitalAppSvc.OnMonthlyHeartbeat()
@@ -181,9 +205,41 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/capital/src/index.ts.
 var (
+	Entities = []any{
+		capitalaccount.Account{},
+		capitalprovider.Provider{},
+		capitalrate.Rate{},
+		capitaltransaction.Transaction{},
+		capitalusage.Usage{},
+		capitalvoucher.Voucher{},
+		capitalvouchertype.VoucherType{},
+		capitalplantype.PlanType{},
+		capitalplan.Plan{},
+		capitalpayment.Payment{},
+		capitalpaymentlog.PaymentLog{},
+	}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/capital.yaml"}
-	Jobs            = []any{}
 	Crons           = []any{}
 )
+
+// Jobs mirrors ntx-apps/libs/capital/src/index.ts jobs. The `payment` consumer
+// handles deferred billing dispatches; `debt` records outstanding balances.
+// Both currently log the job through AppService — provider HTTP wiring lands
+// once Stripe/Flutterwave/Paystack implementations are registered with
+// PaymentService.
+var Jobs = []*goqueues.JobHandler{
+	goqueues.NewSimpleHandler("queue/apps/capital", "payment", func(job *goqueues.QueueJob) (any, error) {
+		if capitalAppSvc == nil {
+			return nil, nil
+		}
+		return capitalAppSvc.OnPaymentJob(job)
+	}),
+	goqueues.NewSimpleHandler("queue/apps/capital", "debt", func(job *goqueues.QueueJob) (any, error) {
+		if capitalAppSvc == nil {
+			return nil, nil
+		}
+		return capitalAppSvc.OnDebtJob(job)
+	}),
+}

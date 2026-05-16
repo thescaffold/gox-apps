@@ -2,38 +2,57 @@ package app
 
 import (
 	"github.com/awesome-goose/goose/types"
+	"github.com/thescaffold/gox-packages/libs/core/i18n"
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
+// AppController mirrors ntx-apps/libs/statics/src/app.controller.ts. Endpoints:
+//
+//	GET  /                 getHello
+//	GET  /filter/:key      filterByKey
+//	GET  /code/:code       findOneByCode
+//	GET  /value/:value     findOneByValue
 type AppController struct {
-	appService *AppService `inject:""`
-	log        types.Log   `inject:""`
+	appService *AppService   `inject:""`
+	lang       *i18n.Service `inject:""`
+	log        types.Log     `inject:""`
 }
 
-func (c *AppController) Health(dto *HealthDto) types.Output {
-	return response.Success(map[string]any{"status": c.appService.GetHello()}, "statics", "ok", nil)
+// GetHello mirrors TS @Get() getHello(): success(getHello()) — plain string,
+// no envelope title/message.
+func (c *AppController) GetHello(dto *HelloDto) types.Output {
+	return response.Success(c.appService.GetHello(), "", "", nil)
 }
 
+// FilterByKey mirrors TS @Get('filter/:key') filterByKey: returns success(list,
+// title, msg). TS always returns success (with the list) even when empty.
 func (c *AppController) FilterByKey(dto *FilterByKeyDto) types.Output {
-	items, err := c.appService.FilterByKey(dto.Key, dto.ParentId)
-	if err != nil {
-		return response.InternalServerError("statics", "Failed to filter by key")
-	}
-	return response.Success(items, "statics", "ok", nil)
+	pref := dto.Ctx.Preference
+	items, _ := c.appService.FilterByKey(dto.Key, dto.ParentId)
+	return response.Success(items,
+		c.lang.Translate("apps.statics.app.title", nil, pref),
+		c.lang.Translate("apps.statics.app.get.filter.success", nil, pref),
+		nil)
 }
 
+// FindByCode mirrors TS @Get('code/:code') findOneByCode: returns success(item,
+// title, msg). TS always returns success (item is null when not found).
 func (c *AppController) FindByCode(dto *FindByCodeDto) types.Output {
-	item, err := c.appService.FindByCode(dto.Code, dto.ParentId)
-	if err != nil {
-		return response.NotFound("statics", "Item not found")
-	}
-	return response.Success(item, "statics", "ok", nil)
+	pref := dto.Ctx.Preference
+	item, _ := c.appService.FindByCode(dto.Code, dto.ParentId)
+	return response.Success(item,
+		c.lang.Translate("apps.statics.app.title", nil, pref),
+		c.lang.Translate("apps.statics.app.get.filter.success", nil, pref),
+		nil)
 }
 
+// FindByValue mirrors TS @Get('value/:value') findOneByValue: returns success(
+// item, title, msg). TS always returns success.
 func (c *AppController) FindByValue(dto *FindByValueDto) types.Output {
-	item, err := c.appService.FindByValue(dto.Value, dto.ParentId)
-	if err != nil {
-		return response.NotFound("statics", "Item not found")
-	}
-	return response.Success(item, "statics", "ok", nil)
+	pref := dto.Ctx.Preference
+	item, _ := c.appService.FindByValue(dto.Value, dto.ParentId)
+	return response.Success(item,
+		c.lang.Translate("apps.statics.app.title", nil, pref),
+		c.lang.Translate("apps.statics.app.get.filter.success", nil, pref),
+		nil)
 }

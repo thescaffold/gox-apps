@@ -2,4 +2,7 @@ package sinktype
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("sinktypes", SinkTypeController{}).All())
+// ROUTES mirrors TS @Controller('sink-type') — singular kebab-case segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("sink-type", SinkTypeController{}).All(),
+)

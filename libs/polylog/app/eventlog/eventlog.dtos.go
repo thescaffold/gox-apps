@@ -1,6 +1,16 @@
 package eventlog
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
+)
+
+// DashboardDto carries the required `?type=` filter for GET /event-log/dashboard.
+type DashboardDto struct {
+	NTX  ntxctx.NTXContext `context:"ntx"`
+	Type string            `query:"type"`
+}
 
 type CreateEventLogDto struct {
 	EventId  string          `json:"eventId"  binding:"required"`

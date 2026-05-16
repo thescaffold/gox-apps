@@ -2,4 +2,7 @@ package payment
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("payments", PaymentController{}).All())
+// ROUTES mirrors TS @Controller('payment') — singular path segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("payment", PaymentController{}).All(),
+)

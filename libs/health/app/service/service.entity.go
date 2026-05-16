@@ -19,5 +19,6 @@ type ServiceEntity struct {
 }
 
 func (e *ServiceEntity) OnRegister() {
-	e.Hydrate("HealthServices", []string{"name", "type", "state"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS service.controller.ts:19 searchable = ['name','desc','state'].
+	e.Hydrate("HealthServices", []string{"name", "desc", "state"}, nil, nil, nil, nil, nil, "created_at desc")
 }

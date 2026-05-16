@@ -1,6 +1,12 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	formsform "github.com/thescaffold/gox-apps/libs/forms/app/form"
+	formsformfield "github.com/thescaffold/gox-apps/libs/forms/app/formfield"
+	formsformlog "github.com/thescaffold/gox-apps/libs/forms/app/formlog"
+	formsformtype "github.com/thescaffold/gox-apps/libs/forms/app/formtype"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "forms"
 
@@ -29,6 +35,12 @@ var Subscriptions = map[string]events.EventHandler{}
 
 // Top-level exports mirroring ntx-apps/libs/forms/src/index.ts.
 var (
+	Entities = []any{
+		formsform.Form{},
+		formsformfield.FormField{},
+		formsformlog.FormLog{},
+		formsformtype.FormType{},
+	}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/forms.yaml"}

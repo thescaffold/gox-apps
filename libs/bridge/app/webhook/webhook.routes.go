@@ -2,4 +2,7 @@ package webhook
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("webhooks", WebhookController{}).All())
+// ROUTES mirrors TS @Controller('webhook') — singular path segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("webhook", WebhookController{}).All(),
+)

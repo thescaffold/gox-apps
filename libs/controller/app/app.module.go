@@ -18,7 +18,12 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them into MediaService before the first request,
+		// matching the TS app bootstrap calling mediaService.load(paths).
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&ctrlroute.RouteModule{},
 		&ctrlreq.RequestModule{},

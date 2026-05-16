@@ -2,6 +2,7 @@ package log
 
 import "github.com/awesome-goose/goose/modules/router"
 
+// ROUTES mirrors TS @Controller('log') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("logs", LogController{}).All(),
+	router.Resource("log", LogController{}).All(),
 )

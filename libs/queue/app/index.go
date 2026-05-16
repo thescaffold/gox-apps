@@ -3,6 +3,9 @@ package app
 import (
 	goqueues "github.com/awesome-goose/goose/modules/queues"
 	"github.com/awesome-goose/goose/modules/sql"
+	queuejob "github.com/thescaffold/gox-apps/libs/queue/app/job"
+	queuelog "github.com/thescaffold/gox-apps/libs/queue/app/log"
+	queuequeue "github.com/thescaffold/gox-apps/libs/queue/app/queue"
 	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
@@ -34,6 +37,7 @@ var Subscriptions = map[string]events.EventHandler{
 
 // Top-level exports mirroring ntx-apps/libs/queue/src/index.ts.
 var (
+	Entities        = []any{queuequeue.Queue{}, queuejob.Job{}, queuelog.Log{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/queue.yaml"}

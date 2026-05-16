@@ -22,5 +22,6 @@ type FlagLogEntity struct {
 }
 
 func (e *FlagLogEntity) OnRegister() {
-	e.Hydrate("FlagFlagLogs", []string{"flag_id"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Mirrors TS flag-log.controller.ts:19 searchable = [] — FlagLog is not query-filtered.
+	e.Hydrate("FlagFlagLogs", nil, nil, nil, nil, nil, nil, "created_at desc")
 }

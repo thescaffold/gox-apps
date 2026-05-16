@@ -24,5 +24,6 @@ type FormLogEntity struct {
 }
 
 func (e *FormLogEntity) OnRegister() {
-	e.Hydrate("FormFormLogs", []string{"form_id", "form_field_id", "key"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Searchable mirrors TS form-log.controller.ts:19 searchable = ['key'].
+	e.Hydrate("FormFormLogs", []string{"key"}, nil, nil, nil, nil, nil, "created_at desc")
 }

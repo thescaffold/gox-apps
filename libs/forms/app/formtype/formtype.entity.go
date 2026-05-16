@@ -1,7 +1,12 @@
 package formtype
 
-import "github.com/awesome-goose/goose/modules/sql"
+import (
+	"encoding/json"
 
+	"github.com/awesome-goose/goose/modules/sql"
+)
+
+// FormType mirrors ntx-apps/libs/forms/src/api/form-type/entities/form-type.entity.ts.
 type FormType struct {
 	sql.BaseEntity
 
@@ -10,8 +15,10 @@ type FormType struct {
 	Detail       *string `gorm:"column:detail;type:text"                 json:"detail,omitempty"`
 	ThumbnailUrl *string `gorm:"column:thumbnail_url;type:varchar(255)"  json:"thumbnailUrl,omitempty"`
 	BannerUrl    *string `gorm:"column:banner_url;type:varchar(255)"     json:"bannerUrl,omitempty"`
-	Tags         *string `gorm:"column:tags;type:jsonb"                  json:"tags,omitempty"`
-	Meta         *string `gorm:"column:meta;type:jsonb"                  json:"meta,omitempty"`
+	// Tags + Meta are jsonb blobs — TS exposes them as `string[]` and any
+	// respectively, so they must round-trip as raw JSON.
+	Tags json.RawMessage `gorm:"column:tags;type:jsonb" json:"tags,omitempty"`
+	Meta json.RawMessage `gorm:"column:meta;type:jsonb" json:"meta,omitempty"`
 }
 
 func (FormType) TableName() string { return "FormFormTypes" }
@@ -21,5 +28,6 @@ type FormTypeEntity struct {
 }
 
 func (e *FormTypeEntity) OnRegister() {
-	e.Hydrate("FormFormTypes", []string{"name"}, nil, nil, nil, nil, nil, "created_at desc")
+	// Searchable mirrors TS form-type.controller.ts:19 searchable = ['name','desc','tags'].
+	e.Hydrate("FormFormTypes", []string{"name", "desc", "tags"}, nil, nil, nil, nil, nil, "created_at desc")
 }

@@ -14,5 +14,10 @@ func (m *ProviderModule) Imports() []types.Module {
 func (m *ProviderModule) Exports() []any { return []any{&ProviderService{}} }
 
 func (m *ProviderModule) Declarations() []any {
-	return []any{&ProviderService{}, &ProviderEntity{}}
+	return []any{
+		&ProviderService{},
+		&ProviderEntity{},
+		&ProviderController{},
+		&AuthorizeController{},
+	}
 }

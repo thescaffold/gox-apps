@@ -18,7 +18,11 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings.
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{
 			Migrations: Migrations,
 		}),
@@ -32,6 +36,8 @@ func (m *AppModule) Exports() []any {
 	return []any{&AppService{}}
 }
 
+// AppController is declared so goose registers it and the routes referencing
+// AppController{} resolve to the same DI-managed instance.
 func (m *AppModule) Declarations() []any {
-	return []any{&AppService{}}
+	return []any{&AppController{}, &AppService{}}
 }

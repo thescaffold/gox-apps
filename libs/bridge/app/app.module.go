@@ -10,6 +10,7 @@ import (
 	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
 	bridgewebhooklog "github.com/thescaffold/gox-apps/libs/bridge/app/webhooklog"
 	"github.com/thescaffold/gox-apps/libs/bridge/migrations"
+	capitalusage "github.com/thescaffold/gox-apps/libs/capital/app/usage"
 	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
@@ -26,7 +27,11 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings.
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&bridgelicensetype.LicenseTypeModule{},
 		&bridgelicense.LicenseModule{},
@@ -34,6 +39,7 @@ func (m *AppModule) Imports() []types.Module {
 		&bridgepreference.PreferenceModule{},
 		&bridgewebhook.WebhookModule{},
 		&bridgewebhooklog.WebhookLogModule{},
+		&capitalusage.UsageModule{},
 		ROUTES,
 	}
 }

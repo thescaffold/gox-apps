@@ -13,6 +13,15 @@ type CreateLogDto struct {
 	Desc   *string         `json:"desc,omitempty"`
 	Meta   json.RawMessage `json:"meta,omitempty"`
 	Status *string         `json:"status,omitempty"`
+
+	// UserId / ClientId / WorkspaceId are NOT submitted by the client — TS
+	// adds them in LogController.morphs.beforeCreate via a payload spread
+	// (`{ ...payload, userId, clientId, workspaceId }`). They live on the DTO
+	// here so the gox beforeCreate morph can populate them before copyAny
+	// flows the fields onto the Log entity.
+	UserId      string `json:"userId,omitempty"`
+	ClientId    string `json:"clientId,omitempty"`
+	WorkspaceId string `json:"workspaceId,omitempty"`
 }
 
 type UpdateLogDto struct {

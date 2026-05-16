@@ -8,6 +8,11 @@ github.com/spf13/cobra v1.3.0/go.mod h1:BrRVncBjOJa/eUcVVm9CE+oC6as8k+VYr4NY7WCi
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+github.com/thescaffold/gox-apps/libs/assets v0.0.1/go.mod h1:dLxrOA4UkOIMh5LGCGYwrl/14MeZpUdTbaMXIfOxpp4=
+github.com/thescaffold/gox-apps/libs/capital v0.0.1/go.mod h1:bQaQSlRCxEqikEibX9D5+vOK2vg8Uq/G6A/TlWjlNf4=
+github.com/thescaffold/gox-apps/libs/flags v0.0.1/go.mod h1:qrsKDwvecDSf875D/2PAqTVLgfDZs7XBLRnwX8yRzAw=
+github.com/thescaffold/gox-apps/libs/queue v0.0.1/go.mod h1:2h0R64Loq5fJV90y6JE3YofdmUYXVY0imV0kFhg9BJY=
+github.com/thescaffold/gox-apps/libs/statics v0.0.1/go.mod h1:ur1p5qbUFNYOZ6OEXGZSeM+HJrI+ilESKkZa60eX1hA=
 github.com/thescaffold/gox-packages/libs/core v0.0.2/go.mod h1:CrFHwNsUYxd6MDx368KZqNW1G4S94br5qSfpfBTvMiI=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/image v0.25.0/go.mod h1:tCAmOEGthTtkalusGp1g3xa2gke8J6c2N565dTyl9Rs=

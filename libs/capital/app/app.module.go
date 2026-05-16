@@ -16,6 +16,8 @@ import (
 	capitalvouchertype "github.com/thescaffold/gox-apps/libs/capital/app/vouchertype"
 	capitalwallet "github.com/thescaffold/gox-apps/libs/capital/app/wallet"
 	"github.com/thescaffold/gox-apps/libs/capital/migrations"
+	flagsapp "github.com/thescaffold/gox-apps/libs/flags/app/flag"
+	queueapp "github.com/thescaffold/gox-apps/libs/queue/app"
 	"github.com/thescaffold/gox-packages/libs/core/module"
 )
 
@@ -37,7 +39,11 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings.
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		sql.Child(&sql.Config{Migrations: Migrations}),
 		&capitalaccount.AccountModule{},
 		&capitalprovider.ProviderModule{},
@@ -51,6 +57,8 @@ func (m *AppModule) Imports() []types.Module {
 		&capitalvouchertype.VoucherTypeModule{},
 		&capitalvoucher.VoucherModule{},
 		&capitalwallet.WalletModule{},
+		&queueapp.AppModule{},
+		&flagsapp.FlagModule{},
 		ROUTES,
 	}
 }

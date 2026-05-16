@@ -2,25 +2,34 @@ package app
 
 import ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 
-type HealthDto struct{}
+// HelloDto carries the request context for GET / (getHello).
+type HelloDto struct {
+	NTX ntxctx.NTXContext `context:"ntx"`
+}
 
+// RecentDto carries the query params for GET /recent. TS reads them with
+// @Query('page')/@Query('perPage') — no validation, defaults applied server-side.
 type RecentDto struct {
 	NTX     ntxctx.NTXContext `context:"ntx"`
-	Page    int               `form:"page"`
-	PerPage int               `form:"perPage"`
+	Page    int               `query:"page"`
+	PerPage int               `query:"perPage"`
 }
 
+// SearchDto mirrors TS @Get('search') parameters. `query` is required; `type`
+// defaults to "global" when absent.
 type SearchDto struct {
 	NTX     ntxctx.NTXContext `context:"ntx"`
-	Query   string            `form:"query"   binding:"required"`
-	Type    string            `form:"type"`
-	Page    int               `form:"page"`
-	PerPage int               `form:"perPage"`
+	Query   string            `query:"query"   binding:"required"`
+	Type    string            `query:"type"`
+	Page    int               `query:"page"`
+	PerPage int               `query:"perPage"`
 }
 
+// LookupDto mirrors TS @Get('lookup') parameters.
 type LookupDto struct {
-	Group      string `form:"group"      binding:"required"`
-	Service    string `form:"service"    binding:"required"`
-	EntityName string `form:"entityName" binding:"required"`
-	EntityId   string `form:"entityId"   binding:"required"`
+	NTX        ntxctx.NTXContext `context:"ntx"`
+	Group      string            `query:"group"      binding:"required"`
+	Service    string            `query:"service"    binding:"required"`
+	EntityName string            `query:"entityName" binding:"required"`
+	EntityId   string            `query:"entityId"   binding:"required"`
 }

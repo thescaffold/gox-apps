@@ -36,8 +36,10 @@ func TestAppModule(t *testing.T) {
 type AppModuleSuite struct{ goosetest.Suite }
 
 func (s *AppModuleSuite) TestMigrations_Count() {
-	// 8 = source-types, sources, sink-types, sinks, channels, events, event-logs, configs.
-	s.T.Expect(len(app.Migrations)).ToEqual(8)
+	// 8 original CREATE TABLE migrations (source-types, sources, sink-types,
+	// sinks, channels, events, event-logs, configs) + 1 Phase-4 schema-alignment
+	// migration (AlignPolylogEventEntity) = 9.
+	s.T.Expect(len(app.Migrations)).ToEqual(9)
 }
 
 func (s *AppModuleSuite) TestName() {

@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"time"
 
+	goqueues "github.com/awesome-goose/goose/modules/queues"
 	bridgelicense "github.com/thescaffold/gox-apps/libs/bridge/app/license"
 	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
 	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
+	capitalusage "github.com/thescaffold/gox-apps/libs/capital/app/usage"
 )
 
 // AppService is the public surface for bridge event handlers.
@@ -15,6 +18,7 @@ type AppService struct {
 	licenseEntity     *bridgelicense.LicenseEntity         `inject:""`
 	licenseTypeEntity *bridgelicensetype.LicenseTypeEntity `inject:""`
 	webhookEntity     *bridgewebhook.WebhookEntity         `inject:""`
+	usageService      *capitalusage.UsageService           `inject:""`
 }
 
 func (s *AppService) GetHello() string { return "Hello World!" }
@@ -165,3 +169,48 @@ func (s *AppService) OnDailyHeartbeat() error   { return s.runHeartbeat("daily")
 func (s *AppService) OnWeeklyHeartbeat() error  { return s.runHeartbeat("weekly") }
 func (s *AppService) OnMonthlyHeartbeat() error { return s.runHeartbeat("monthly") }
 func (s *AppService) OnYearlyHeartbeat() error  { return s.runHeartbeat("yearly") }
+
+// OnLicenseJob handles a job from the `queue/apps/bridge/license` queue.
+// Mirrors TS handler in ntx-apps/libs/bridge/src/index.ts jobs[0]:
+//
+//	const { plan } = job.data;
+//	usageService.updateUsage(
+//	  plan.userId, plan.clientId, plan.workspaceId,
+//	  `apps/bridge/plan/${plan.type.key}/${plan.periodType}`,
+//	  plan.type.id, { plan }, 1,
+//	);
+//
+// The plan envelope on job.data carries the nested type with key+id, matching
+// TS `relations: ['type']` from the queue producer.
+func (s *AppService) OnLicenseJob(job *goqueues.QueueJob) (any, error) {
+	if job == nil {
+		return nil, nil
+	}
+	var data map[string]any
+	if len(job.Data) > 0 {
+		_ = json.Unmarshal(job.Data, &data)
+	}
+	plan, _ := data["plan"].(map[string]any)
+	if plan == nil {
+		return map[string]any{"jobId": job.Id, "status": "skipped"}, nil
+	}
+	userID, _ := plan["userId"].(string)
+	clientID, _ := plan["clientId"].(string)
+	workspaceID, _ := plan["workspaceId"].(string)
+	periodType, _ := plan["periodType"].(string)
+	planType, _ := plan["type"].(map[string]any)
+	typeKey := ""
+	typeID := ""
+	if planType != nil {
+		typeKey, _ = planType["key"].(string)
+		typeID, _ = planType["id"].(string)
+	}
+	if userID == "" || typeID == "" {
+		return map[string]any{"jobId": job.Id, "status": "skipped"}, nil
+	}
+	name := "apps/bridge/plan/" + typeKey + "/" + periodType
+	if s.usageService != nil {
+		s.usageService.UpdateUsage(userID, clientID, workspaceID, name, typeID, map[string]any{"plan": plan}, 1)
+	}
+	return map[string]any{"jobId": job.Id, "status": "dispatched", "name": name}, nil
+}

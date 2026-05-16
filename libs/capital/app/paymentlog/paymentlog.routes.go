@@ -2,4 +2,7 @@ package paymentlog
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("paymentlogs", PaymentLogController{}).All())
+// ROUTES mirrors TS @Controller('payment-log') — singular kebab-case segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("payment-log", PaymentLogController{}).All(),
+)

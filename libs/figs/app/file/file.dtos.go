@@ -14,6 +14,7 @@ type CreateFileDto struct {
 }
 
 type UpdateFileDto struct {
+	Name   *string         `json:"name,omitempty"`
 	Input  json.RawMessage `json:"input,omitempty"`
 	Output json.RawMessage `json:"output,omitempty"`
 	Meta   json.RawMessage `json:"meta,omitempty"`

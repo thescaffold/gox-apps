@@ -1,6 +1,15 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	goqueues "github.com/awesome-goose/goose/modules/queues"
+	bridgelicense "github.com/thescaffold/gox-apps/libs/bridge/app/license"
+	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
+	bridgeplantype "github.com/thescaffold/gox-apps/libs/bridge/app/plantype"
+	bridgepreference "github.com/thescaffold/gox-apps/libs/bridge/app/preference"
+	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
+	bridgewebhooklog "github.com/thescaffold/gox-apps/libs/bridge/app/webhooklog"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "bridge"
 
@@ -105,11 +114,46 @@ var Subscriptions = map[string]events.EventHandler{
 	},
 }
 
+// Jobs mirrors ntx-apps/libs/bridge/src/index.ts jobs array. The `license`
+// queue handler logs the licence for the next payment cycle via the capital
+// app's UsageService. Capital's UsageService is wired in Phase 7.5; until
+// then the handler logs the job and returns success so the queue worker
+// (Phase 3) treats it as drained rather than retrying indefinitely.
+//
+// TS handler:
+//
+//	queue: 'queue/apps/bridge', job: 'license', fn: async (job) => {
+//	  ...syncService.once(`apps:bridge:payment:queue:${plan.id}`, async () => {
+//	    usageService.updateUsage(userId, clientId, workspaceId,
+//	      `apps/bridge/plan/${plan.type.key}/${plan.periodType}`,
+//	      plan.type.id, { plan }, 1);
+//	  });
+//	}
+//
+// The handler is registered against the queue.AppService at boot — that
+// happens in the host application after both bridge and queue modules load.
+// Host code: `queueApp.RegisterJob(bridge.Jobs[0])` (or RegisterJobs).
+var Jobs = []*goqueues.JobHandler{
+	goqueues.NewSimpleHandler("queue/apps/bridge", "license", func(job *goqueues.QueueJob) (any, error) {
+		if bridgeAppSvc == nil {
+			return nil, nil
+		}
+		return bridgeAppSvc.OnLicenseJob(job)
+	}),
+}
+
 // Top-level exports mirroring ntx-apps/libs/bridge/src/index.ts.
 var (
+	Entities = []any{
+		bridgelicense.License{},
+		bridgelicensetype.LicenseType{},
+		bridgeplantype.PlanType{},
+		bridgepreference.Preference{},
+		bridgewebhook.Webhook{},
+		bridgewebhooklog.WebhookLog{},
+	}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/bridge.yaml"}
-	Jobs            = []any{}
 	Crons           = []any{}
 )

@@ -1,6 +1,9 @@
 package app
 
-import "github.com/thescaffold/gox-packages/libs/core/events"
+import (
+	"github.com/thescaffold/gox-apps/libs/cache/app/list"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+)
 
 const Name = "cache"
 
@@ -18,6 +21,7 @@ var Subscriptions = map[string]events.EventHandler{}
 
 // Top-level exports mirroring ntx-apps/libs/cache/src/index.ts.
 var (
+	Entities        = []any{list.List{}}
 	Messages        = map[string]any{}
 	UnsafeEventList = []string{}
 	Paths           = []string{"translations/en/ntx/apps/cache.yaml"}

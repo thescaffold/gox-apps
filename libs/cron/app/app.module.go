@@ -12,7 +12,12 @@ type AppModule struct{}
 
 func (m *AppModule) Imports() []types.Module {
 	return []types.Module{
-		module.New(module.CoreConfig{}),
+		// TranslationPaths mirror TS index.ts `paths = [translations/en/ntx/apps/${name}.yaml]`;
+		// CoreModule.Boot pre-loads them so translate() resolves real strings,
+		// matching the TS bootstrap calling mediaService.load(paths).
+		module.New(module.CoreConfig{
+			TranslationPaths: Paths,
+		}),
 		gocron.NewModule(gocron.DefaultConfig(), Jobs, true),
 		&cronjob.JobModule{},
 		&cronlog.LogModule{},

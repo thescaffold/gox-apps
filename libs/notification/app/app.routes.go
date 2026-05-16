@@ -10,7 +10,7 @@ import "github.com/awesome-goose/goose/modules/router"
 //	GET    /subscription    → GetSubscription
 //	PATCH  /subscription    → UpdateSubscription
 var ROUTES = router.ForRoutes(
-	router.Get("/", []any{AppController{}, "Health"}),
+	router.Get("/", []any{AppController{}, "GetHello"}),
 	router.Get("/scope", []any{AppController{}, "FindByScope"}),
 	router.Get("/priority", []any{AppController{}, "FindByPriority"}),
 	router.Get("/subscription", []any{AppController{}, "GetSubscription"}),

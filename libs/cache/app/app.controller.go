@@ -2,82 +2,133 @@ package app
 
 import (
 	"github.com/awesome-goose/goose/types"
+	"github.com/thescaffold/gox-packages/libs/core/i18n"
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
+// AppController mirrors ntx-apps/libs/cache/src/app.controller.ts. The TS
+// controller has no health endpoint and no /flush endpoint — both are absent
+// here too. Every response is i18n-translated via `apps.cache.app.*` keys.
 type AppController struct {
-	appService *AppService `inject:""`
-	log        types.Log   `inject:""`
+	appService *AppService   `inject:""`
+	lang       *i18n.Service `inject:""`
+	log        types.Log     `inject:""`
 }
 
-func (c *AppController) Health(dto *HealthDto) types.Output {
-	return response.Success(map[string]any{"status": c.appService.GetHello()}, "cache", "ok", nil)
-}
-
+// Get mirrors TS @Get('get'). TS returns success(list, …) where list may be
+// null — we deliberately do NOT 404 on a miss (TS returns 200 + data:null).
 func (c *AppController) Get(dto *GetDto) types.Output {
-	item, err := c.appService.Get(dto.Key, dto.Group)
-	if err != nil || item == nil {
-		return response.NotFound("cache", "key not found")
-	}
-	return response.Success(item, "cache", "ok", nil)
+	pref := dto.Ctx.Preference
+	item, _ := c.appService.Get(dto.Key)
+	return response.Success(item,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.get.success", nil, pref),
+		nil)
 }
 
+// Set mirrors TS @Post('set'). The TS response data is the literal string 'OK'
+// — `success('OK', …)` — independent of whether the row was inserted or updated.
 func (c *AppController) Set(dto *SetDto) types.Output {
-	item, err := c.appService.Set(dto.Key, dto.Value, dto.Group, dto.TTL)
-	if err != nil {
-		return response.InternalServerError("cache", "failed to set key")
+	pref := dto.Ctx.Preference
+	if _, err := c.appService.Set(dto.Key, dto.Value, dto.Duration); err != nil {
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
 	}
-	return response.Success(item, "cache", "ok", nil)
+	return response.Success("OK",
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.set.success", nil, pref),
+		nil)
 }
 
-func (c *AppController) Del(dto *DelDto) types.Output {
-	if err := c.appService.Del(dto.Key, dto.Group); err != nil {
-		return response.InternalServerError("cache", "failed to delete key")
-	}
-	return response.Success(nil, "cache", "deleted", nil)
-}
-
-func (c *AppController) Flush(dto *FlushDto) types.Output {
-	if err := c.appService.Flush(dto.Group); err != nil {
-		return response.InternalServerError("cache", "failed to flush group")
-	}
-	return response.Success(nil, "cache", "flushed", nil)
-}
-
-// SetNx mirrors TS app.controller.ts setNx — returns 1 on insert, 0 if exists.
+// SetNx mirrors TS @Post('setnx'). Returns 1 on insert, 0 if the key existed.
+// TS uses the `apps.cache.app.setnx.success` translation key.
 func (c *AppController) SetNx(dto *SetDto) types.Output {
-	n, err := c.appService.SetNx(dto.Key, dto.Value, dto.Group, dto.TTL)
+	pref := dto.Ctx.Preference
+	n, err := c.appService.SetNx(dto.Key, dto.Value, dto.Duration)
 	if err != nil {
-		return response.InternalServerError("cache", "failed to setnx")
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
 	}
-	return response.Success(n, "cache", "ok", nil)
+	return response.Success(n,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.setnx.success", nil, pref),
+		nil)
 }
 
-// GetSet mirrors TS app.controller.ts getSet — returns previous entry.
+// GetSet mirrors TS @Post('getset'). Returns the PREVIOUS entry (or null when
+// the key was unset). TS uses the `apps.cache.app.setnx.success` key here too
+// (slightly odd but verbatim).
 func (c *AppController) GetSet(dto *SetDto) types.Output {
-	prev, err := c.appService.GetSet(dto.Key, dto.Value, dto.Group, dto.TTL)
+	pref := dto.Ctx.Preference
+	prev, err := c.appService.GetSet(dto.Key, dto.Value, dto.Duration)
 	if err != nil {
-		return response.InternalServerError("cache", "failed to getset")
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
 	}
-	return response.Success(prev, "cache", "ok", nil)
+	return response.Success(prev,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.setnx.success", nil, pref),
+		nil)
 }
 
-// TTL mirrors TS app.controller.ts ttl — returns remaining seconds.
-//
-//	-2: key not found, -1: no expiry, >=0: seconds.
+// Del mirrors TS @Delete('del'). Returns the number of rows deleted. TS
+// uses the `apps.cache.app.set.success` translation key for this response.
+func (c *AppController) Del(dto *DelDto) types.Output {
+	pref := dto.Ctx.Preference
+	n, err := c.appService.Del(dto.Key)
+	if err != nil {
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
+	}
+	return response.Success(n,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.set.success", nil, pref),
+		nil)
+}
+
+// TTL mirrors TS @Get('ttl'). -2 = missing, -1 = no expiry, >=0 = seconds.
+// TS uses the `apps.cache.app.ttl.none` key for the -2 / -1 cases and the
+// `apps.cache.app.ttl.success` key when an expiry is present.
 func (c *AppController) TTL(dto *TTLDto) types.Output {
-	secs, err := c.appService.TTL(dto.Key, dto.Group)
+	pref := dto.Ctx.Preference
+	secs, err := c.appService.TTL(dto.Key)
 	if err != nil {
-		return response.InternalServerError("cache", "failed to read ttl")
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
 	}
-	return response.Success(secs, "cache", "ok", nil)
+	msgKey := "apps.cache.app.ttl.success"
+	if secs < 0 {
+		msgKey = "apps.cache.app.ttl.none"
+	}
+	return response.Success(secs,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate(msgKey, nil, pref),
+		nil)
 }
 
-// Incr mirrors TS app.controller.ts incr — atomic integer increment.
+// Incr mirrors TS @Post('incr'). Returns the post-increment integer, or 0 if
+// the existing value couldn't be parsed.
 func (c *AppController) Incr(dto *IncrDto) types.Output {
-	n, err := c.appService.Incr(dto.Key, dto.Group)
+	pref := dto.Ctx.Preference
+	n, err := c.appService.Incr(dto.Key)
 	if err != nil {
-		return response.InternalServerError("cache", "failed to incr")
+		return response.InternalServerError(
+			c.lang.Translate("apps.cache.app.title", nil, pref),
+			err.Error(),
+		)
 	}
-	return response.Success(n, "cache", "ok", nil)
+	return response.Success(n,
+		c.lang.Translate("apps.cache.app.title", nil, pref),
+		c.lang.Translate("apps.cache.app.incr.success", nil, pref),
+		nil)
 }

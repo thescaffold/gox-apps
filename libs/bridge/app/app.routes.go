@@ -2,4 +2,9 @@ package app
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Get("/", []any{AppController{}, "Health"}))
+// ROUTES mirrors ntx-apps/libs/bridge/src/app.controller.ts:
+//
+//	GET  /  → GetHello
+var ROUTES = router.ForRoutes(
+	router.Get("/", []any{AppController{}, "GetHello"}),
+)

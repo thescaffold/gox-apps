@@ -4,6 +4,8 @@ go 1.25.3
 
 require github.com/awesome-goose/goose v0.0.6
 require github.com/thescaffold/gox-packages/libs/core v0.0.2
+require github.com/thescaffold/gox-apps/libs/queue v0.0.1
+require github.com/thescaffold/gox-apps/libs/flags v0.0.1
 
 require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect

@@ -2,4 +2,7 @@ package preference
 
 import "github.com/awesome-goose/goose/modules/router"
 
-var ROUTES = router.ForRoutes(router.Resource("preferences", PreferenceController{}).All())
+// ROUTES mirrors TS @Controller('preference') — singular path segment.
+var ROUTES = router.ForRoutes(
+	router.Resource("preference", PreferenceController{}).All(),
+)

@@ -2,6 +2,7 @@ package message
 
 import "github.com/awesome-goose/goose/modules/router"
 
+// ROUTES mirrors TS @Controller('message') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("messages", MessageController{}).All(),
+	router.Resource("message", MessageController{}).All(),
 )

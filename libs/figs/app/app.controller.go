@@ -2,32 +2,46 @@ package app
 
 import (
 	"github.com/awesome-goose/goose/types"
+	"github.com/thescaffold/gox-packages/libs/core/i18n"
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
+// AppController mirrors ntx-apps/libs/figs/src/app.controller.ts. Endpoints:
+//
+//	GET  /         getHello
+//	POST /:name    saveFile (find-or-error + validate → map → convert → store)
 type AppController struct {
-	appService *AppService `inject:""`
-	log        types.Log   `inject:""`
+	appService *AppService   `inject:""`
+	lang       *i18n.Service `inject:""`
+	log        types.Log     `inject:""`
 }
 
-func (c *AppController) Health(dto *HealthDto) types.Output {
-	return response.Success(map[string]any{"status": c.appService.GetHello()}, "figs", "ok", nil)
+// GetHello mirrors TS @Get() getHello(): success(getHello()) — the data is the
+// raw string "Hello World!", no envelope title/message.
+func (c *AppController) GetHello(dto *HelloDto) types.Output {
+	return response.Success(c.appService.GetHello(), "", "", nil)
 }
 
+// SaveFile mirrors TS @Post(':name') saveFile. Existing-name → 'existing' error;
+// any pipeline failure (validator/mapper/store) → 'invalid-request' error;
+// success returns {url} + title/message via i18n.
 func (c *AppController) SaveFile(dto *SaveFileDto) types.Output {
+	pref := dto.Ctx.Preference
+	title := c.lang.Translate("apps.figs.app.title", nil, pref)
+
 	name := dto.Name
 	if name == "" {
 		if n, ok := dto.MetaRaw["name"].(string); ok {
 			name = n
 		}
 	}
-	if name == "" {
-		return response.BadRequest("figs", "name is required")
-	}
 
-	existing, err := c.appService.FindFileByName(name)
-	if err == nil && existing != nil {
-		return response.Conflict("figs", "file already exists")
+	existing, _ := c.appService.FindFileByName(name)
+	if existing != nil {
+		return response.BadRequest(
+			title,
+			c.lang.Translate("apps.figs.app.post.file.error.existing", nil, pref),
+		)
 	}
 
 	payload := &Payload{
@@ -40,12 +54,15 @@ func (c *AppController) SaveFile(dto *SaveFileDto) types.Output {
 	}
 
 	url, err := c.appService.SaveFile(name, payload)
-	if err != nil {
-		return response.InternalServerError("figs", "processing failed")
-	}
-	if url == "" {
-		return response.BadRequest("figs", "invalid request")
+	if err != nil || url == "" {
+		return response.BadRequest(
+			title,
+			c.lang.Translate("apps.figs.app.post.file.error.invalid-request", nil, pref),
+		)
 	}
 
-	return response.Success(map[string]any{"url": url}, "figs", "ok", nil)
+	return response.Success(map[string]any{"url": url},
+		title,
+		c.lang.Translate("apps.figs.app.post.file.success", nil, pref),
+		nil)
 }

@@ -5,12 +5,18 @@ import (
 	"github.com/awesome-goose/goose/modules/sql"
 )
 
+// Event mirrors ntx-apps/libs/polylog/src/api/event/entities/event.entity.ts.
+// TS stores the entity-name under `entity` (TS field `entityName` with
+// `@Column({name: 'entity'})`); gox originally used `entity_name`. Phase 4
+// adds the `entity` column; both columns coexist until a follow-up cleanup
+// migration retires `entity_name`.
 type Event struct {
 	sql.BaseEntity
 	UserId      string          `gorm:"column:user_id;type:varchar(36);not null"      json:"userId"`
 	ClientId    string          `gorm:"column:client_id;type:varchar(255);not null"   json:"clientId"`
 	WorkspaceId string          `gorm:"column:workspace_id;type:varchar(36);not null" json:"workspaceId"`
 	EntityId    string          `gorm:"column:entity_id;type:varchar(36);not null"    json:"entityId"`
+	Entity      *string         `gorm:"column:entity;type:varchar(255)"               json:"-"`
 	EntityName  string          `gorm:"column:entity_name;type:varchar(255);not null" json:"entityName"`
 	Category    string          `gorm:"column:category;type:varchar(255);not null"    json:"category"`
 	Type        *string         `gorm:"column:type;type:varchar(255)"                 json:"type,omitempty"`

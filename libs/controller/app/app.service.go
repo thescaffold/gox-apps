@@ -1,6 +1,9 @@
 package app
 
 import (
+	"time"
+
+	"github.com/thescaffold/gox-apps/libs/controller/app/request"
 	"github.com/thescaffold/gox-apps/libs/controller/app/route"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
@@ -13,7 +16,18 @@ const (
 
 // AppService mirrors ntx-apps/libs/controller/src/app.service.ts.
 type AppService struct {
-	routeEntity *route.RouteEntity `inject:""`
+	routeEntity   *route.RouteEntity     `inject:""`
+	requestEntity *request.RequestEntity `inject:""`
+}
+
+// Housekeep deletes ControllerRequests rows older than cutoff. Mirrors TS
+// AppController.subscriptions['apps.cron.heartbeat.hourly'] which deletes
+// Request rows where createdAt < threshold (no status filter).
+func (s *AppService) Housekeep(cutoff time.Time) {
+	if s.requestEntity == nil {
+		return
+	}
+	_, _ = s.requestEntity.Delete(`"created_at" < ?`, cutoff)
 }
 
 // GetHello returns the constant TS getHello() returns.
@@ -54,19 +68,58 @@ func (s *AppService) GetRoute(path string) (string, error) {
 // duplicated into a Http and a Ws route, each upserted by the
 // (group, service, type, name) tuple. The update covers desc, upstream, status.
 func (s *AppService) RegisterRoutes(dto *RegisterDto) error {
+	return s.upsertRoutePair(dto.Group, dto.Service, dto.Name, dto.Upstream, dto.Desc, dto.Status)
+}
+
+// RegisterRoutePayload mirrors TS subscription
+// 'apps.controller.route.register' which receives a raw payload object and
+// upserts the same Http/Ws pair as the HTTP @Post('register') endpoint. The
+// payload keys map to RegisterDto fields one-for-one; unrecognized keys are
+// ignored. The function accepts the goose Item.Payload (any) shape directly.
+func (s *AppService) RegisterRoutePayload(payload any) error {
+	m, ok := payload.(map[string]any)
+	if !ok {
+		return nil
+	}
+	get := func(k string) string {
+		if v, ok := m[k].(string); ok {
+			return v
+		}
+		return ""
+	}
+	getPtr := func(k string) *string {
+		if v, ok := m[k].(string); ok {
+			return &v
+		}
+		return nil
+	}
+	return s.upsertRoutePair(get("group"), get("service"), get("name"), get("upstream"), getPtr("desc"), getPtr("status"))
+}
+
+// upsertRoutePair inserts or updates two Route rows (Http + Ws variants) keyed
+// by (group, service, type, name) — the shared kernel of register / subscription.
+// Returns nil when entity is unwired or the (group, service, name) tuple is
+// incomplete (so empty subscription payloads don't insert garbage rows).
+func (s *AppService) upsertRoutePair(group, service, name, upstream string, desc, status *string) error {
+	if s.routeEntity == nil {
+		return nil
+	}
+	if group == "" || service == "" || name == "" {
+		return nil
+	}
 	for _, t := range []string{RouteTypeHttp, RouteTypeWs} {
 		row := &route.Route{
-			Group:    dto.Group,
-			Service:  dto.Service,
+			Group:    group,
+			Service:  service,
 			Type:     t,
-			Name:     dto.Name,
-			Desc:     dto.Desc,
-			Upstream: dto.Upstream,
-			Status:   dto.Status,
+			Name:     name,
+			Desc:     desc,
+			Upstream: upstream,
+			Status:   status,
 		}
 		existing, err := s.routeEntity.First(
 			`"group" = ? AND "service" = ? AND "type" = ? AND "name" = ?`,
-			dto.Group, dto.Service, t, dto.Name,
+			group, service, t, name,
 		)
 		if err != nil {
 			return err
@@ -74,7 +127,7 @@ func (s *AppService) RegisterRoutes(dto *RegisterDto) error {
 		if existing != nil {
 			if _, err := s.routeEntity.Update(row,
 				`"group" = ? AND "service" = ? AND "type" = ? AND "name" = ?`,
-				dto.Group, dto.Service, t, dto.Name,
+				group, service, t, name,
 			); err != nil {
 				return err
 			}

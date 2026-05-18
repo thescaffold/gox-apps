@@ -2,8 +2,11 @@ package app
 
 import (
 	"context"
+	"time"
 
 	goqueues "github.com/awesome-goose/goose/modules/queues"
+	queuejob "github.com/thescaffold/gox-apps/libs/queue/app/job"
+	queuelog "github.com/thescaffold/gox-apps/libs/queue/app/log"
 )
 
 // AppService is the producer + consumer surface for the queue lib. The
@@ -13,7 +16,21 @@ import (
 // Process` is idempotent (it calls `Initialize` internally) so handlers can
 // be registered from each app module's Boot hook without coordination.
 type AppService struct {
-	queueSvc *goqueues.Queue `inject:""`
+	queueSvc *goqueues.Queue    `inject:""`
+	jobs     *queuejob.JobEntity `inject:""`
+	logs     *queuelog.LogEntity `inject:""`
+}
+
+// Housekeep deletes successful QueueJobs and QueueLogs older than cutoff.
+// Mirrors TS AppController.subscriptions['apps.cron.heartbeat.hourly'] which
+// deletes Job and Log rows where status=Success AND createdAt < threshold.
+func (s *AppService) Housekeep(cutoff time.Time) {
+	if s.jobs != nil {
+		_, _ = s.jobs.Delete(`"status" = ? AND "created_at" < ?`, "success", cutoff)
+	}
+	if s.logs != nil {
+		_, _ = s.logs.Delete(`"status" = ? AND "created_at" < ?`, "success", cutoff)
+	}
 }
 
 func (s *AppService) GetHello() string { return "Hello World!" }

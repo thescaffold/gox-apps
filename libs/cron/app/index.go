@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"os"
+	"strconv"
+	"time"
 
 	gocron "github.com/awesome-goose/goose/modules/cron"
 	"github.com/awesome-goose/goose/modules/sql"
@@ -44,8 +47,20 @@ var Jobs = []*gocron.CronHandler{
 	gocron.NewHandler("apps.cron", "heartbeat.yearly", "0 0 0 1 1 *", heartbeatHandler("apps.cron.heartbeat.yearly")),
 }
 
+// handleHourlyHeartbeat mirrors TS subscription 'apps.cron.heartbeat.hourly':
+// delete successful Log rows older than LOG_RETENTION_THRESHOLD hours (default 24).
 func handleHourlyHeartbeat(_ string, _ any) {
-	// housekeeping: the cron module's own CleanupInterval handles log retention
+	if cronAppSvc == nil {
+		return
+	}
+	threshold := 24
+	if v := os.Getenv("LOG_RETENTION_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			threshold = n
+		}
+	}
+	cutoff := time.Now().UTC().Add(-time.Duration(threshold) * time.Hour)
+	cronAppSvc.Housekeep(cutoff)
 }
 
 var Subscriptions = map[string]events.EventHandler{

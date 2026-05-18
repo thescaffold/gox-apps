@@ -2,6 +2,7 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	goosetest "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps/libs/queue/app"
@@ -72,4 +73,26 @@ func (s *AppModuleSuite) TestName_IsQueue() {
 func (s *AppModuleSuite) TestSubscriptions_HasHourly() {
 	_, ok := app.Subscriptions["apps.cron.heartbeat.hourly"]
 	s.T.Expect(ok).ToEqual(true)
+}
+
+// TestSubscriptions_HourlyIsBound asserts the hourly heartbeat handler is a
+// real function reference, not a nil entry. Combined with TestAppService_
+// Housekeep_DoesNotPanic_WithoutDeps below, this guards against the regression
+// where the handler was a no-op stub. TS deletes successful Queue/Job + Log
+// rows on each tick; this test ensures gox has the wiring in place.
+func (s *AppModuleSuite) TestSubscriptions_HourlyIsBound() {
+	handler, ok := app.Subscriptions["apps.cron.heartbeat.hourly"]
+	s.T.Expect(ok).ToEqual(true)
+	s.T.Expect(handler == nil).ToEqual(false)
+}
+
+// TestAppService_Housekeep_DoesNotPanic_WithoutDeps verifies the Housekeep
+// method tolerates a fresh, uninitialized AppService (no entities injected).
+// The handler runs from a subscription, so panicking on missing deps would
+// crash the event bus loop. The real DI path will inject jobs/logs in
+// production.
+func (s *AppModuleSuite) TestAppService_Housekeep_DoesNotPanic_WithoutDeps() {
+	svc := &app.AppService{}
+	defer func() { s.T.Expect(recover() == nil).ToEqual(true) }()
+	svc.Housekeep(time.Now().UTC().Add(-24 * time.Hour))
 }

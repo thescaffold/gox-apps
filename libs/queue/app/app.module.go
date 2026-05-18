@@ -29,5 +29,7 @@ func (m *AppModule) Imports() []types.Module {
 func (m *AppModule) Exports() []any { return []any{&AppService{}} }
 
 func (m *AppModule) Declarations() []any {
-	return []any{&AppController{}, &AppService{}}
+	svc := &AppService{}
+	queueAppSvc = svc
+	return []any{&AppController{}, svc}
 }

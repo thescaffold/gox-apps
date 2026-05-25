@@ -59,23 +59,8 @@ func decodeLicense(p map[string]any) LicensePayload {
 	return l
 }
 
-func decodePayment(p map[string]any) PaymentPayload {
-	pp := PaymentPayload{}
-	pp.UserID, _ = p["userId"].(string)
-	pp.ClientID, _ = p["clientId"].(string)
-	pp.WorkspaceID, _ = p["workspaceId"].(string)
-	if v, ok := p["amount"].(float64); ok {
-		pp.Amount = v
-	}
-	pp.Currency, _ = p["currency"].(string)
-	pp.Provider, _ = p["provider"].(string)
-	pp.Reference, _ = p["reference"].(string)
-	return pp
-}
-
-// Subscriptions mirrors TS subscriptions list. Each handler decodes the bus
-// payload into a typed struct and forwards to a method on the resolved
-// AppService singleton. TS-equivalent bodies are stubbed in AppService.
+// Subscriptions mirrors TS subscriptions list. Each handler forwards the bus
+// payload to a method on the resolved AppService singleton.
 var Subscriptions = map[string]events.EventHandler{
 	"apps.bridge.license.register": func(_ string, raw any) {
 		if bridgeAppSvc != nil {
@@ -84,12 +69,12 @@ var Subscriptions = map[string]events.EventHandler{
 	},
 	"apps.capital.payment.pay": func(_ string, raw any) {
 		if bridgeAppSvc != nil {
-			_ = bridgeAppSvc.OnPaymentPay(decodePayment(payloadOf(raw)))
+			_ = bridgeAppSvc.OnPaymentPay(payloadOf(raw))
 		}
 	},
 	"apps.capital.payment.debt": func(_ string, raw any) {
 		if bridgeAppSvc != nil {
-			_ = bridgeAppSvc.OnPaymentDebt(decodePayment(payloadOf(raw)))
+			_ = bridgeAppSvc.OnPaymentDebt(payloadOf(raw))
 		}
 	},
 	"apps.cron.heartbeat.daily": func(_ string, _ any) {

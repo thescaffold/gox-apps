@@ -2,13 +2,53 @@ package app
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
+	"time"
 
 	"github.com/thescaffold/gox-apps/libs/figs/app/file"
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/mapper"
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/store"
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/validator"
+	"gopkg.in/yaml.v3"
 )
+
+// schemaHTTPClient fetches remote JSON-Schema documents referenced by
+// meta.schemaUrl, mirroring TS JSONService which loads the schema via
+// mediaService.loadAndGet(schemaUrl).
+var schemaHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+// fetchRemoteSchema GETs schemaUrl and parses it into a schema object (JSON, or
+// YAML when the yaml validator is selected). Returns nil on any failure so the
+// caller falls back to an inline meta["schema"] / no-op validation.
+func fetchRemoteSchema(schemaURL string, validatorType validator.ProviderType) any {
+	req, err := http.NewRequest(http.MethodGet, schemaURL, nil)
+	if err != nil {
+		return nil
+	}
+	resp, err := schemaHTTPClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+	var schema any
+	if validatorType == validator.YAML {
+		if err := yaml.Unmarshal(body, &schema); err != nil {
+			return nil
+		}
+	} else if err := json.Unmarshal(body, &schema); err != nil {
+		return nil
+	}
+	return schema
+}
 
 type AppService struct {
 	fileService      *file.FileService  `inject:""`
@@ -141,6 +181,13 @@ func (s *AppService) runPipeline(payload *Payload) ([]any, *converter.Response, 
 	}
 
 	if schemaUrl, _ := metaMap["schemaUrl"].(string); schemaUrl != "" {
+		// TS loads the schema remotely from meta.schemaUrl; fetch it and feed it
+		// to the validator as meta["schema"] (unless an inline schema is present).
+		if _, hasInline := metaMap["schema"]; !hasInline {
+			if schema := fetchRemoteSchema(schemaUrl, validatorType); schema != nil {
+				metaMap["schema"] = schema
+			}
+		}
 		vPayload := &validator.Payload{Meta: metaMap, Input: inputMap, Output: outputMap}
 		ok, err := s.validatorService.Use(validatorType).Validate(vPayload)
 		if err != nil || !ok {

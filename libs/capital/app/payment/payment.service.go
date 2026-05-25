@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -280,7 +281,9 @@ func (s *PaymentService) Accrual(plan *capitalplan.Plan) (*AccrualSummary, error
 		if stopAt.Before(to) {
 			effectiveStop = stopAt
 		}
-		hours := effectiveStop.Sub(effectiveStart).Hours()
+		// TS uses dayjs .diff(_, 'hours') which truncates toward zero to whole
+		// hours (absFloor); a fractional remainder must NOT be billed.
+		hours := math.Trunc(effectiveStop.Sub(effectiveStart).Hours())
 		if hours <= 0 {
 			continue
 		}
@@ -572,9 +575,9 @@ func (s *PaymentService) verifyLeg(plan *capitalplan.Plan, pay *Payment, _, _ ti
 		s.linkCard(plan, providerName, currency, card)
 	}
 
-	// Fund the wallet with the verified amount.
+	// TS verify leg uses walletService.double.default (credit then debit, net-zero).
 	if s.walletService != nil {
-		_, _ = s.walletService.Fund(plan.UserId, pay.Reference, amount, currency, map[string]any{
+		_, _ = s.walletService.DoubleDefault(plan.UserId, pay.Reference, amount, currency, map[string]any{
 			"narration": "chisq|card|charge|new",
 		})
 	}
@@ -611,7 +614,8 @@ func (s *PaymentService) chargeLeg(plan *capitalplan.Plan, pay *Payment, _, _ ti
 		return false
 	}
 	if s.walletService != nil {
-		_, _ = s.walletService.Fund(plan.UserId, pay.Reference, amount, currency, map[string]any{
+		// TS uses walletService.double.default (credit then debit, net-zero).
+		_, _ = s.walletService.DoubleDefault(plan.UserId, pay.Reference, amount, currency, map[string]any{
 			"narration": "chisq|card|charge",
 		})
 	}
@@ -643,7 +647,8 @@ func (s *PaymentService) recordOnlyLeg(plan *capitalplan.Plan, pay *Payment, _, 
 		"paymentId": pay.Id,
 	}, nil)
 	if s.walletService != nil {
-		_, _ = s.walletService.Fund(plan.UserId, pay.Reference, amount, currency, map[string]any{
+		// TS uses walletService.double.default (credit then debit, net-zero).
+		_, _ = s.walletService.DoubleDefault(plan.UserId, pay.Reference, amount, currency, map[string]any{
 			"narration": "chisq|card|charge",
 		})
 	}

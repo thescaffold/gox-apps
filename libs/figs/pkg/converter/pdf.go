@@ -17,15 +17,14 @@ func (p *PDFProvider) Convert(args ...any) (*Response, error) {
 
 	lineH := 7.0
 	for _, arg := range args {
-		switch v := arg.(type) {
-		case []string:
-			pdf.CellFormat(0, lineH, joinCells(v), "", 1, "", false, 0, "")
-		case [][]string:
-			for _, row := range v {
-				pdf.CellFormat(0, lineH, joinCells(row), "", 1, "", false, 0, "")
-			}
-		default:
-			pdf.CellFormat(0, lineH, fmt.Sprintf("%v", v), "", 1, "", false, 0, "")
+		rows, ok := normalizeRows(arg)
+		if !ok {
+			// Non-tabular arg (e.g. rendered HTML from the html mapper) → one line.
+			pdf.CellFormat(0, lineH, fmt.Sprintf("%v", arg), "", 1, "", false, 0, "")
+			continue
+		}
+		for _, row := range rows {
+			pdf.CellFormat(0, lineH, joinCells(row), "", 1, "", false, 0, "")
 		}
 	}
 
@@ -37,7 +36,8 @@ func (p *PDFProvider) Convert(args ...any) (*Response, error) {
 	return &Response{
 		Buffer:    buf.Bytes(),
 		Mime:      "application/pdf",
-		Encoding:  "binary",
+		// TS pdf.service.ts sets encoding 'utf-8' (persisted to file.output.encoding).
+		Encoding:  "utf-8",
 		Extension: "pdf",
 	}, nil
 }

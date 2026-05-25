@@ -12,19 +12,14 @@ func (p *CSVProvider) Convert(args ...any) (*Response, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 	for _, arg := range args {
-		switch v := arg.(type) {
-		case []string:
-			if err := w.Write(v); err != nil {
+		if rows, ok := normalizeRows(arg); ok {
+			if err := w.WriteAll(rows); err != nil {
 				return nil, err
 			}
-		case [][]string:
-			if err := w.WriteAll(v); err != nil {
-				return nil, err
-			}
-		default:
-			if err := w.Write([]string{fmt.Sprintf("%v", v)}); err != nil {
-				return nil, err
-			}
+			continue
+		}
+		if err := w.Write([]string{fmt.Sprintf("%v", arg)}); err != nil {
+			return nil, err
 		}
 	}
 	w.Flush()

@@ -35,10 +35,12 @@ type InitInput struct {
 	Meta        json.RawMessage
 }
 
-// InitOutput is the file record + computed URL.
+// InitOutput is the file record fields + computed URL, flattened to match TS
+// init() which returns `{...nFile, url}` (file fields at the top level, not
+// nested under a "file" key). The embedded *file.File promotes its JSON fields.
 type InitOutput struct {
-	File *file.File `json:"file"`
-	URL  string     `json:"url"`
+	*file.File
+	URL string `json:"url"`
 }
 
 // Init finds-or-creates a file by (userId, clientId, workspaceId, type, name).
@@ -108,11 +110,12 @@ type VerifyInput struct {
 	ParentId    *string
 }
 
-// VerifyOutput is the file record + pages count + URL.
+// VerifyOutput is the flattened file record + pages count + URL, matching TS
+// verify() which returns `{...nFile, pagesCount, url}`.
 type VerifyOutput struct {
-	File       *file.File `json:"file"`
-	PagesCount int64      `json:"pagesCount"`
-	URL        string     `json:"url"`
+	*file.File
+	PagesCount int64  `json:"pagesCount"`
+	URL        string `json:"url"`
 }
 
 // Verify returns the file plus how many pages have been uploaded.
@@ -132,9 +135,11 @@ func (s *AppService) Verify(in VerifyInput) (*VerifyOutput, error) {
 	return &VerifyOutput{File: f, PagesCount: count, URL: s.fileURL(f.Id)}, nil
 }
 
-// UploadOutput bundles the upload result.
+// UploadOutput bundles the upload result. Mirrors TS upload() which returns
+// `{file: {...nFile, url}, pages}` — the nested `file` carries the file fields
+// AND the computed url (i.e. the flattened InitOutput shape).
 type UploadOutput struct {
-	File  *file.File  `json:"file"`
+	File  *InitOutput `json:"file"`
 	Pages []page.Page `json:"pages"`
 }
 
@@ -159,7 +164,7 @@ func (s *AppService) Upload(in InitInput, rawPages []string) (*UploadOutput, err
 	if err != nil {
 		return nil, err
 	}
-	return &UploadOutput{File: initOut.File, Pages: pages}, nil
+	return &UploadOutput{File: initOut, Pages: pages}, nil
 }
 
 // Download returns the assembled raw bytes of a file (concatenated pages in order).

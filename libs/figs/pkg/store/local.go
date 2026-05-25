@@ -1,32 +1,20 @@
 package store
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"encoding/base64"
 
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
 )
 
 type LocalProvider struct{}
 
+// Store mirrors TS LocalService.store: it does NOT write to disk — it returns
+// the bare meta name as the url and the converted content as base64. The base64
+// raw is persisted to file.raw; the object/S3 store handles real remote storage.
 func (p *LocalProvider) Store(payload *Payload, raw *converter.Response) (*Response, error) {
 	name, _ := payload.Meta["name"].(string)
-	bucket, _ := payload.Meta["bucket"].(string)
-	if bucket == "" {
-		bucket = "common"
-	}
-	dir := filepath.Join("storage", bucket)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
-	}
-	filename := fmt.Sprintf("%s.%s", name, raw.Extension)
-	path := filepath.Join(dir, filename)
-	if err := os.WriteFile(path, raw.Buffer, 0644); err != nil {
-		return nil, err
-	}
 	return &Response{
-		URL: "/" + filepath.ToSlash(path),
-		Raw: string(raw.Buffer),
+		URL: name,
+		Raw: base64.StdEncoding.EncodeToString(raw.Buffer),
 	}, nil
 }

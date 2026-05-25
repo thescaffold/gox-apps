@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 // UnsafeEntityNames lists entity table names whose events must not be re-logged
@@ -12,11 +13,13 @@ import (
 var UnsafeEntityNames = []string{"auditlogs", "audittokens", "audittokenlogs"}
 
 type AppService struct {
-	logService *auditlog.LogService `inject:""`
+	logService *auditlog.LogService   `inject:""`
+	tracker    *events.TrackerService `inject:""`
 }
 
 func (s *AppService) GetHello() string {
-	return "Hello from audit"
+	// TS getHello() returns "Hello World!" uniformly across services.
+	return "Hello World!"
 }
 
 // HandleEvent creates an audit log entry from an incoming event payload.

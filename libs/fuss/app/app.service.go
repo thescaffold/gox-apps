@@ -140,7 +140,10 @@ func (s *AppService) Search(query, histType, userId, clientId, workspaceId strin
 	if page > 1 {
 		offset = (page - 1) * perPage
 	}
-	logs, err := s.tokenLogEntity.Find(offset, 0, `"value" LIKE ?`, "%"+query+"%")
+	// TS applies skip+take at the DB once (find({skip, take})); the page is then
+	// uniqued and its length becomes `total`. Apply perPage as the limit here so
+	// pagination is NOT applied a second time via a post-unique re-slice.
+	logs, err := s.tokenLogEntity.Find(offset, perPage, `"value" LIKE ?`, "%"+query+"%")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -180,16 +183,11 @@ func (s *AppService) Search(query, histType, userId, clientId, workspaceId strin
 		})
 	}
 
-	total := int64(len(results))
-	start := (page - 1) * perPage
-	end := start + perPage
-	if start >= int(total) {
-		return []map[string]any{}, total, nil
+	// total is the post-unique length of THIS page (matches TS `total = tokens.length`).
+	if results == nil {
+		results = []map[string]any{}
 	}
-	if end > int(total) {
-		end = int(total)
-	}
-	return results[start:end], total, nil
+	return results, int64(len(results)), nil
 }
 
 func (s *AppService) Lookup(group, svc, entityName, entityId string) (map[string]any, error) {

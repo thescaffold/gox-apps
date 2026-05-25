@@ -9,6 +9,8 @@ import (
 	bridgelicensetype "github.com/thescaffold/gox-apps/libs/bridge/app/licensetype"
 	bridgewebhook "github.com/thescaffold/gox-apps/libs/bridge/app/webhook"
 	capitalusage "github.com/thescaffold/gox-apps/libs/capital/app/usage"
+	"github.com/thescaffold/gox-packages/libs/core/events"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 // AppService is the public surface for bridge event handlers.
@@ -19,6 +21,7 @@ type AppService struct {
 	licenseTypeEntity *bridgelicensetype.LicenseTypeEntity `inject:""`
 	webhookEntity     *bridgewebhook.WebhookEntity         `inject:""`
 	usageService      *capitalusage.UsageService           `inject:""`
+	tracker           *events.TrackerService               `inject:""`
 }
 
 func (s *AppService) GetHello() string { return "Hello World!" }
@@ -81,47 +84,214 @@ func (s *AppService) OnLicenseRegister(p LicensePayload) error {
 	return s.licenseEntity.Insert(lic)
 }
 
-// PaymentPayload bridges capital payment events.
-type PaymentPayload struct {
-	UserID      string  `json:"userId,omitempty"`
-	ClientID    string  `json:"clientId,omitempty"`
-	WorkspaceID string  `json:"workspaceId,omitempty"`
-	Amount      float64 `json:"amount,omitempty"`
-	Currency    string  `json:"currency,omitempty"`
-	Provider    string  `json:"provider,omitempty"`
-	Reference   string  `json:"reference,omitempty"`
+// OnPaymentPay ports the `apps.capital.payment.pay` subscription
+// (ntx-apps/libs/bridge/src/app.controller.ts). It branches on the payment's
+// meta.type and links/renews the matching license(s):
+//   - apps.capital.license.pay     → the single license by meta.licenseId
+//   - apps.capital.payment.renewal → each meta.logs[].meta.licenseId
+//   - apps.capital.payment.record  → every license for (user, client, workspace)
+//
+// In each case it verifies the licenseType amount for the license's period
+// matches the paid amount (else emits apps.capital.pay.mismatch and aborts),
+// links the license (period→monthly, fresh token, start/renewed=now,
+// expiredAt=+1 month, status=Success), and emits apps.identity.attribute.update.
+//
+// NB: TS does a redundant `status: Failed` write before the Success write when
+// status!=true; that write is immediately overwritten, so (per the idiomatic-Go
+// directive) we skip the dead write — the final status is always Success.
+func (s *AppService) OnPaymentPay(payload map[string]any) error {
+	if s.licenseEntity == nil || payload == nil {
+		return nil
+	}
+	payment, _ := payload["payment"].(map[string]any)
+	if payment == nil {
+		return nil
+	}
+	userID, _ := payment["userId"].(string)
+	clientID, _ := payment["clientId"].(string)
+	workspaceID, _ := payment["workspaceId"].(string)
+	amount := toFloat(payment["amount"])
+	meta, _ := payment["meta"].(map[string]any)
+	if meta == nil {
+		return nil
+	}
+	typ, _ := meta["type"].(string)
+
+	switch typ {
+	case "apps.capital.license.pay":
+		licenseID, _ := meta["licenseId"].(string)
+		lic, _ := s.licenseEntity.First(`id = ?`, licenseID)
+		if lic == nil {
+			return nil
+		}
+		if !s.amountMatches(lic, amount) {
+			s.payMismatch(payment, lic, userID, clientID, workspaceID)
+			return nil
+		}
+		s.linkLicense(lic)
+		s.attributeUpdate(userID, clientID, workspaceID)
+
+	case "apps.capital.payment.renewal":
+		renewalAmount := toFloat(meta["amount"]) // TS re-binds amount from meta
+		logs, _ := meta["logs"].([]any)
+		for _, lraw := range logs {
+			log, _ := lraw.(map[string]any)
+			lmeta, _ := log["meta"].(map[string]any)
+			if lmeta == nil || lmeta["licenseId"] == nil {
+				continue
+			}
+			licenseID, _ := lmeta["licenseId"].(string)
+			lic, _ := s.licenseEntity.First(`id = ?`, licenseID)
+			if lic == nil {
+				continue
+			}
+			if !s.amountMatches(lic, renewalAmount) {
+				s.payMismatch(payment, lic, userID, clientID, workspaceID)
+				return nil // TS returns from the whole handler on a mismatch
+			}
+			s.linkLicense(lic)
+			s.attributeUpdate(userID, clientID, workspaceID)
+		}
+
+	case "apps.capital.payment.record":
+		licenses, _ := s.licenseEntity.Find(0, 0,
+			`user_id = ? AND client_id = ? AND workspace_id = ?`, userID, clientID, workspaceID)
+		for i := range licenses {
+			lic := &licenses[i]
+			if !s.amountMatches(lic, amount) {
+				s.payMismatch(payment, lic, userID, clientID, workspaceID)
+				return nil
+			}
+			s.linkLicense(lic)
+			s.attributeUpdate(userID, clientID, workspaceID)
+		}
+	}
+	return nil
 }
 
-// OnPaymentPay marks the user's most-recent license as renewed.
-func (s *AppService) OnPaymentPay(p PaymentPayload) error {
-	if s.licenseEntity == nil || p.UserID == "" {
+// OnPaymentDebt ports the `apps.capital.payment.debt` subscription: for each
+// payment whose meta.type is apps.capital.license.pay, mark its license Failed.
+// Mirrors TS exactly: a payment whose type is NOT license.pay aborts the whole
+// handler (return, not continue).
+func (s *AppService) OnPaymentDebt(payload map[string]any) error {
+	if s.licenseEntity == nil || payload == nil {
 		return nil
 	}
-	lic, _ := s.licenseEntity.First(`user_id = ? AND workspace_id = ?`, p.UserID, p.WorkspaceID)
-	if lic == nil {
-		return nil
+	payments, _ := payload["payments"].([]any)
+	failed := "failed"
+	for _, praw := range payments {
+		payment, _ := praw.(map[string]any)
+		meta, _ := payment["meta"].(map[string]any)
+		if meta == nil {
+			return nil
+		}
+		typ, _ := meta["type"].(string)
+		if typ != "apps.capital.license.pay" {
+			return nil
+		}
+		licenseID, _ := meta["licenseId"].(string)
+		_, _ = s.licenseEntity.Update(&bridgelicense.License{Status: &failed}, `id = ?`, licenseID)
 	}
+	return nil
+}
+
+// amountMatches reports whether the license's type amount for its period equals
+// the paid amount — TS `license.type[license.periodType] === amount`. A missing
+// type, unknown/absent period amount counts as a mismatch (TS undefined !== n).
+func (s *AppService) amountMatches(lic *bridgelicense.License, amount float64) bool {
+	if s.licenseTypeEntity == nil {
+		return false
+	}
+	lt, _ := s.licenseTypeEntity.First(`id = ?`, lic.TypeId)
+	if lt == nil {
+		return false
+	}
+	amt, ok := licenseTypeAmount(lt, strPtrVal(lic.PeriodType))
+	return ok && amt == amount
+}
+
+func licenseTypeAmount(lt *bridgelicensetype.LicenseType, period string) (float64, bool) {
+	switch period {
+	case "daily":
+		if lt.Daily != nil {
+			return *lt.Daily, true
+		}
+	case "weekly":
+		if lt.Weekly != nil {
+			return *lt.Weekly, true
+		}
+	case "monthly":
+		return lt.Monthly, true
+	case "yearly":
+		if lt.Yearly != nil {
+			return *lt.Yearly, true
+		}
+	}
+	return 0, false
+}
+
+// linkLicense applies the TS "link license" update: period→monthly, fresh token,
+// start/renewed=now, expiredAt=+1 month, status=Success.
+func (s *AppService) linkLicense(lic *bridgelicense.License) {
 	now := time.Now().UTC()
+	exp := now.AddDate(0, 1, 0)
+	monthly := "monthly"
+	tkn := utils.Reference("TKN", 36)
+	success := "success"
+	lic.PeriodType = &monthly
+	lic.Token = &tkn
+	lic.StartAt = &now
 	lic.RenewedAt = &now
-	status := "active"
-	lic.Status = &status
-	_, err := s.licenseEntity.Update(lic, `id = ?`, lic.Id)
-	return err
+	lic.ExpiredAt = &exp
+	lic.Status = &success
+	_, _ = s.licenseEntity.Update(lic, `id = ?`, lic.Id)
 }
 
-// OnPaymentDebt marks the user's most-recent license as suspended.
-func (s *AppService) OnPaymentDebt(p PaymentPayload) error {
-	if s.licenseEntity == nil || p.UserID == "" {
-		return nil
+func (s *AppService) payMismatch(payment map[string]any, lic *bridgelicense.License, userID, clientID, workspaceID string) {
+	if s.tracker == nil {
+		return
 	}
-	lic, _ := s.licenseEntity.First(`user_id = ? AND workspace_id = ?`, p.UserID, p.WorkspaceID)
-	if lic == nil {
-		return nil
+	s.tracker.Message("apps.capital.pay.mismatch", map[string]any{
+		"payment":     payment,
+		"license":     lic,
+		"userId":      userID,
+		"clientId":    clientID,
+		"workspaceId": workspaceID,
+	})
+}
+
+func (s *AppService) attributeUpdate(userID, clientID, workspaceID string) {
+	if s.tracker == nil {
+		return
 	}
-	status := "suspended"
-	lic.Status = &status
-	_, err := s.licenseEntity.Update(lic, `id = ?`, lic.Id)
-	return err
+	s.tracker.Message("apps.identity.attribute.update", map[string]any{
+		"type":        "activity",
+		"key":         "licenses",
+		"value":       "1",
+		"action":      "add",
+		"userId":      userID,
+		"clientId":    clientID,
+		"workspaceId": workspaceID,
+	})
+}
+
+func toFloat(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	}
+	return 0
+}
+
+func strPtrVal(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 // runHeartbeat is the shared body for daily/weekly/monthly/yearly heartbeats.

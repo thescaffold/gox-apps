@@ -132,8 +132,8 @@ type LimitResult struct {
 }
 
 // Limit returns the allowed/limit/usage triple. Mirrors the intent of TS
-// appService.limit(): allowed is true when the flag is Active AND usage is
-// below limit; usage is the sum of FlagLog.limit values for the flag.
+// appService.limit(): allowed is true when the flag is Active (status only —
+// usage does NOT gate it); usage is the sum of FlagLog.limit values for the flag.
 func (s *AppService) Limit(env EnvironmentRef, q LogQuery) (*LimitResult, error) {
 	flag, err := s.flag(env, q)
 	if err != nil {
@@ -142,16 +142,18 @@ func (s *AppService) Limit(env EnvironmentRef, q LogQuery) (*LimitResult, error)
 	if flag == nil {
 		return &LimitResult{Allowed: false, Limit: 0, Usage: 0}, nil
 	}
-	active := flag.Status == nil || *flag.Status == "active"
-	if !active {
-		return &LimitResult{Allowed: false, Limit: flag.Limit, Usage: 0}, nil
+	// TS: allowed = (status === Active). It is NOT gated by usage — usage is
+	// returned but never reconsidered — and a null status yields allowed=false.
+	allowed := flag.Status != nil && *flag.Status == "active"
+	usage := 0
+	if allowed {
+		used, err := s.sumFlagLogLimits(flag.Id)
+		if err != nil {
+			return nil, err
+		}
+		usage = used
 	}
-	used, err := s.sumFlagLogLimits(flag.Id)
-	if err != nil {
-		return nil, err
-	}
-	allowed := flag.Limit <= 0 || used < flag.Limit
-	return &LimitResult{Allowed: allowed, Limit: flag.Limit, Usage: used}, nil
+	return &LimitResult{Allowed: allowed, Limit: flag.Limit, Usage: usage}, nil
 }
 
 // sumFlagLogLimits computes SUM(limit) for the FlagLog rows of a given flag.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	formpkg "github.com/thescaffold/gox-apps/libs/forms/app/form"
 	formfieldpkg "github.com/thescaffold/gox-apps/libs/forms/app/formfield"
@@ -92,8 +93,18 @@ func (s *AppService) SaveForm(id string, body map[string]any) error {
 	}
 
 	// First pass: validate every key has a registered field, materialise rows.
+	// Iterate keys in a deterministic (sorted) order so the field-not-found error
+	// reports a stable key. (Go maps have no insertion order, so we cannot mirror
+	// JS for…in order exactly; sorting removes the prior non-determinism.)
+	keys := make([]string, 0, len(body))
+	for k := range body {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	rows := make([]formlogpkg.FormLog, 0, len(body))
-	for key, raw := range body {
+	for _, key := range keys {
+		raw := body[key]
 		field, _ := s.formFieldEntity.First(`form_id = ? AND "key" = ?`, id, key)
 		if field == nil {
 			return &FieldNotFoundError{Key: key}

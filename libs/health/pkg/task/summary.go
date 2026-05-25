@@ -68,6 +68,13 @@ func (t *SummaryTask) run() {
 		}
 
 		received := int(count)
+		// TS's leftJoin + WHERE log.createdAt >= from excludes services with no
+		// logs in the window — they get no summary and keep their prior type. Skip
+		// them here too (this also makes the measure<=0 "down" branch unreachable,
+		// exactly as in TS).
+		if received == 0 {
+			continue
+		}
 		measure := 0.0
 		if expectedCount > 0 {
 			measure = float64(received) / float64(expectedCount)
@@ -75,22 +82,14 @@ func (t *SummaryTask) run() {
 
 		outcomeType := outcomeFromMeasure(measure)
 
-		existing, _ := t.summaryEntity.First(`"service_id" = ?`, svc.Id)
-		if existing != nil {
-			existing.Type = outcomeType
-			existing.Received = received
-			existing.Measure = measure
-			existing.Note = nil
-			_, _ = t.summaryEntity.Update(existing, `"id" = ?`, existing.Id)
-		} else {
-			s := &healthsum.Summary{
-				ServiceId: svc.Id,
-				Type:      outcomeType,
-				Received:  received,
-				Measure:   measure,
-			}
-			_ = t.summaryEntity.Insert(s)
-		}
+		// TS save({...}) with no id INSERTs a new summary every run (history
+		// accumulates); it does not update a single per-service row.
+		_ = t.summaryEntity.Insert(&healthsum.Summary{
+			ServiceId: svc.Id,
+			Type:      outcomeType,
+			Received:  received,
+			Measure:   measure,
+		})
 
 		updatedSvc := &healthsvc.Service{Type: &outcomeType}
 		_, _ = t.serviceEntity.Update(updatedSvc, `"id" = ?`, svc.Id)
@@ -104,7 +103,8 @@ func outcomeFromMeasure(measure float64) string {
 	case measure < 0.5:
 		return "troubled"
 	case measure < 0.8:
-		return "possible_troubled"
+		// TS HealthStatusType.PossibleTroubled = 'possibly_troubled'.
+		return "possibly_troubled"
 	default:
 		return "good"
 	}

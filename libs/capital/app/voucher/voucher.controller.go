@@ -160,9 +160,9 @@ func (c *VoucherController) isAvailable(ntx ntxctx.NTXContext, scope string, vt 
 	if len(vt.Rules) > 0 {
 		_ = json.Unmarshal(vt.Rules, &rules)
 	}
-	if rules == nil {
-		return true
-	}
+	// TS does NOT short-circuit when rules is absent: `reuse = rules?.reuse ?? 0`,
+	// so a voucher type already used at least once is unavailable even with no
+	// rules. Go map reads below are nil-safe, so run the checks with a nil ruleset.
 
 	// reuse cap
 	reuseCap := 0

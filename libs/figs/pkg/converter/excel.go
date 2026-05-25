@@ -18,24 +18,18 @@ func (p *ExcelProvider) Convert(args ...any) (*Response, error) {
 
 	row := 1
 	for _, arg := range args {
-		switch v := arg.(type) {
-		case []string:
-			for col, cell := range v {
+		rows, ok := normalizeRows(arg)
+		if !ok {
+			colName, _ := excelize.ColumnNumberToName(1)
+			_ = f.SetCellValue(sheet, fmt.Sprintf("%s%d", colName, row), fmt.Sprintf("%v", arg))
+			row++
+			continue
+		}
+		for _, r := range rows {
+			for col, cell := range r {
 				colName, _ := excelize.ColumnNumberToName(col + 1)
 				_ = f.SetCellValue(sheet, fmt.Sprintf("%s%d", colName, row), cell)
 			}
-			row++
-		case [][]string:
-			for _, r := range v {
-				for col, cell := range r {
-					colName, _ := excelize.ColumnNumberToName(col + 1)
-					_ = f.SetCellValue(sheet, fmt.Sprintf("%s%d", colName, row), cell)
-				}
-				row++
-			}
-		default:
-			colName, _ := excelize.ColumnNumberToName(1)
-			_ = f.SetCellValue(sheet, fmt.Sprintf("%s%d", colName, row), fmt.Sprintf("%v", v))
 			row++
 		}
 	}
@@ -48,7 +42,8 @@ func (p *ExcelProvider) Convert(args ...any) (*Response, error) {
 	return &Response{
 		Buffer:    buf.Bytes(),
 		Mime:      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Encoding:  "binary",
+		// TS excel.service.ts sets encoding 'utf-8' (persisted to file.output.encoding).
+		Encoding:  "utf-8",
 		Extension: "xlsx",
 	}, nil
 }

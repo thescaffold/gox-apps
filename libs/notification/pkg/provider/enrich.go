@@ -19,15 +19,17 @@ func enrichRenderContext(data map[string]any, fetcher IdentityFetcher, log *noti
 	}
 
 	// Always add a `now` block — TS adds this regardless of identity presence.
+	// Keys/formats mirror TS provider.service.ts exactly: dateTime/time use the
+	// 12-hour FULL_DATE_TIME/FULL_TIME formats, and day/month/year are
+	// zero-padded strings (dayjs DD/MM/YYYY). NOTE: no iso/pretty in TS.
 	now := time.Now().UTC()
 	data["now"] = map[string]any{
-		"iso":    now.Format(time.RFC3339),
-		"date":   now.Format("2006-01-02"),
-		"time":   now.Format("15:04:05"),
-		"pretty": now.Format("Mon, 02 Jan 2006, 03:04 PM"),
-		"year":   now.Year(),
-		"month":  int(now.Month()),
-		"day":    now.Day(),
+		"dateTime": now.Format("2006-01-02 03:04:05"),
+		"time":     now.Format("03:04:05"),
+		"date":     now.Format("2006-01-02"),
+		"day":      now.Format("02"),
+		"month":    now.Format("01"),
+		"year":     now.Format("2006"),
 	}
 
 	if fetcher == nil {

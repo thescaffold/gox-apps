@@ -22,7 +22,10 @@ func (p *JSONProvider) Validate(payload *Payload) (bool, error) {
 		return false, fmt.Errorf("validator: marshal schema: %w", err)
 	}
 
-	inputBytes, err := json.Marshal(payload.Input)
+	// TS validates input.data (not the whole input). The schema is loaded from
+	// meta.schemaUrl by AppService.runPipeline (fetchRemoteSchema) and passed in
+	// as meta["schema"]; an inline meta["schema"] is also honoured.
+	inputBytes, err := json.Marshal(payload.Input["data"])
 	if err != nil {
 		return false, fmt.Errorf("validator: marshal input: %w", err)
 	}

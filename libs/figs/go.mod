@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.16
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
+	github.com/cbroglie/mustache v1.4.0
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/thescaffold/gox-packages/libs/core v0.0.3
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -31,7 +32,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1 // indirect
 	github.com/aws/smithy-go v1.25.1 // indirect
-	github.com/cbroglie/mustache v1.4.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect

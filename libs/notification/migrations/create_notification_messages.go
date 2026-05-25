@@ -19,6 +19,7 @@ func (m *CreateNotificationMessages) Run(q *sql.Query) error {
 			"subject"      varchar(255) DEFAULT NULL,
 			"channel"      varchar(255) DEFAULT NULL,
 			"message"      jsonb        DEFAULT NULL,
+			"data"         jsonb        DEFAULT NULL,
 			"read_at"      timestamp    DEFAULT NULL,
 			"publish_at"   timestamp    DEFAULT NULL,
 			"expire_at"    timestamp    DEFAULT NULL,
@@ -31,6 +32,11 @@ func (m *CreateNotificationMessages) Run(q *sql.Query) error {
 			PRIMARY KEY ("id")
 		)
 	`); err != nil {
+		return err
+	}
+	// Idempotently add the `data` column for DBs created before it existed
+	// (TS Message carries data: log.data on web sends).
+	if _, err := q.Exec(`ALTER TABLE "NotificationMessages" ADD COLUMN IF NOT EXISTS "data" jsonb`); err != nil {
 		return err
 	}
 	for _, idx := range []string{

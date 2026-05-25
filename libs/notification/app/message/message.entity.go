@@ -18,6 +18,7 @@ type Message struct {
 	Subject     *string         `gorm:"column:subject;type:varchar(255)"      json:"subject,omitempty"`
 	Channel     *string         `gorm:"column:channel;type:varchar(255)"      json:"channel,omitempty"`
 	Message     json.RawMessage `gorm:"column:message;type:jsonb"             json:"message,omitempty"`
+	Data        json.RawMessage `gorm:"column:data;type:jsonb"                json:"data,omitempty"`
 	ReadAt      *time.Time      `gorm:"column:read_at;type:timestamp"         json:"readAt,omitempty"`
 	PublishAt   *time.Time      `gorm:"column:publish_at;type:timestamp"      json:"publishAt,omitempty"`
 	ExpireAt    *time.Time      `gorm:"column:expire_at;type:timestamp"       json:"expireAt,omitempty"`

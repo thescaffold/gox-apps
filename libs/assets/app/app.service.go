@@ -59,15 +59,15 @@ func RandomName() string {
 // (workspace.beforeCreate, identity/provider/authorize, etc.) embed in the
 // owning entity.
 //
-// The URL is composed from BLOBS_BASE_URL (env, optional) + `/dynamic?id=<file.id>`
-// so the asset can be served by the public blobs endpoint regardless of where
-// the host app is mounted. Falls back to a placeholder only when both the
-// image generator AND the file service fail — earlier impls returned a
+// The URL is composed from ASSETS_BASE_URL (env, optional) + `/dynamic?id=<file.id>`
+// — matching TS app.service.ts which builds the dynamic-asset url from
+// ASSETS_BASE_URL (NOT BLOBS_BASE_URL). Falls back to a placeholder only when
+// both the image generator AND the file service fail — earlier impls returned a
 // placeholder on `err != nil` alone which silently masked storage errors.
 func (s *AppService) GetDynamicAsset() *DynamicAsset {
 	name := RandomName()
 	svg := s.GenerateDynamicSVG(name, "pixel", nil, 80, true)
-	baseURL := os.Getenv("BLOBS_BASE_URL")
+	baseURL := os.Getenv("ASSETS_BASE_URL")
 	f, url, err := s.StoreDynamicFile(name, svg, baseURL)
 	if err == nil && f != nil {
 		return &DynamicAsset{Id: f.Id, Name: name, Url: url}

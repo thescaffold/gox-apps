@@ -13,7 +13,9 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
-const asterisk = "*"
+// asterisk mirrors TS ASTERISK (app.config.ts) — a fixed UUID sentinel used as
+// the wildcard segment/source value in channel-type matching. It is NOT "*".
+const asterisk = "965c068d-52d9-4cf4-907f-8e453f20074a"
 
 var unsafeEventList = []string{
 	"apps.common.log.request",
@@ -128,7 +130,9 @@ func (s *PipelineService) Process(ev *polyloevent.Event) error {
 		return nil
 	}
 
-	inProgress := "in_progress"
+	// TS EventStatusType.InProgress is 'inprogress' (no underscore); the
+	// dashboard counts that exact value.
+	inProgress := "inprogress"
 	_, _ = s.eventEntity.Update(&polyloevent.Event{Status: &inProgress}, `"id" = ?`, ev.Id)
 
 	channels, err := s.getConfig(

@@ -319,7 +319,11 @@ func (s *AppService) OnUsageStart(p UsageStartPayload) error {
 	})
 }
 
-// OnUsageUpdate increments quantity on the latest open usage row.
+// OnUsageUpdate replaces quantity on the latest open usage row. Mirrors the TS
+// apps.capital.usage.update subscription which does
+// usageService.update({...}, { quantity }) — a REPLACE, not an increment. TS
+// skips the field when the payload omits quantity (undefined), so we leave the
+// row unchanged when no positive quantity is supplied.
 func (s *AppService) OnUsageUpdate(p UsageStartPayload) error {
 	if s.usageEntity == nil || p.UserID == "" {
 		return nil
@@ -331,11 +335,10 @@ func (s *AppService) OnUsageUpdate(p UsageStartPayload) error {
 	if row == nil {
 		return nil
 	}
-	q := p.Quantity
-	if q <= 0 {
-		q = 1
+	if p.Quantity <= 0 {
+		return nil
 	}
-	row.Quantity += q
+	row.Quantity = p.Quantity
 	_, err := s.usageEntity.Update(row, `id = ?`, row.Id)
 	return err
 }

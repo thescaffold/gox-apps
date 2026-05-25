@@ -33,7 +33,9 @@ func (p *YAMLProvider) Validate(payload *Payload) (bool, error) {
 		return false, fmt.Errorf("validator: convert schema to json: %w", err)
 	}
 
-	inputBytes, err := json.Marshal(normalise(payload.Input))
+	// TS validates input.data (not the whole input). (Remote schema fetch from
+	// meta.schemaUrl is a remaining gap — this port uses inline meta["schema"].)
+	inputBytes, err := json.Marshal(normalise(payload.Input["data"]))
 	if err != nil {
 		return false, fmt.Errorf("validator: convert input to json: %w", err)
 	}

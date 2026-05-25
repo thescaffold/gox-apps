@@ -29,15 +29,29 @@ func handleEvent(_ string, payload any) {
 	}
 }
 
+// summaryHandler returns a heartbeat handler that runs the periodic summary for
+// `period`. Mirrors TS app.controller.ts which dispatches a SummaryBatch via
+// batchService.run (async); we run it in a goroutine so the synchronous event
+// bus is not blocked while every user's summary is aggregated.
+func summaryHandler(period string) events.EventHandler {
+	return func(_ string, _ any) {
+		if appSvc == nil {
+			return
+		}
+		go func() { _ = appSvc.RunSummary(period) }()
+	}
+}
+
 // Subscriptions maps event patterns to handlers for this app.
-// Mirrors ntx-apps/libs/audit/src/index.ts subscriptions exactly (6 entries).
+// Mirrors ntx-apps/libs/audit/src/index.ts subscriptions exactly (6 entries):
+// the after-* events create audit logs; the heartbeats run the period summary.
 var Subscriptions = map[string]events.EventHandler{
 	"*.*.*.after-insert":          handleEvent,
 	"*.*.*.after-update":          handleEvent,
 	"*.*.*.after-delete":          handleEvent,
-	"apps.cron.heartbeat.weekly":  handleEvent,
-	"apps.cron.heartbeat.monthly": handleEvent,
-	"apps.cron.heartbeat.yearly":  handleEvent,
+	"apps.cron.heartbeat.weekly":  summaryHandler("weekly"),
+	"apps.cron.heartbeat.monthly": summaryHandler("monthly"),
+	"apps.cron.heartbeat.yearly":  summaryHandler("yearly"),
 }
 
 // LogActionType aliases exported for host usage.

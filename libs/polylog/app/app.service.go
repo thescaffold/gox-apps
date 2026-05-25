@@ -268,17 +268,25 @@ func (s *AppService) upsertSink(dto *SetConfigDto, typeId string) (*sink.Sink, e
 	return row, nil
 }
 
-// dottedTypeVariations expands a dotted type string into the cumulative
-// prefixes used by GetConfig matching. e.g. "a.b.c" → ["a", "a.b", "a.b.c"].
-// Mirrors TS generateDottedStringVariations.
+// dottedTypeVariations expands a dotted type string into the 2^n wildcard
+// combinations used by GetConfig channel matching, mirroring TS
+// generateDottedStringVariations: each segment is either itself or the ASTERISK
+// sentinel. e.g. "a.b" → ["a.b", "<*>.b", "a.<*>", "<*>.<*>"]. (The previous
+// cumulative-prefix version did not match TS and missed wildcard channels.)
 func dottedTypeVariations(t string) []string {
-	if t == "" {
-		return nil
-	}
-	parts := strings.Split(t, ".")
-	out := make([]string, 0, len(parts))
-	for i := range parts {
-		out = append(out, strings.Join(parts[:i+1], "."))
+	segments := strings.Split(t, ".")
+	total := 1 << len(segments)
+	out := make([]string, 0, total)
+	for i := 0; i < total; i++ {
+		combo := make([]string, len(segments))
+		for j, seg := range segments {
+			if i&(1<<j) != 0 {
+				combo[j] = asterisk
+			} else {
+				combo[j] = seg
+			}
+		}
+		out = append(out, strings.Join(combo, "."))
 	}
 	return out
 }

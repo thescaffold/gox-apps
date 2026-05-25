@@ -3,8 +3,10 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/thescaffold/gox-apps/libs/common/app/ip"
@@ -24,7 +26,10 @@ type AppService struct {
 func (s *AppService) GetHello() string { return "Hello World!" }
 
 func (s *AppService) GetCurrency(currency string) (*rate.Rate, error) {
-	return s.rateEntity.First(`"currency" = ?`, currency)
+	// TS Rate.currency has an upper-casing column transformer applied to the
+	// query value, so lookups are case-insensitive against the upper-cased
+	// stored values.
+	return s.rateEntity.First(`"currency" = ?`, strings.ToUpper(currency))
 }
 
 func (s *AppService) GetLocation(ipValue string) (*ip.Ip, error) {
@@ -156,8 +161,9 @@ func fetchUSDRates() (map[string]int, error) {
 		if !ok {
 			continue
 		}
-		// TS divides each rate by eurToBaseRate to re-base. Persisted as int.
-		out[currency] = int(f / eurToBase)
+		// TS divides each rate by eurToBaseRate to re-base, then persists into an
+		// int column — Postgres rounds to nearest, so round (don't truncate).
+		out[currency] = int(math.Round(f / eurToBase))
 	}
 	return out, nil
 }

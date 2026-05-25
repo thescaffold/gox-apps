@@ -3,7 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/cbroglie/mustache"
 	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
@@ -66,6 +66,14 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 	if v, ok := data["owner"].(string); ok && v != "" {
 		to = v
 	}
+	if to == "" && s.Identity != nil && log.UserId != nil {
+		// TS: to = data?.owner ?? user?.ref — fall back to the resolved user's ref.
+		if uc, err := s.Identity.FetchByUserId(*log.UserId); err == nil && uc != nil {
+			if ref, ok := uc.User["ref"].(string); ok {
+				to = ref
+			}
+		}
+	}
 	if to == "" {
 		return
 	}
@@ -94,16 +102,22 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 			continue
 		}
 
-		if notification != nil {
-			logType := ""
-			if log.Type != nil {
-				logType = *log.Type
-			}
-			if allowed, ok := notification[logType]; ok {
-				if !containsStr(toStrSlice(allowed), channel) {
-					continue
-				}
-			}
+		// TS always restricts to typeChannels: the subscription rule's value when
+		// the log type is present in it, else defaultMessageTypeChannels(type)
+		// (= web,email). A channel outside that set is skipped — so e.g. sms is
+		// dropped when there is no rule, matching TS.
+		logType := ""
+		if log.Type != nil {
+			logType = *log.Type
+		}
+		var typeChannels []string
+		if v, ok := notification[logType]; ok {
+			typeChannels = channelList(v)
+		} else {
+			typeChannels = defaultMessageTypeChannels()
+		}
+		if !containsStr(typeChannels, channel) {
+			continue
 		}
 
 		templateValue := s.templateField(tmpl, channel)
@@ -184,8 +198,10 @@ func (s *ProviderService) saveWebMessage(log *notificationlog.Log, to string) bo
 		PublishAt:   log.PublishAt,
 		ExpireAt:    log.ExpireAt,
 	}
-	ref := to + "-" + log.Key + "-" + time.Now().Format("20060102150405")
-	m.Reference = &ref
+	// TS web() persists the Message with reference = log.reference (not a freshly
+	// minted to-key-timestamp) and data = log.data.
+	m.Reference = &log.Reference
+	m.Data = log.Data
 	return s.messageEntity.Insert(m) == nil
 }
 
@@ -209,6 +225,30 @@ func (s *ProviderService) templateField(tmpl *notificationtemplate.Template, cha
 		}
 	}
 	return ""
+}
+
+// defaultMessageTypeChannels mirrors TS app.config.ts: every message type maps
+// to "web,email".
+func defaultMessageTypeChannels() []string { return []string{"web", "email"} }
+
+// channelList normalises a subscription rule value (a comma-joined string or a
+// JSON array) into a channel slice, matching TS `typeChannels.includes(channel)`
+// over either shape.
+func channelList(v any) []string {
+	switch t := v.(type) {
+	case string:
+		parts := strings.Split(t, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			if p = strings.TrimSpace(p); p != "" {
+				out = append(out, p)
+			}
+		}
+		return out
+	case []any:
+		return toStrSlice(t)
+	}
+	return nil
 }
 
 func containsStr(slice []string, s string) bool {

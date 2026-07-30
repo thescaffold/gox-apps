@@ -43,8 +43,8 @@ github.com/thescaffold/gox-apps/libs/flags v0.0.1 h1:PKI3Y71EFOJSTV4BNs5z9xqKMCo
 github.com/thescaffold/gox-apps/libs/flags v0.0.1/go.mod h1:qrsKDwvecDSf875D/2PAqTVLgfDZs7XBLRnwX8yRzAw=
 github.com/thescaffold/gox-apps/libs/queue v0.0.1 h1:+i3NbU2EoHR3F047dBTaLsRve6anUcdaoMf2XSfijKg=
 github.com/thescaffold/gox-apps/libs/queue v0.0.1/go.mod h1:2h0R64Loq5fJV90y6JE3YofdmUYXVY0imV0kFhg9BJY=
-github.com/thescaffold/gox-packages/libs/core v0.0.4 h1:Zd0u30v4w897cyAn0KGOJ12qhV28du6hqC7nMr/zkMA=
-github.com/thescaffold/gox-packages/libs/core v0.0.4/go.mod h1:FEB1Ko+IqSRDSsmmuc0wC2v0X8mKigWN6MJ3vqFh1r8=
+github.com/thescaffold/gox-packages/libs/core v0.0.6 h1:FUSAplAH7fhsLieDEaWbl/0EBBkHuh5pwOwyhND6bKY=
+github.com/thescaffold/gox-packages/libs/core v0.0.6/go.mod h1:FEB1Ko+IqSRDSsmmuc0wC2v0X8mKigWN6MJ3vqFh1r8=
 golang.org/x/crypto v0.50.0 h1:zO47/JPrL6vsNkINmLoo/PH1gcxpls50DNogFvB5ZGI=
 golang.org/x/crypto v0.50.0/go.mod h1:3muZ7vA7PBCE6xgPX7nkzzjiUq87kRItoJQM1Yo8S+Q=
 golang.org/x/net v0.52.0 h1:He/TN1l0e4mmR3QqHMT2Xab3Aj3L9qjbhRm78/6jrW0=

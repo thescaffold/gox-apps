@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/cbroglie/mustache v1.4.0
 	github.com/go-pdf/fpdf v0.9.0
-	github.com/thescaffold/gox-packages/libs/core v0.0.6
+	github.com/thescaffold/gox-packages/libs/core v0.0.7
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xuri/excelize/v2 v2.10.1
 	gopkg.in/yaml.v3 v3.0.1

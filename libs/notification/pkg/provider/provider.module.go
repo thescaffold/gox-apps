@@ -26,5 +26,8 @@ func (m *ProviderModule) Declarations() []any {
 		&ProviderService{},
 		&MailgunProvider{},
 		&ZohoProvider{},
+		&CloudflareProvider{},
+		&TermiiProvider{},
+		&AfricastalkingProvider{},
 	}
 }

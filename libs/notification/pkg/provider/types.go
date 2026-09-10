@@ -9,8 +9,11 @@ type EmailMessage struct {
 }
 
 type SMSMessage struct {
-	To   string
-	Body string
+	From    string
+	To      string
+	Subject string
+	Text    string
+	HTML    string
 }
 
 type WebMessage struct {

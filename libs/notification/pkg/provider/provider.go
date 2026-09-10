@@ -19,6 +19,9 @@ type ProviderService struct {
 	messageEntity  *notificationmessage.MessageEntity   `inject:""`
 	mailgun        *MailgunProvider                     `inject:""`
 	zoho           *ZohoProvider                        `inject:""`
+	cloudflare     *CloudflareProvider                  `inject:""`
+	termii         *TermiiProvider                      `inject:""`
+	africastalking *AfricastalkingProvider              `inject:""`
 
 	// Identity is an optional context enricher. When set, every template render
 	// receives {user, address, preference, organization, now} alongside the raw
@@ -91,11 +94,6 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 	// IdentityFetcher is wired or the lookup returns nil.
 	enrichRenderContext(data, s.Identity, log, to)
 
-	provider := os.Getenv("NOTIFICATION_DEFAULT_PROVIDER")
-	if provider == "" {
-		provider = "mailgun"
-	}
-
 	var results []map[string]any
 	for _, channel := range channels {
 		if channel == "" {
@@ -125,6 +123,8 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 			continue
 		}
 
+		provider := resolveProvider(channel)
+
 		rendered, err := mustache.Render(templateValue, data)
 		if err != nil {
 			rendered = templateValue
@@ -141,7 +141,11 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 		case "email":
 			ok = s.emailProvider(provider, msg)
 		case "sms":
-			ok = false
+			ok = s.smsProvider(provider, SMSMessage{
+				To:      to,
+				Subject: log.Subject,
+				Text:    rendered,
+			})
 		case "web":
 			ok = s.saveWebMessage(log, to)
 		case "mobile":
@@ -170,12 +174,50 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 	_, _ = s.logEntity.Update(updated, `"id" = ?`, log.Id)
 }
 
+// resolveProvider picks the provider for a channel: a channel-specific override
+// (NOTIFICATION_EMAIL_DEFAULT_PROVIDER / NOTIFICATION_SMS_DEFAULT_PROVIDER) wins
+// over the shared NOTIFICATION_DEFAULT_PROVIDER. Falls back to "mailgun" when
+// nothing is configured (matches prior gox behaviour).
+func resolveProvider(channel string) string {
+	switch channel {
+	case "email":
+		if v := os.Getenv("NOTIFICATION_EMAIL_DEFAULT_PROVIDER"); v != "" {
+			return v
+		}
+	case "sms":
+		if v := os.Getenv("NOTIFICATION_SMS_DEFAULT_PROVIDER"); v != "" {
+			return v
+		}
+	}
+	if v := os.Getenv("NOTIFICATION_DEFAULT_PROVIDER"); v != "" {
+		return v
+	}
+	return "mailgun"
+}
+
 func (s *ProviderService) emailProvider(providerName string, msg EmailMessage) bool {
 	switch providerName {
 	case "zoho":
 		return s.zoho.Email(msg)
+	case "cloudflare":
+		return s.cloudflare.Email(msg)
 	default:
 		return s.mailgun.Email(msg)
+	}
+}
+
+// smsProvider routes the sms channel to the configured default provider,
+// mirroring TS this.use(provider).sms(message). Only termii and africastalking
+// implement sms, so any other NOTIFICATION_DEFAULT_PROVIDER yields false —
+// matching mailgun/zoho whose .sms() return false in TS.
+func (s *ProviderService) smsProvider(providerName string, msg SMSMessage) bool {
+	switch providerName {
+	case "termii":
+		return s.termii.SMS(msg)
+	case "africastalking":
+		return s.africastalking.SMS(msg)
+	default:
+		return false
 	}
 }
 

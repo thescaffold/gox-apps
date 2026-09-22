@@ -38,13 +38,20 @@ func heartbeatHandler(eventType string) gocron.CronHandlerFn {
 	}
 }
 
+// Patterns are standard 5-field cron (minute hour day-of-month month
+// day-of-week) — goose's modules/cron.IsValidCronPattern accepts exactly
+// that and nothing else. These were 6-field with a leading seconds column
+// ("0 * * * * *"), a common JS cron-library convention (node-cron) the TS
+// original likely used; goose has no seconds field, so every one of these
+// six registrations failed validation and never actually registered,
+// silently (a boot-time warning, not a fatal error).
 var Jobs = []*gocron.CronHandler{
-	gocron.NewHandler("apps.cron", "heartbeat.minute", "0 * * * * *", heartbeatHandler("apps.cron.heartbeat.minute")),
-	gocron.NewHandler("apps.cron", "heartbeat.hourly", "0 0 * * * *", heartbeatHandler("apps.cron.heartbeat.hourly")),
-	gocron.NewHandler("apps.cron", "heartbeat.daily", "0 0 0 * * *", heartbeatHandler("apps.cron.heartbeat.daily")),
-	gocron.NewHandler("apps.cron", "heartbeat.weekly", "0 0 0 * * 0", heartbeatHandler("apps.cron.heartbeat.weekly")),
-	gocron.NewHandler("apps.cron", "heartbeat.monthly", "0 0 0 1 * *", heartbeatHandler("apps.cron.heartbeat.monthly")),
-	gocron.NewHandler("apps.cron", "heartbeat.yearly", "0 0 0 1 1 *", heartbeatHandler("apps.cron.heartbeat.yearly")),
+	gocron.NewHandler("apps.cron", "heartbeat.minute", "* * * * *", heartbeatHandler("apps.cron.heartbeat.minute")),
+	gocron.NewHandler("apps.cron", "heartbeat.hourly", "0 * * * *", heartbeatHandler("apps.cron.heartbeat.hourly")),
+	gocron.NewHandler("apps.cron", "heartbeat.daily", "0 0 * * *", heartbeatHandler("apps.cron.heartbeat.daily")),
+	gocron.NewHandler("apps.cron", "heartbeat.weekly", "0 0 * * 0", heartbeatHandler("apps.cron.heartbeat.weekly")),
+	gocron.NewHandler("apps.cron", "heartbeat.monthly", "0 0 1 * *", heartbeatHandler("apps.cron.heartbeat.monthly")),
+	gocron.NewHandler("apps.cron", "heartbeat.yearly", "0 0 1 1 *", heartbeatHandler("apps.cron.heartbeat.yearly")),
 }
 
 // handleHourlyHeartbeat mirrors TS subscription 'apps.cron.heartbeat.hourly':

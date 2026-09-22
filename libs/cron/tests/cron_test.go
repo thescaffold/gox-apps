@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	gocron "github.com/awesome-goose/goose/modules/cron"
 	test "github.com/awesome-goose/goose/testing"
 	"github.com/thescaffold/gox-apps/libs/cron/app"
 	cronjob "github.com/thescaffold/gox-apps/libs/cron/app/job"
@@ -58,6 +59,23 @@ func (s *AppModuleSuite) TestJobs_SixHeartbeats() {
 	s.T.Expect(len(app.Jobs)).ToEqual(6)
 }
 
+// TestJobs_PatternsAreValid registers every heartbeat against goose's own
+// cron.IsValidCronPattern — the exact check modules/cron's Boot hook runs on
+// every registration. The patterns previously included a leading seconds
+// field ("0 * * * * *", 6 fields), matching a common JS cron-library
+// convention (node-cron) the TS original presumably used, but
+// goose's parser accepts standard 5-field patterns only
+// (minute hour day-of-month month day-of-week — see IsValidCronPattern's own
+// 5-element validators slice) and rejects anything else outright. Every one
+// of these six registrations silently failed at boot — "silently" because
+// the kernel logs it as a warning and keeps booting, so nothing failed loudly
+// enough to be caught before now.
+func (s *AppModuleSuite) TestJobs_PatternsAreValid() {
+	for _, j := range app.Jobs {
+		s.T.Expect(gocron.IsValidCronPattern(j.Pattern)).ToEqual(true)
+	}
+}
+
 func (s *AppModuleSuite) TestSubscriptions_HasHourly() {
 	_, ok := app.Subscriptions["apps.cron.heartbeat.hourly"]
 	s.T.Expect(ok).ToEqual(true)
@@ -68,7 +86,7 @@ func (s *AppModuleSuite) TestJobs_HeartbeatMinute() {
 	for _, j := range app.Jobs {
 		if j.Group == "apps.cron" && j.Name == "heartbeat.minute" {
 			found = true
-			s.T.Expect(j.Pattern).ToEqual("0 * * * * *")
+			s.T.Expect(j.Pattern).ToEqual("* * * * *")
 		}
 	}
 	s.T.Expect(found).ToEqual(true)
@@ -79,7 +97,7 @@ func (s *AppModuleSuite) TestJobs_HeartbeatYearly() {
 	for _, j := range app.Jobs {
 		if j.Group == "apps.cron" && j.Name == "heartbeat.yearly" {
 			found = true
-			s.T.Expect(j.Pattern).ToEqual("0 0 0 1 1 *")
+			s.T.Expect(j.Pattern).ToEqual("0 0 1 1 *")
 		}
 	}
 	s.T.Expect(found).ToEqual(true)

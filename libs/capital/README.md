@@ -41,7 +41,7 @@ Account, Payment, PaymentLog, Plan, PlanType, Provider, Rate, Transaction, Usage
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-capital/app"
+import "github.com/thescaffold/gox-apps/libs/capital/app"
 
 app.AppModule{}
 ```

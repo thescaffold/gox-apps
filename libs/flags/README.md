@@ -25,7 +25,7 @@ Go/Goose microservice for feature flag management.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-flags/app"
+import "github.com/thescaffold/gox-apps/libs/flags/app"
 
 app.AppModule{}
 ```

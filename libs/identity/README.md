@@ -54,8 +54,8 @@ Go/Goose microservice for authentication, authorisation, and user/workspace mana
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-identity/app"
-import authpkg "github.com/thescaffold/gox-apps-identity/pkg"
+import "github.com/thescaffold/gox-apps/libs/identity/app"
+import authpkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 
 // Full app
 app.AppModule{}

@@ -28,7 +28,7 @@ Go/Goose microservice for static file and dynamic SVG asset management.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-assets/app"
+import "github.com/thescaffold/gox-apps/libs/assets/app"
 
 app.AppModule{}
 ```

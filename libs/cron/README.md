@@ -24,7 +24,7 @@ Go/Goose microservice for distributed cron job scheduling.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-cron/app"
+import "github.com/thescaffold/gox-apps/libs/cron/app"
 
 app.AppModule{}
 ```

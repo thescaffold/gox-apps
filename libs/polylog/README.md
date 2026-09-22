@@ -42,7 +42,7 @@ Channel, Event, EventLog, Sink, SinkType, Source, SourceType
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-polylog/app"
+import "github.com/thescaffold/gox-apps/libs/polylog/app"
 
 app.AppModule{}
 ```

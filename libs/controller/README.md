@@ -23,7 +23,7 @@ Go/Goose microservice for API gateway request routing and route management.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-controller/app"
+import "github.com/thescaffold/gox-apps/libs/controller/app"
 
 app.AppModule{}
 ```

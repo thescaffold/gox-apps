@@ -21,7 +21,7 @@ Go/Goose microservice for binary large object (blob) storage and page management
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-blobs/app"
+import "github.com/thescaffold/gox-apps/libs/blobs/app"
 
 app.AppModule{}
 ```

@@ -25,7 +25,7 @@ Go/Goose microservice for dynamic form definitions and submissions.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-forms/app"
+import "github.com/thescaffold/gox-apps/libs/forms/app"
 
 app.AppModule{}
 ```

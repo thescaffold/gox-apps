@@ -26,7 +26,7 @@ Go/Goose microservice for distributed job queuing.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-queue/app"
+import "github.com/thescaffold/gox-apps/libs/queue/app"
 
 app.AppModule{}
 ```

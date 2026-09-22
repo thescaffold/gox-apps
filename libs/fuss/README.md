@@ -26,7 +26,7 @@ Go/Goose microservice for search history, tokens, and lookup.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-fuss/app"
+import "github.com/thescaffold/gox-apps/libs/fuss/app"
 
 app.AppModule{}
 ```

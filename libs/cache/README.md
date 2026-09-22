@@ -24,7 +24,7 @@ Go/Goose microservice for key-value cache storage.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-cache/app"
+import "github.com/thescaffold/gox-apps/libs/cache/app"
 
 app.AppModule{}
 ```

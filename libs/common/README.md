@@ -33,7 +33,7 @@ Ip, Project, ProjectType, Rate, RateLog, Tag, TagType
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-common/app"
+import "github.com/thescaffold/gox-apps/libs/common/app"
 
 app.AppModule{}
 ```

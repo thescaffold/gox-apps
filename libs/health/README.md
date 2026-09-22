@@ -35,7 +35,7 @@ Go/Goose microservice for service health monitoring and summary computation.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-health/app"
+import "github.com/thescaffold/gox-apps/libs/health/app"
 
 app.AppModule{}
 ```

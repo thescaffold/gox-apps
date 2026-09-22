@@ -29,7 +29,7 @@ Go/Goose microservice for license, subscription plan, preference, and webhook ma
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-bridge/app"
+import "github.com/thescaffold/gox-apps/libs/bridge/app"
 
 app.AppModule{}
 ```

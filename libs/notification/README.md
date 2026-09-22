@@ -46,7 +46,7 @@ Go/Goose microservice for multi-channel notification delivery.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-notification/app"
+import "github.com/thescaffold/gox-apps/libs/notification/app"
 
 app.AppModule{}
 ```

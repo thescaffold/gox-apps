@@ -39,7 +39,7 @@ Go/Goose microservice for audit logging and activity aggregation.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-audit/app"
+import "github.com/thescaffold/gox-apps/libs/audit/app"
 
 app.AppModule{}
 ```

@@ -2,7 +2,7 @@
 
 ## Adding a new service
 
-1. Create `libs/<name>/go.mod` with module path `github.com/thescaffold/gox-apps-<name>`.
+1. Create `libs/<name>/go.mod` with module path `github.com/thescaffold/gox-apps/libs/<name>`.
 2. Add the module path to `go.work`.
 3. Follow the existing directory layout:
    ```
@@ -29,11 +29,15 @@
 
 ## Publishing a release
 
-Tag releases using the format `<service>/v<semver>`:
+Tag releases using the format `libs/<service>/v<semver>` — the nested-module
+form Go requires for a module that isn't at the repo root. A bare
+`<service>/v<semver>` tag addresses the repo-root module (which doesn't
+exist here) instead, and produces a confusing "unknown revision"/module
+lookup error unrelated to the actual tag:
 
 ```bash
-git tag audit/v1.2.0
-git push origin audit/v1.2.0
+git tag libs/audit/v1.2.0
+git push origin libs/audit/v1.2.0
 ```
 
 The publish workflow will build, test, and create a GitHub Release automatically.

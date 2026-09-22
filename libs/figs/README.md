@@ -39,7 +39,7 @@ Go/Goose microservice for file conversion, mapping, validation, and storage.
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-figs/app"
+import "github.com/thescaffold/gox-apps/libs/figs/app"
 
 app.AppModule{}
 ```

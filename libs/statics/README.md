@@ -22,7 +22,7 @@ Go/Goose microservice for static lookup lists (country codes, currencies, enums,
 ## Module
 
 ```go
-import "github.com/thescaffold/gox-apps-statics/app"
+import "github.com/thescaffold/gox-apps/libs/statics/app"
 
 app.AppModule{}
 ```

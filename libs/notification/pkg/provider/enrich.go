@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"os"
 	"time"
 
 	notificationlog "github.com/thescaffold/gox-apps/libs/notification/app/log"
@@ -17,6 +18,12 @@ func enrichRenderContext(data map[string]any, fetcher IdentityFetcher, log *noti
 	if data == nil {
 		return
 	}
+
+	// A template needs an absolute URL for a logo image or a call-to-action
+	// link (there's no "current origin" in an email client); BASE_URL is the
+	// same env var the app itself uses. Matches the os.Getenv("GROUP_NAME")
+	// convention already used in Send, above.
+	data["BASE_URL"] = os.Getenv("BASE_URL")
 
 	// Always add a `now` block — TS adds this regardless of identity presence.
 	// Keys/formats mirror TS provider.service.ts exactly: dateTime/time use the

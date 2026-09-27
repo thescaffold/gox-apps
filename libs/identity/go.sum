@@ -45,8 +45,12 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/thescaffold/gox-apps/libs/assets v0.0.1 h1:4AIIG/e0mYeKOtc4ngGiERfnrucvlrsdCDNiY80Q324=
 github.com/thescaffold/gox-apps/libs/assets v0.0.1/go.mod h1:dLxrOA4UkOIMh5LGCGYwrl/14MeZpUdTbaMXIfOxpp4=
+github.com/thescaffold/gox-apps/libs/assets v0.0.7 h1:hIsgW1NHsq+Ln6L1W9YiMQ1KBrIK7crVRVMTELmx/6Q=
+github.com/thescaffold/gox-apps/libs/assets v0.0.7/go.mod h1:Z+fK11dDSblXR4xEHN5BDF3jKRRbuTW3gQVSmWMU1pA=
 github.com/thescaffold/gox-apps/libs/flags v0.0.1 h1:PKI3Y71EFOJSTV4BNs5z9xqKMCoUQqWoz2TH5jwkJZk=
 github.com/thescaffold/gox-apps/libs/flags v0.0.1/go.mod h1:qrsKDwvecDSf875D/2PAqTVLgfDZs7XBLRnwX8yRzAw=
+github.com/thescaffold/gox-apps/libs/flags v0.0.7 h1:3DKLay44IzqTe2ALWdHPuNvie1K6r0NCM32kexTs0i0=
+github.com/thescaffold/gox-apps/libs/flags v0.0.7/go.mod h1:3DFqpbnJT5HUO7mH63HukroEC9Wt4+faNo9MTJCx5kw=
 github.com/thescaffold/gox-packages/libs/core v0.0.7 h1:O/br6rCiBKwu+BusMdFAyl47tVV+nXbhcCFQ7TUzPIE=
 github.com/thescaffold/gox-packages/libs/core v0.0.7/go.mod h1:FEB1Ko+IqSRDSsmmuc0wC2v0X8mKigWN6MJ3vqFh1r8=
 github.com/thescaffold/gox-packages/libs/core v0.0.8 h1:+T09tj3HZE38iv9Zd9i+IFr18wQYCbaSjnSEHtIuQps=

@@ -6,9 +6,9 @@ require github.com/awesome-goose/goose v0.0.18
 
 require github.com/thescaffold/gox-packages/libs/core v0.0.8
 
-require github.com/thescaffold/gox-apps/libs/assets v0.0.1
+require github.com/thescaffold/gox-apps/libs/assets v0.0.7
 
-require github.com/thescaffold/gox-apps/libs/flags v0.0.1
+require github.com/thescaffold/gox-apps/libs/flags v0.0.7
 
 require (
 	github.com/cbroglie/mustache v1.4.0 // indirect

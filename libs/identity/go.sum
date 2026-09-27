@@ -1,5 +1,7 @@
 github.com/awesome-goose/goose v0.0.6 h1:hBEvFPJnRBowzxTudFU6MSWS7StOXQcML2yce5LSeF0=
 github.com/awesome-goose/goose v0.0.6/go.mod h1:XFMUc3cjDRDt03djiM9DocIUUIAz7S4oAF30JhF1Erc=
+github.com/awesome-goose/goose v0.0.18 h1:NobGdA91QT9t7ZhqLTBaqPlknFpcy2kGx7TXrfz8u1M=
+github.com/awesome-goose/goose v0.0.18/go.mod h1:wQOj1ZnCiuFaG0JQOdn8PnXKdohC8XU6IHwQHCJVlyo=
 github.com/cbroglie/mustache v1.4.0 h1:Azg0dVhxTml5me+7PsZ7WPrQq1Gkf3WApcHMjMprYoU=
 github.com/cbroglie/mustache v1.4.0/go.mod h1:SS1FTIghy0sjse4DUVGV1k/40B1qE1XkD9DtDsHo9iM=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
@@ -47,6 +49,8 @@ github.com/thescaffold/gox-apps/libs/flags v0.0.1 h1:PKI3Y71EFOJSTV4BNs5z9xqKMCo
 github.com/thescaffold/gox-apps/libs/flags v0.0.1/go.mod h1:qrsKDwvecDSf875D/2PAqTVLgfDZs7XBLRnwX8yRzAw=
 github.com/thescaffold/gox-packages/libs/core v0.0.7 h1:O/br6rCiBKwu+BusMdFAyl47tVV+nXbhcCFQ7TUzPIE=
 github.com/thescaffold/gox-packages/libs/core v0.0.7/go.mod h1:FEB1Ko+IqSRDSsmmuc0wC2v0X8mKigWN6MJ3vqFh1r8=
+github.com/thescaffold/gox-packages/libs/core v0.0.8 h1:+T09tj3HZE38iv9Zd9i+IFr18wQYCbaSjnSEHtIuQps=
+github.com/thescaffold/gox-packages/libs/core v0.0.8/go.mod h1:FEB1Ko+IqSRDSsmmuc0wC2v0X8mKigWN6MJ3vqFh1r8=
 golang.org/x/crypto v0.50.0 h1:zO47/JPrL6vsNkINmLoo/PH1gcxpls50DNogFvB5ZGI=
 golang.org/x/crypto v0.50.0/go.mod h1:3muZ7vA7PBCE6xgPX7nkzzjiUq87kRItoJQM1Yo8S+Q=
 golang.org/x/net v0.52.0 h1:He/TN1l0e4mmR3QqHMT2Xab3Aj3L9qjbhRm78/6jrW0=

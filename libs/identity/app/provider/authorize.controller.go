@@ -68,6 +68,31 @@ func (c *AuthorizeController) SetRegistry(r *identityproviderpkg.Registry) {
 	c.registry = r
 }
 
+// Boot self-wires the OAuth Registry from the four built-in providers (PLAN
+// M0-27a). Each NewXxx() constructor reads its own client id/secret from the
+// process environment (GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET etc. — see
+// pkg/provider/*.go), so no host wiring is required for the common case;
+// SetRegistry above remains available for a host that wants to replace this
+// with credentials sourced another way (tests, secret manager). Providers
+// with no credentials configured are still registered — Authorize/Exchange
+// simply fail predictably for them (documented on google.go's NewGoogle) —
+// because it's the IdentityProviders DB row, not the Registry, that decides
+// whether a sign-in button is offered for a given provider. Goose collects
+// Boot from every registered declaration automatically once DI completes
+// (see types.Bootable), so this runs with c already fully injected.
+func (c *AuthorizeController) Boot(_ types.Kernel) error {
+	if c.registry != nil {
+		return nil
+	}
+	registry := identityproviderpkg.NewRegistry()
+	registry.Register(identityproviderpkg.NewGitHub())
+	registry.Register(identityproviderpkg.NewGitLab())
+	registry.Register(identityproviderpkg.NewBitbucket())
+	registry.Register(identityproviderpkg.NewGoogle())
+	c.SetRegistry(registry)
+	return nil
+}
+
 // supportsState is the set of provider keys for which the OAuth `state`
 // nonce check is enforced. Mirrors TS SupportsState — providers that don't
 // echo state back can't be checked, so we skip those.

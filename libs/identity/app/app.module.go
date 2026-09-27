@@ -4,6 +4,7 @@ import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identityauth "github.com/thescaffold/gox-apps/libs/identity/app/auth"
 	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
 	identityclientlog "github.com/thescaffold/gox-apps/libs/identity/app/clientlog"
 	identitydevice "github.com/thescaffold/gox-apps/libs/identity/app/device"
@@ -74,6 +75,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identitydevicelog.DeviceLogModule{},
 		&identitydevicesession.DeviceSessionModule{},
 		&identityattribute.AttributeModule{},
+		&identityauth.AuthModule{},
 		&identityinvite.InviteModule{},
 		&identityprovider.ProviderModule{},
 		&identityproviderlog.ProviderLogModule{},

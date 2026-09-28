@@ -14,6 +14,14 @@ type CreateLogDto struct {
 	Meta   json.RawMessage `json:"meta,omitempty"`
 	Status *string         `json:"status,omitempty"`
 
+	// ActorType/ActorId (PLAN M1-04): unlike UserId/ClientId/WorkspaceId
+	// below, these ARE client-submitted — an AI or system-initiated log
+	// entry usually has no authenticated HTTP session for a morph to read
+	// from, so whatever code is logging on that actor's behalf passes it
+	// explicitly.
+	ActorType *string `json:"actorType,omitempty" binding:"omitempty,oneof=user ai system"`
+	ActorId   *string `json:"actorId,omitempty"`
+
 	// UserId / ClientId / WorkspaceId are NOT submitted by the client — TS
 	// adds them in LogController.morphs.beforeCreate via a payload spread
 	// (`{ ...payload, userId, clientId, workspaceId }`). They live on the DTO
@@ -33,4 +41,6 @@ type UpdateLogDto struct {
 	Desc       *string         `json:"desc,omitempty"`
 	Meta       json.RawMessage `json:"meta,omitempty"`
 	Status     *string         `json:"status,omitempty"`
+	ActorType  *string         `json:"actorType,omitempty" binding:"omitempty,oneof=user ai system"`
+	ActorId    *string         `json:"actorId,omitempty"`
 }

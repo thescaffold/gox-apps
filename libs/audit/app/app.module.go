@@ -10,6 +10,7 @@ import (
 
 var Migrations = []sql.Migration{
 	&migrations.CreateAuditLogs{},
+	&migrations.AddActorToAuditLogs{},
 }
 
 type AppModule struct{}

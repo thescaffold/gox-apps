@@ -20,6 +20,10 @@ func (c *LogController) OnRegister() {
 		Name: "log",
 		// Mirrors TS log.controller.ts:20 searchable = ['desc'].
 		Searchable: []string{"desc"},
+		// TRD U-S11: Log.WorkspaceId is NOT NULL (no global rows) — an
+		// audit trail is exactly the kind of data a cross-tenant read
+		// would be most damaging for.
+		WorkspaceScoped: true,
 		// Mirrors TS morphs.beforeCreate which spreads
 		// `{ userId: user.id, clientId: client.id, workspaceId: workspace.id }`
 		// onto the create payload. The morph runs before the entity insert so

@@ -206,8 +206,11 @@ func (c *AuthorizeController) Authorize(dto *AuthorizeProviderDto) types.Output 
 	// 10. Default Admin/Member role-type + permission-type seeding.
 	c.seedDefaultRoles(existing.Id, dto.ClientId, workspaces[0].Id)
 
-	// 11. Issue access + refresh tokens.
-	access, refresh, err := c.auth.IssueTokensByHandle(profile.Email, dto.ClientId)
+	// 11. Issue access + refresh tokens, scoped to the workspace already
+	// resolved at step 6 (U-S9, PLAN M1-02) — workspaces[0] is also what
+	// device bootstrap and role seeding above already treat as "the"
+	// workspace for this login.
+	access, refresh, err := c.auth.IssueTokensByHandle(profile.Email, dto.ClientId, workspaces[0].Id)
 	if err != nil {
 		return response.Unauthorized(title, err.Error())
 	}

@@ -70,13 +70,17 @@ func (s *AuthService) GenerateOTP(handle string) string {
 
 // IssueTokensByHandle issues an access+refresh pair for the user identified
 // by `handle` (ref OR email). Used by the OTP-verify path which has already
-// validated the user out-of-band — no password check.
-func (s *AuthService) IssueTokensByHandle(handle, clientId string) (string, string, error) {
+// validated the user out-of-band — no password check. workspaceId is the
+// workspace the caller has already resolved for this session (U-S9): pass
+// "" only when the user genuinely has no workspace yet (never as a
+// convenience default — that's exactly the F6 bug this parameter exists to
+// close, see buildClaims's own doc comment).
+func (s *AuthService) IssueTokensByHandle(handle, clientId, workspaceId string) (string, string, error) {
 	u, err := s.userEntity.First(`"ref" = ? OR "email" = ?`, handle, handle)
 	if err != nil || u == nil {
 		return "", "", errors.New("invalid credentials")
 	}
-	claims := s.buildClaims(u, clientId, "")
+	claims := s.buildClaims(u, clientId, workspaceId)
 	access, err := auth.Sign(claims, s.jwtSecret(), accessExpiry)
 	if err != nil {
 		return "", "", err
@@ -123,20 +127,40 @@ func (s *AuthService) hmacKey() string {
 
 // --- Auth methods ---
 
-// Login validates credentials and returns signed access + refresh tokens.
-// Accepts either the new `ref` column (TS-aligned, Phase H) or the legacy
-// `email`. Lookup is OR'd so existing accounts keep working while new ones
-// can be created with ref-only identifiers.
-func (s *AuthService) Login(handle, password, clientId string) (accessToken, refreshToken string, err error) {
+// VerifyCredentials checks handle+password (accepts either the new `ref`
+// column, TS-aligned Phase H, or the legacy `email` — lookup is OR'd so
+// existing accounts keep working) and returns the user on success. Split out
+// of Login (PLAN M1-02) so a caller that needs to check something about the
+// account — closed/suspended status, say — can do so *between* verifying
+// the password and issuing tokens, without revealing that status to a
+// request that never had a valid password in the first place (identity/app/
+// auth's Login handler is exactly this: checking suspended/closed before
+// VerifyCredentials would let an attacker learn an account's status with no
+// valid credentials at all).
+func (s *AuthService) VerifyCredentials(handle, password string) (*user.User, error) {
 	u, err := s.userEntity.First(`"ref" = ? OR "email" = ?`, handle, handle)
 	if err != nil || u == nil {
-		return "", "", errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
 	if u.Secret == nil || !security.Compare(password, *u.Secret) {
-		return "", "", errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
+	return u, nil
+}
 
-	claims := s.buildClaims(u, clientId, "")
+// IssueTokens signs and persists an access+refresh pair for an
+// already-verified user. workspaceId (U-S9, PLAN M1-02) is the workspace
+// this session's claims are scoped to — the caller must resolve it before
+// calling (the user's own default membership, or one the caller
+// re-verified belongs to them; see identity/app/auth's Login handler and
+// SwitchWorkspace). Passing "" is only correct when the user genuinely has
+// no workspace yet, never as a shortcut: an empty workspaceId here used to
+// mean "every workspace's permissions, unfiltered" (TRD F6) —
+// ResolveRoles/ResolvePermissions now treat it as "global-scope rows only"
+// instead, but a caller that always passes "" out of convenience would
+// still hand out a token good for nothing tenant-scoped, silently.
+func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string) (accessToken, refreshToken string, err error) {
+	claims := s.buildClaims(u, clientId, workspaceId)
 	accessToken, err = auth.Sign(claims, s.jwtSecret(), accessExpiry)
 	if err != nil {
 		return "", "", err
@@ -156,6 +180,18 @@ func (s *AuthService) Login(handle, password, clientId string) (accessToken, ref
 	})
 
 	return accessToken, refreshToken, nil
+}
+
+// Login is VerifyCredentials + IssueTokens combined, for a caller that has
+// no reason to interleave anything between the two (see VerifyCredentials's
+// own doc comment for why identity/app/auth's real Login handler doesn't
+// use this).
+func (s *AuthService) Login(handle, password, clientId, workspaceId string) (accessToken, refreshToken string, err error) {
+	u, err := s.VerifyCredentials(handle, password)
+	if err != nil {
+		return "", "", err
+	}
+	return s.IssueTokens(u, clientId, workspaceId)
 }
 
 // BearerAuth verifies a JWT Bearer token and returns the decoded claims.
@@ -281,14 +317,27 @@ func (s *AuthService) RegisterUser(name, email, password string) (*user.User, er
 
 // --- Role / Permission resolution ---
 
+// workspaceScope builds the workspace half of a Resolve* WHERE clause. A
+// real workspaceId scopes to that workspace's own rows plus global rows
+// (workspace_id IS NULL); an empty one (U-S9, PLAN M1-02 / TRD F6) used to
+// mean "no filter at all" — every row for every workspace this user or
+// client ever touched, the exact cross-tenant leak F6 found. It now means
+// "global rows only": the safe, minimal result for a session that genuinely
+// has no workspace context yet, never a silent "everything."
+func workspaceScope(workspaceId string) (clause string, args []any) {
+	if workspaceId != "" {
+		return ` AND ("workspace_id" = ? OR "workspace_id" IS NULL)`, []any{workspaceId}
+	}
+	return ` AND "workspace_id" IS NULL`, nil
+}
+
 // ResolveRoles returns all role records for a client (optionally scoped to workspace).
 func (s *AuthService) ResolveRoles(_, clientId, workspaceId string) ([]identityrole.Role, error) {
 	query := `"client_id" = ?`
 	args := []any{clientId}
-	if workspaceId != "" {
-		query += ` AND ("workspace_id" = ? OR "workspace_id" IS NULL)`
-		args = append(args, workspaceId)
-	}
+	clause, extra := workspaceScope(workspaceId)
+	query += clause
+	args = append(args, extra...)
 	return s.roleEntity.Find(0, 0, query, args...)
 }
 
@@ -296,10 +345,9 @@ func (s *AuthService) ResolveRoles(_, clientId, workspaceId string) ([]identityr
 func (s *AuthService) ResolvePermissions(userId, clientId, workspaceId string) ([]identitypermission.Permission, error) {
 	query := `"user_id" = ? AND "client_id" = ?`
 	args := []any{userId, clientId}
-	if workspaceId != "" {
-		query += ` AND ("workspace_id" = ? OR "workspace_id" IS NULL)`
-		args = append(args, workspaceId)
-	}
+	clause, extra := workspaceScope(workspaceId)
+	query += clause
+	args = append(args, extra...)
 	return s.permissionEntity.Find(0, 0, query, args...)
 }
 
@@ -307,10 +355,9 @@ func (s *AuthService) ResolvePermissions(userId, clientId, workspaceId string) (
 func (s *AuthService) ResolvePreference(userId, clientId, workspaceId string) (map[string]any, error) {
 	query := `"user_id" = ? AND "client_id" = ?`
 	args := []any{userId, clientId}
-	if workspaceId != "" {
-		query += ` AND ("workspace_id" = ? OR "workspace_id" IS NULL)`
-		args = append(args, workspaceId)
-	}
+	clause, extra := workspaceScope(workspaceId)
+	query += clause
+	args = append(args, extra...)
 	attrs, err := s.attributeEntity.Find(0, 0, query, args...)
 	if err != nil {
 		return nil, err

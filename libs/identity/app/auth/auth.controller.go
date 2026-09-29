@@ -284,7 +284,10 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 	c.seedDefaultRoles()
 	c.cache.Del(verifyKey)
 
-	access, refresh, err := c.auth.Login(entry.Ref, dto.Secret, entry.ClientId)
+	// The new account has exactly one workspace at this point (just
+	// bootstrapped above) — no need to re-verify the password we just set,
+	// IssueTokens goes straight from the User row we already have.
+	access, refresh, err := c.auth.IssueTokens(newUser, entry.ClientId, wsID(ws))
 	if err != nil {
 		return response.Unauthorized(title, err.Error())
 	}
@@ -301,21 +304,21 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 	}, title, c.lang.Translate("apps.identity.app.post.secret.success", nil, pref), nil)
 }
 
-// Login mirrors TS POST /login (app.controller.ts:1196-1363). Token issuance
-// and credential verification are identity/pkg's already-live
-// AuthService.Login; this handler layers on the workspace/attribute/device
-// bootstrap guard's gate.component.ts actually consumes.
+// Login mirrors TS POST /login (app.controller.ts:1196-1363). Credential
+// verification and token issuance are identity/pkg's already-live
+// AuthService (split into VerifyCredentials/IssueTokens, PLAN M1-02, so the
+// closed/suspended checks below can run strictly *after* the password is
+// verified and *before* tokens are issued — checking them before
+// VerifyCredentials would let a request with no valid password at all learn
+// whether an account exists and is suspended); this handler layers on the
+// workspace/attribute/device bootstrap guard's gate.component.ts actually
+// consumes.
 func (c *AuthController) Login(dto *LoginDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
-	access, refresh, err := c.auth.Login(dto.Ref, dto.Secret, dto.ClientId)
+	u, err := c.auth.VerifyCredentials(dto.Ref, dto.Secret)
 	if err != nil {
-		return response.Unauthorized(title,
-			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
-	}
-	u, _ := c.userEntity.First(`"ref" = ? OR "email" = ?`, dto.Ref, dto.Ref)
-	if u == nil {
 		return response.Unauthorized(title,
 			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
 	}
@@ -329,7 +332,23 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 			c.lang.Translate("apps.identity.app.post.login.error.suspended", nil, pref))
 	}
 
+	// Login selects a workspace (U-S9, PLAN M1-02): the user's first
+	// membership by default. A different one is reached via SwitchWorkspace
+	// once the client has shown them the `workspaces` list this response
+	// carries — Login itself never accepts a client-requested workspaceId,
+	// so there's nothing here to re-verify against UCW membership.
 	workspaces := c.workspacesForUser(u.Id, dto.ClientId)
+	workspaceId := ""
+	if len(workspaces) > 0 {
+		workspaceId = workspaces[0].Id
+	}
+
+	access, refresh, err := c.auth.IssueTokens(u, dto.ClientId, workspaceId)
+	if err != nil {
+		return response.Unauthorized(title,
+			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
+	}
+
 	attributes := c.attributesForUser(u.Id)
 	if len(workspaces) > 0 {
 		deviceId, sessionId := c.bootstrapDevice(u.Id, dto.UserAgent)
@@ -529,6 +548,14 @@ func (c *AuthController) bootstrapWorkspace(u *identityuser.User, clientId strin
 		UserId: u.Id, ClientId: clientId, WorkspaceId: ws.Id, Status: &owner,
 	})
 	return ws
+}
+
+// wsID returns ws.Id, or "" if bootstrapWorkspace failed (ws == nil).
+func wsID(ws *identityworkspace.Workspace) string {
+	if ws == nil {
+		return ""
+	}
+	return ws.Id
 }
 
 // workspacesForUser mirrors provider/authorize.controller.go's helper of the

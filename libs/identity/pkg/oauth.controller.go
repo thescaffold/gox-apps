@@ -210,7 +210,9 @@ func (c *OAuthController) exchangeAccessToken(dto *OAuthAccessTokenDto) types.Ou
 	if c.authService == nil {
 		return response.InternalServerError("identity", "auth service unavailable")
 	}
-	access, refresh, err := c.authService.IssueTokensByHandle(redeemed.UserId, redeemed.ClientId)
+	// OAuthController is dead code (see pkg/auth.controller.go's Login doc
+	// comment) — "" preserves this call's exact prior behavior.
+	access, refresh, err := c.authService.IssueTokensByHandle(redeemed.UserId, redeemed.ClientId, "")
 	if err != nil {
 		// Fallback: when the userId isn't a valid handle (the OAuth flow
 		// authenticated via a different identity provider), persist the
@@ -252,7 +254,7 @@ func (c *OAuthController) Login(dto *OAuthLoginDto) types.Output {
 	if profile.Email != "" {
 		_, _ = c.authService.RegisterUser(profile.Name, profile.Email, profile.ID)
 	}
-	access, refresh, err := c.authService.Login(profile.Email, profile.ID, dto.ClientId)
+	access, refresh, err := c.authService.Login(profile.Email, profile.ID, dto.ClientId, "")
 	if err != nil {
 		return response.Unauthorized("identity", err.Error())
 	}

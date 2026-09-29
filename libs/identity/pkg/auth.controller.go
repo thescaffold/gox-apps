@@ -85,8 +85,16 @@ type AuthAppController struct {
 }
 
 // Login mirrors TS POST /auth/login — issues access + refresh tokens.
+//
+// AuthAppController is dead code: identity/app/app.module.go mounts
+// identity/app/auth's real AuthController instead (PLAN M0-27a), and
+// nothing imports pkg.AuthModule (this controller's own module) into that
+// tree. Kept compiling rather than deleted or dropped from this pass — not
+// this task's job to remove it — so the "" workspaceId here (PLAN M1-02
+// added the parameter; this call site never ran and still never will)
+// preserves its exact prior behavior rather than being a real fix.
 func (c *AuthAppController) Login(dto *LoginDto) types.Output {
-	access, refresh, err := c.authService.Login(dto.Email, dto.Password, dto.ClientId)
+	access, refresh, err := c.authService.Login(dto.Email, dto.Password, dto.ClientId, "")
 	if err != nil {
 		return response.Unauthorized("identity", err.Error())
 	}
@@ -154,7 +162,7 @@ func (c *AuthAppController) Initiate(dto *InitiateDto) types.Output {
 // using the password column keep working.
 func (c *AuthAppController) Verify(dto *VerifyDto) types.Output {
 	if c.authService.VerifyOTP(dto.Email, dto.Code) {
-		access, refresh, err := c.authService.IssueTokensByHandle(dto.Email, dto.ClientId)
+		access, refresh, err := c.authService.IssueTokensByHandle(dto.Email, dto.ClientId, "")
 		if err != nil {
 			return response.Unauthorized("identity", err.Error())
 		}
@@ -163,7 +171,7 @@ func (c *AuthAppController) Verify(dto *VerifyDto) types.Output {
 			"refreshToken": refresh,
 		}, "identity", "verified", nil)
 	}
-	access, refresh, err := c.authService.Login(dto.Email, dto.Code, dto.ClientId)
+	access, refresh, err := c.authService.Login(dto.Email, dto.Code, dto.ClientId, "")
 	if err != nil {
 		return response.Unauthorized("identity", err.Error())
 	}

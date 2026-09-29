@@ -364,6 +364,46 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	}, title, c.lang.Translate("apps.identity.app.post.login.success", nil, pref), nil)
 }
 
+// SwitchWorkspace mirrors TRD §6.14/U-S9's "a workspace switch re-issues
+// claims": the client already has the `workspaces` list from Login or
+// Attributes and picks a different one. dto.WorkspaceId is client-supplied
+// and untrusted until checked against UserClientWorkspace — without that
+// check this would be the exact same shape of IDOR U-S9 exists to close,
+// just moved to a new endpoint: any authenticated user could mint a token
+// scoped to a workspace they don't belong to simply by asking for its id.
+func (c *AuthController) SwitchWorkspace(dto *SwitchWorkspaceDto) types.Output {
+	pref := dto.Ctx.Preference
+	title := c.lang.Translate("apps.identity.app.title", nil, pref)
+
+	if dto.Ctx.UserID == "" || dto.Ctx.ClientID == "" {
+		return response.Unauthorized(title,
+			c.lang.Translate("apps.identity.app.post.switch.error.unauthorized", nil, pref))
+	}
+
+	link, _ := c.ucwEntity.First(`"user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`,
+		dto.Ctx.UserID, dto.Ctx.ClientID, dto.WorkspaceId)
+	if link == nil {
+		return response.Unauthorized(title,
+			c.lang.Translate("apps.identity.app.post.switch.error.forbidden", nil, pref))
+	}
+
+	u, _ := c.userEntity.First(`"id" = ?`, dto.Ctx.UserID)
+	if u == nil {
+		return response.Unauthorized(title,
+			c.lang.Translate("apps.identity.app.post.switch.error.unauthorized", nil, pref))
+	}
+
+	access, refresh, err := c.auth.IssueTokens(u, dto.Ctx.ClientID, dto.WorkspaceId)
+	if err != nil {
+		return response.InternalServerError(title, err.Error())
+	}
+
+	return response.Success(map[string]any{
+		"accessToken":  access,
+		"refreshToken": refresh,
+	}, title, c.lang.Translate("apps.identity.app.post.switch.success", nil, pref), nil)
+}
+
 // ResetSecretInitiate mirrors TS POST /reset-secret/initiate
 // (app.controller.ts:1988-2033). Always returns success regardless of
 // whether ref matches an account, so the response can't be used to enumerate

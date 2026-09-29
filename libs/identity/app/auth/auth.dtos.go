@@ -60,6 +60,16 @@ type ResetSecretUpdateDto struct {
 	ConfirmNewSecret string            `json:"confirmNewSecret" binding:"required"`
 }
 
+// SwitchWorkspaceDto carries POST /switch (U-S9, PLAN M1-02): re-issue
+// tokens scoped to a different workspace the already-authenticated user
+// belongs to. Ctx.UserID/ClientID come from the verified Bearer token
+// (requireUser()), never the request body — only WorkspaceId is
+// client-supplied, and the handler verifies membership before trusting it.
+type SwitchWorkspaceDto struct {
+	Ctx         ntxctx.NTXContext `context:"ntx"`
+	WorkspaceId string            `json:"workspaceId" binding:"required"`
+}
+
 // AttributesQueryDto carries GET /attributes?type=. Always scoped to the
 // current authenticated user (dto.Ctx.UserID) — mirrors TS :1563-1616.
 type AttributesQueryDto struct {

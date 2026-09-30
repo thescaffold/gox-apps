@@ -1,6 +1,9 @@
 package store
 
-import "github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
+import (
+	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
+	"github.com/thescaffold/gox-packages/libs/blobs/objectstore"
+)
 
 type ProviderType string
 
@@ -24,12 +27,17 @@ type Provider interface {
 	Store(payload *Payload, raw *converter.Response) (*Response, error)
 }
 
-type Service struct{}
+// Service hands out providers. Objects is the ObjectStore the `object`
+// provider writes to (the control plane injects the store selected by
+// BLOBS_BACKEND — Postgres by default).
+type Service struct {
+	Objects objectstore.ObjectStore
+}
 
 func (s *Service) Use(t ProviderType) Provider {
 	switch t {
 	case Object:
-		return &ObjectProvider{}
+		return &ObjectProvider{Objects: s.Objects}
 	default:
 		return &LocalProvider{}
 	}

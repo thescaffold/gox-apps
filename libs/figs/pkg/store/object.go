@@ -3,79 +3,53 @@ package store
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	"regexp"
+	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/thescaffold/gox-apps/libs/figs/pkg/converter"
+	"github.com/thescaffold/gox-packages/libs/blobs/objectstore"
 )
 
-// ObjectProvider stores files in an S3-compatible bucket.
-// Configure via environment variables:
-//
-//	FIGS_S3_BUCKET   — bucket name (required)
-//	FIGS_S3_REGION   — AWS region (default: us-east-1)
-//	FIGS_S3_ENDPOINT — custom endpoint for S3-compatible stores (e.g. MinIO)
-//	AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY — credentials
-type ObjectProvider struct{}
+// ObjectProvider stores converted files through the ObjectStore (PLAN
+// M1-05a; it used to call S3 directly). The key is
+// ws/<workspaceId>/figs/<name>.<ext> — the tenant prefix of the shared key
+// layout — and the returned URL is that KEY: a presigned link would expire,
+// so callers mint one with ObjectStore.Presign when they need to serve it.
+type ObjectProvider struct {
+	Objects objectstore.ObjectStore
+}
+
+var unsafeName = regexp.MustCompile(`[^A-Za-z0-9._ -]+`)
+
+// segment reduces caller text to one safe key segment ("" if nothing is left).
+func segment(s string) string {
+	s = unsafeName.ReplaceAllString(s, "_")
+	s = strings.Trim(s, " .")
+	return s
+}
 
 func (p *ObjectProvider) Store(payload *Payload, raw *converter.Response) (*Response, error) {
-	bucket := os.Getenv("FIGS_S3_BUCKET")
-	if bucket == "" {
-		return nil, fmt.Errorf("store: FIGS_S3_BUCKET is not set")
+	if p.Objects == nil {
+		return nil, errors.New("store: no object store configured (inject one into store.Service; BLOBS_BACKEND selects the driver)")
 	}
-	region := os.Getenv("FIGS_S3_REGION")
-	if region == "" {
-		region = "us-east-1"
+	name := segment(fmt.Sprint(payload.Meta["name"]))
+	if name == "" || name == "<nil>" {
+		return nil, errors.New("store: meta.name is required for the object store")
 	}
-	endpoint := os.Getenv("FIGS_S3_ENDPOINT")
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-
-	opts := []func(*config.LoadOptions) error{
-		config.WithRegion(region),
+	ws, _ := payload.Meta["workspaceId"].(string)
+	if ws = segment(ws); ws == "" {
+		ws = "shared"
 	}
-	if accessKey != "" && secretKey != "" {
-		opts = append(opts, config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
-		))
+	ext := segment(raw.Extension)
+	if ext != "" {
+		name += "." + ext
 	}
-
-	cfg, err := config.LoadDefaultConfig(context.Background(), opts...)
+	key := "ws/" + ws + "/figs/" + name
+	_, err := p.Objects.Put(context.Background(), key, bytes.NewReader(raw.Buffer), objectstore.PutOptions{MediaType: raw.Mime})
 	if err != nil {
-		return nil, fmt.Errorf("store: s3 config: %w", err)
+		return nil, fmt.Errorf("store: object store put: %w", err)
 	}
-
-	clientOpts := []func(*s3.Options){}
-	if endpoint != "" {
-		clientOpts = append(clientOpts, func(o *s3.Options) {
-			o.BaseEndpoint = aws.String(endpoint)
-			o.UsePathStyle = true
-		})
-	}
-
-	client := s3.NewFromConfig(cfg, clientOpts...)
-
-	name, _ := payload.Meta["name"].(string)
-	key := fmt.Sprintf("%s.%s", name, raw.Extension)
-
-	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String(key),
-		Body:        bytes.NewReader(raw.Buffer),
-		ContentType: aws.String(raw.Mime),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("store: s3 put: %w", err)
-	}
-
-	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key)
-	if endpoint != "" {
-		url = fmt.Sprintf("%s/%s/%s", endpoint, bucket, key)
-	}
-
-	return &Response{URL: url, Raw: string(raw.Buffer)}, nil
+	return &Response{URL: key, Raw: string(raw.Buffer)}, nil
 }

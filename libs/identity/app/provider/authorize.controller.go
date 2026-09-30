@@ -6,6 +6,8 @@
 package provider
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"strings"
 	"time"
@@ -246,7 +248,10 @@ func (c *AuthorizeController) logProfile(providerId, accessToken string, profile
 	if c.providerLogEntity == nil {
 		return
 	}
-	req, _ := json.Marshal(map[string]any{"accessToken": accessToken})
+	// Never the token itself (PLAN M1-03): a short fingerprint lets an audit
+	// trail correlate handshakes without the log being a credential store.
+	fp := sha256.Sum256([]byte(accessToken))
+	req, _ := json.Marshal(map[string]any{"tokenFingerprint": hex.EncodeToString(fp[:4])})
 	resp, _ := json.Marshal(profile)
 	_ = c.providerLogEntity.Insert(&identityproviderlog.ProviderLog{
 		ProviderId: providerId,

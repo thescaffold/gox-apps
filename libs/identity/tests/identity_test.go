@@ -205,8 +205,10 @@ type AppModuleSuite struct{ goosetest.Suite }
 
 func (s *AppModuleSuite) TestMigrations_Count() {
 	// 17 original CREATE TABLE migrations + 1 Phase-4 schema-alignment
-	// migration (AlignIdentityWithNtx) = 18.
-	s.T.Expect(len(app.Migrations)).ToEqual(18)
+	// migration (AlignIdentityWithNtx) + 3 credentials-at-rest migrations
+	// (PLAN M1-03: HashRefreshTokens, EncryptProviderTokens,
+	// ScrubProviderLogTokens) = 21.
+	s.T.Expect(len(app.Migrations)).ToEqual(21)
 }
 func (s *AppModuleSuite) TestName() {
 	s.T.Expect(app.Name).ToEqual("identity")

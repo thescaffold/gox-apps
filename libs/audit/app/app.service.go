@@ -89,8 +89,8 @@ func (s *AppService) HandleEvent(payload map[string]any) error {
 	return s.logService.Create(entry)
 }
 
-func (s *AppService) Activities(page, perPage int) ([]auditlog.Log, int64, error) {
-	return s.logService.Activities(page, perPage)
+func (s *AppService) Activities(workspaceID string, page, perPage int) ([]auditlog.Log, int64, error) {
+	return s.logService.Activities(workspaceID, page, perPage)
 }
 
 // buildDescription mirrors the TS descriptions() helper.

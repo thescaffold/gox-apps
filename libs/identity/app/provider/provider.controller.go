@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	"sort"
 	"strings"
 	"time"
@@ -52,6 +53,21 @@ func (c *ProviderController) OnRegister() {
 			return out
 		},
 		Morphs: map[string]crud.MorphFn{
+			// PLAN M1-03: a provider OAuth token is sealed before it reaches the
+			// table; with no IDENTITY_TOKEN_KEY the write is refused rather than
+			// stored in plaintext.
+			crud.BeforeCreate: func(payload any, ctx ntxctx.NTXContext) (any, error) {
+				if p, ok := payload.(*CreateProviderDto); ok && p != nil {
+					return nil, sealToken(&p.Token)
+				}
+				return nil, nil
+			},
+			crud.BeforeUpdate: func(payload any, ctx ntxctx.NTXContext) (any, error) {
+				if p, ok := payload.(*UpdateProviderDto); ok && p != nil {
+					return nil, sealToken(&p.Token)
+				}
+				return nil, nil
+			},
 			crud.AfterList: func(payload any, ctx ntxctx.NTXContext) (any, error) {
 				rows, ok := payload.([]Provider)
 				if !ok {
@@ -185,4 +201,17 @@ func providerOrderIndex(name *string) int {
 		return v
 	}
 	return 1 << 30
+}
+
+// sealToken encrypts *tok in place (no-op for nil/empty or an already sealed value).
+func sealToken(tok **string) error {
+	if *tok == nil || **tok == "" || tokenstore.IsSealed(**tok) {
+		return nil
+	}
+	sealed, err := tokenstore.SealProviderToken(**tok, tokenstore.Key())
+	if err != nil {
+		return &crud.HTTPError{Status: 503, Message: "provider tokens cannot be stored: encryption key not configured"}
+	}
+	*tok = &sealed
+	return nil
 }

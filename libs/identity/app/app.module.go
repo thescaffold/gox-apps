@@ -49,6 +49,10 @@ var Migrations = []sql.Migration{
 	// country+region+city+area). Idempotent ALTER TABLE ADD COLUMN IF NOT
 	// EXISTS — safe to rerun against partially-aligned databases.
 	&migrations.AlignIdentityWithNtx{},
+	// PLAN M1-03: credentials at rest.
+	&migrations.HashRefreshTokens{},
+	&migrations.EncryptProviderTokens{},
+	&migrations.ScrubProviderLogTokens{},
 }
 
 type AppModule struct{}

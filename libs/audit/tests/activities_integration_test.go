@@ -1,11 +1,13 @@
 package tests
 
 import (
+	"github.com/awesome-goose/goose/modules/sql"
+	"github.com/thescaffold/gox-apps/libs/audit/migrations"
 	"os"
 	"testing"
 
-	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
 	"github.com/google/uuid"
+	auditlog "github.com/thescaffold/gox-apps/libs/audit/app/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -21,6 +23,13 @@ func testDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open db: %v", err)
+	}
+	// Idempotent, so a scratch database needs no preparation.
+	q := (&sql.Query{}).With(&sql.Db{DB: db})
+	for _, m := range []sql.Migration{&migrations.CreateAuditLogs{}, &migrations.AddActorToAuditLogs{}} {
+		if err := m.Run(q); err != nil {
+			t.Fatalf("migrate: %v", err)
+		}
 	}
 	return db
 }
@@ -58,7 +67,7 @@ func TestActivities_ReturnsAIActor(t *testing.T) {
 		_, _ = auditlog.NewLogEntityForTest(db).Delete("id = ?", entry.Id)
 	})
 
-	logs, total, err := svc.Activities(1, 50)
+	logs, total, err := svc.Activities(ws, 1, 50)
 	if err != nil {
 		t.Fatalf("activities: %v", err)
 	}
@@ -84,5 +93,40 @@ func TestActivities_ReturnsAIActor(t *testing.T) {
 	}
 	if found.UserId != "" {
 		t.Fatalf("expected UserId to stay empty for an AI-initiated event, got %q", found.UserId)
+	}
+}
+
+// TestActivities_AreScopedToTheWorkspace is PLAN M1-02b: the activity feed
+// used to return every workspace's rows to any caller.
+func TestActivities_AreScopedToTheWorkspace(t *testing.T) {
+	db := testDB(t)
+	svc := auditlog.NewLogServiceForTest(db)
+	wsA, wsB := uuid.NewString(), uuid.NewString()
+	mk := func(ws string) *auditlog.Log {
+		d := "something happened in " + ws
+		e := &auditlog.Log{WorkspaceId: ws, ClientId: "c", Group: "apps", Service: "tasks", EntityId: uuid.NewString(),
+			EntityName: "task", Action: auditlog.LogActionTypeCreate, Desc: &d}
+		if err := svc.Create(e); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _, _ = auditlog.NewLogEntityForTest(db).Delete("id = ?", e.Id) })
+		return e
+	}
+	a, b := mk(wsA), mk(wsB)
+
+	logs, total, err := svc.Activities(wsA, 1, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(logs) != 1 || logs[0].Id != a.Id {
+		t.Fatalf("workspace A sees %d rows (total %d); want exactly its own", len(logs), total)
+	}
+	for _, l := range logs {
+		if l.Id == b.Id || l.WorkspaceId != wsA {
+			t.Fatalf("workspace A's feed contains %+v", l)
+		}
+	}
+	if logs, total, _ := svc.Activities("", 1, 100); len(logs) != 0 || total != 0 {
+		t.Fatalf("an empty workspace must see nothing, got %d rows", len(logs))
 	}
 }

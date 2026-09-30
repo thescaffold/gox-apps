@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -92,7 +93,7 @@ func (s *AuthService) IssueTokensByHandle(handle, clientId, workspaceId string) 
 	expiresAt := time.Now().Add(refreshExpiry)
 	_ = s.tokenEntity.Insert(&token.Token{
 		UserId: u.Id, ClientId: clientId, Type: tokenTypeRefresh,
-		Token: refresh, ExpiresAt: &expiresAt,
+		Token: tokenstore.HashRefresh(refresh), ExpiresAt: &expiresAt,
 	})
 	return access, refresh, nil
 }
@@ -175,7 +176,7 @@ func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string) (a
 		UserId:    u.Id,
 		ClientId:  clientId,
 		Type:      tokenTypeRefresh,
-		Token:     refreshToken,
+		Token:     tokenstore.HashRefresh(refreshToken),
 		ExpiresAt: &expiresAt,
 	})
 
@@ -264,7 +265,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (string, error) {
 		return "", errors.New("invalid or expired token")
 	}
 
-	rec, err := s.tokenEntity.First(`"token" = ? AND "type" = ?`, refreshToken, tokenTypeRefresh)
+	rec, err := s.tokenEntity.First(`"token" = ? AND "type" = ?`, tokenstore.HashRefresh(refreshToken), tokenTypeRefresh)
 	if err != nil || rec == nil {
 		return "", errors.New("token revoked")
 	}

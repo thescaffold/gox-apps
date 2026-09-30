@@ -36,7 +36,7 @@ func (c *AppController) Activities(dto *ActivitiesDto) types.Output {
 		perPage = 10
 	}
 
-	logs, total, err := c.appService.Activities(page, perPage)
+	logs, total, err := c.appService.Activities(dto.Ctx.WorkspaceID, page, perPage)
 	if err != nil {
 		return response.InternalServerError(
 			c.lang.Translate("apps.audit.app.title", nil, pref),

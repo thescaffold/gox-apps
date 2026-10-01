@@ -53,6 +53,8 @@ var Migrations = []sql.Migration{
 	&migrations.HashRefreshTokens{},
 	&migrations.EncryptProviderTokens{},
 	&migrations.ScrubProviderLogTokens{},
+	// PLAN M1-40: a device session remembers its client.
+	&migrations.DeviceSessionClient{},
 }
 
 type AppModule struct{}

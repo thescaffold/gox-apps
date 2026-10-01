@@ -183,6 +183,14 @@ func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string) (a
 	return accessToken, refreshToken, nil
 }
 
+// IssueAccessToken mints a short-lived access token for a workspace and nothing
+// else: no refresh token, and no record is written. The browser shell calls it
+// (through the device's sessions) every time it needs a fresh token, and a
+// refresh token per call would fill the table with credentials nobody holds.
+func (s *AuthService) IssueAccessToken(u *user.User, clientId, workspaceId string) (string, error) {
+	return auth.Sign(s.buildClaims(u, clientId, workspaceId), s.jwtSecret(), accessExpiry)
+}
+
 // Login is VerifyCredentials + IssueTokens combined, for a caller that has
 // no reason to interleave anything between the two (see VerifyCredentials's
 // own doc comment for why identity/app/auth's real Login handler doesn't

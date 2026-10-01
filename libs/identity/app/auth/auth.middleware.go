@@ -2,6 +2,7 @@ package auth
 
 import (
 	"os"
+	"strings"
 
 	"github.com/awesome-goose/goose/types"
 	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
@@ -57,4 +58,33 @@ func requireUser() []types.Middleware {
 		&coreauth.AuthMiddleware{Secret: jwtSecret()},
 		&claimsToContext{},
 	}
+}
+
+// optionalClaimsToContext fills the NTXContext from a Bearer token when one is
+// sent and valid, and otherwise leaves it empty rather than refusing the
+// request. Sign-out needs this: it is asked from the sign-in screens, by a
+// browser that may hold nothing but its device cookie.
+type optionalClaimsToContext struct{}
+
+func (m *optionalClaimsToContext) Handle(ctx types.Context) error {
+	ntx := ntxctx.NTXContext{}
+	if vs := ctx.Request().Headers()["Authorization"]; len(vs) > 0 {
+		if token, ok := strings.CutPrefix(vs[0], "Bearer "); ok {
+			if claims, err := coreauth.Verify(token, jwtSecret()); err == nil {
+				if v, ok := claims["sub"].(string); ok {
+					ntx.UserID = v
+				}
+				if v, ok := claims["clientId"].(string); ok {
+					ntx.ClientID = v
+				}
+			}
+		}
+	}
+	ntxctx.Set(ctx, ntx)
+	return nil
+}
+
+// optionalUser is requireUser's lenient sibling (see optionalClaimsToContext).
+func optionalUser() []types.Middleware {
+	return []types.Middleware{&optionalClaimsToContext{}}
 }

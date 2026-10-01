@@ -12,6 +12,9 @@ type DeviceSession struct {
 	Token     string     `gorm:"column:token;type:text;not null"            json:"token"`
 	ExpiresAt *time.Time `gorm:"column:expires_at;type:timestamp"           json:"expiresAt,omitempty"`
 	Status    *string    `gorm:"column:status;type:varchar(255)"            json:"status,omitempty"`
+	// ClientId is the client the session signed in to (nil for sessions made
+	// before PLAN M1-40).
+	ClientId *string `gorm:"column:client_id;type:varchar(255)" json:"clientId,omitempty"`
 }
 
 func (DeviceSession) TableName() string { return "IdentityDeviceSessions" }

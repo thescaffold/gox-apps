@@ -35,10 +35,11 @@
 //     provider/authorize.controller.go already calls after an OAuth
 //     exchange) for one access+refresh pair, rather than inventing a third,
 //     divergent token shape.
-//   - Cookie-based device continuity (`x_ntx_device_id`). gox's
-//     response.Success has no header/cookie parameter, so each login
-//     bootstraps a fresh Device+DeviceSession pair instead of reusing one
-//     via a cookie the client sends back.
+//   - (Done in PLAN M1-40, see device.go.) Cookie-based device continuity
+//     (`x_ntx_device_id`): a response's headers can carry Set-Cookie through
+//     the Output's Headers() map, so sign-in and sign-up now open a device
+//     session on the browser's own device, and GET sessions, POST logout,
+//     GET user-clients and POST client-log/register serve the browser shell.
 package auth
 
 import (
@@ -50,6 +51,8 @@ import (
 
 	"github.com/awesome-goose/goose/types"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
+	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
+	identityclientlog "github.com/thescaffold/gox-apps/libs/identity/app/clientlog"
 	identitydevice "github.com/thescaffold/gox-apps/libs/identity/app/device"
 	identitydevicelog "github.com/thescaffold/gox-apps/libs/identity/app/devicelog"
 	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
@@ -125,6 +128,8 @@ type AuthController struct {
 	deviceEntity         *identitydevice.DeviceEntity                 `inject:""`
 	deviceSessionEntity  *identitydevicesession.DeviceSessionEntity   `inject:""`
 	deviceLogEntity      *identitydevicelog.DeviceLogEntity           `inject:""`
+	clientEntity         *identityclient.ClientEntity                 `inject:""`
+	clientLogEntity      *identityclientlog.ClientLogEntity           `inject:""`
 	roleTypeEntity       *identityroletype.RoleTypeEntity             `inject:""`
 	permissionTypeEntity *identitypermissiontype.PermissionTypeEntity `inject:""`
 	permissionEntity     *identitypermission.PermissionEntity         `inject:""`
@@ -296,12 +301,19 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 	if ws != nil {
 		workspaces = []identityworkspace.Workspace{*ws}
 	}
-	return response.Success(map[string]any{
+	// the new account is signed in on this browser: open its device session too
+	deviceId := ""
+	if ws != nil {
+		var sessionId string
+		deviceId, sessionId = c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
+		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
+	}
+	return withDeviceCookie(response.Success(map[string]any{
 		"user":         maskUser(newUser),
 		"workspaces":   workspaces,
 		"accessToken":  access,
 		"refreshToken": refresh,
-	}, title, c.lang.Translate("apps.identity.app.post.secret.success", nil, pref), nil)
+	}, title, c.lang.Translate("apps.identity.app.post.secret.success", nil, pref), nil), deviceId)
 }
 
 // Login mirrors TS POST /login (app.controller.ts:1196-1363). Credential
@@ -350,18 +362,20 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	}
 
 	attributes := c.attributesForUser(u.Id)
+	deviceId := ""
 	if len(workspaces) > 0 {
-		deviceId, sessionId := c.bootstrapDevice(u.Id, dto.UserAgent)
+		var sessionId string
+		deviceId, sessionId = c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
 		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 	}
 
-	return response.Success(map[string]any{
+	return withDeviceCookie(response.Success(map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,
 		"workspaces":   workspaces,
 		"attributes":   attributes,
-	}, title, c.lang.Translate("apps.identity.app.post.login.success", nil, pref), nil)
+	}, title, c.lang.Translate("apps.identity.app.post.login.success", nil, pref), nil), deviceId)
 }
 
 // SwitchWorkspace mirrors TRD §6.14/U-S9's "a workspace switch re-issues
@@ -688,31 +702,6 @@ func (c *AuthController) redeemReferralCode(userId, code string) {
 		return
 	}
 	c.upsertAttribute(userId, "user", "referrer_id", referrer.UserId)
-}
-
-// bootstrapDevice creates a fresh Device + DeviceSession pair (see the
-// package doc for why this doesn't reuse a cookie-carried device id).
-func (c *AuthController) bootstrapDevice(userId, userAgent string) (string, string) {
-	if c.deviceEntity == nil || c.deviceSessionEntity == nil {
-		return "", ""
-	}
-	dev := &identitydevice.Device{
-		UserId: userId, Fingerprint: utils.Reference("DEV", 24), Type: "browser",
-	}
-	if userAgent != "" {
-		dev.Agent = &userAgent
-	}
-	if err := c.deviceEntity.Insert(dev); err != nil {
-		return "", ""
-	}
-	exp := time.Now().UTC().Add(24 * time.Hour)
-	sess := &identitydevicesession.DeviceSession{
-		DeviceId: dev.Id, UserId: userId, Token: utils.Reference("SES", 32), ExpiresAt: &exp,
-	}
-	if err := c.deviceSessionEntity.Insert(sess); err != nil {
-		return dev.Id, ""
-	}
-	return dev.Id, sess.Id
 }
 
 // logDeviceLogin records a DeviceLog row for a successful login. Same shape

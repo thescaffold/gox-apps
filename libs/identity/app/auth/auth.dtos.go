@@ -36,6 +36,7 @@ type SecretDto struct {
 	Timezone      string            `json:"timezone"`
 	Country       string            `json:"country"`
 	Currency      string            `json:"currency"`
+	Cookie        string            `header:"Cookie"`
 }
 
 // LoginDto carries POST /login. Mirrors TS LoginUserDto (app.dto.ts:344-361)
@@ -49,6 +50,9 @@ type LoginDto struct {
 	Secret    string            `json:"secret"    binding:"required"`
 	ClientId  string            `json:"clientId"  binding:"required"`
 	UserAgent string            `json:"userAgent"`
+	// Cookie is the request's Cookie header; the device the browser already
+	// holds (x_ntx_device_id) is reused rather than a new one made per login.
+	Cookie string `header:"Cookie"`
 }
 
 // ResetSecretUpdateDto carries POST /reset-secret/update. Mirrors TS
@@ -85,4 +89,38 @@ type UpdateAttributesDto struct {
 	Ctx  ntxctx.NTXContext `context:"ntx"`
 	Type string            `param:"type"`
 	Body map[string]any    `json:",merge"`
+}
+
+// SessionsDto carries GET /sessions. It is answered from the device cookie, not
+// a bearer token: the sign-in screens ask which accounts this browser already
+// holds before anyone has signed in.
+type SessionsDto struct {
+	Ctx    ntxctx.NTXContext `context:"ntx"`
+	Cookie string            `header:"Cookie"`
+}
+
+// LogoutDto carries POST /logout. `device` is "yes" (this browser's device, from
+// its cookie), "no", or a device id; userId and clientId narrow what is signed
+// out, as TS's LogoutUserDto does.
+type LogoutDto struct {
+	Ctx      ntxctx.NTXContext `context:"ntx"`
+	Cookie   string            `header:"Cookie"`
+	Device   string            `json:"device"`
+	UserId   string            `json:"userId"`
+	ClientId string            `json:"clientId"`
+}
+
+// UserClientsDto carries GET /user-clients: the signed-in user's apps.
+type UserClientsDto struct {
+	Ctx ntxctx.NTXContext `context:"ntx"`
+}
+
+// ClientLogRegisterDto carries POST /client-log/register: "this user opened this
+// app". The user is always the signed-in one; a userId in the body is ignored.
+type ClientLogRegisterDto struct {
+	Ctx         ntxctx.NTXContext `context:"ntx"`
+	ClientId    string            `json:"clientId"    binding:"required"`
+	WorkspaceId string            `json:"workspaceId"`
+	Type        string            `json:"type"`
+	Status      string            `json:"status"`
 }

@@ -35,13 +35,35 @@ Go/Goose microservice for multi-channel notification delivery.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAILGUN_API_KEY` | — | Mailgun private API key |
+| `GROUP_NAME` | — | Templates are looked up by (`key`, `group` = this value) |
+| `NOTIFICATION_DEFAULT_PROVIDER` | `mailgun` | `mailgun`, `zoho` or `cloudflare` for email; `termii` or `africastalking` for SMS. `NOTIFICATION_EMAIL_DEFAULT_PROVIDER` / `NOTIFICATION_SMS_DEFAULT_PROVIDER` override it per channel |
+| `MAILGUN_BASE_URL` | — | e.g. `https://api.mailgun.net` |
 | `MAILGUN_DOMAIN` | — | Mailgun sending domain |
+| `MAILGUN_TOKEN` | — | Mailgun private API key |
 | `MAILGUN_FROM` | — | Sender address |
-| `ZOHO_CLIENT_ID` | — | Zoho OAuth client ID |
-| `ZOHO_CLIENT_SECRET` | — | Zoho OAuth client secret |
-| `ZOHO_REFRESH_TOKEN` | — | Zoho OAuth refresh token |
-| `ZOHO_FROM_EMAIL` | — | Zoho sender address |
+| `ZOHO_BASE_URL`, `ZOHO_TOKEN`, `ZOHO_FROM_EMAIL`, `ZOHO_FROM_NAME` | — | Zoho Mail |
+| `CLOUDFLARE_BASE_URL`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_FROM_EMAIL`, `CLOUDFLARE_FROM_NAME` | — | Cloudflare Email Service |
+
+## Delivering one notification and knowing the outcome
+
+The `apps.notification.message.new` event is fire-and-forget. A host that needs
+to know whether the message went out calls the service directly:
+
+```go
+if svc := app.Service(); svc != nil {           // nil until the module is declared
+    err := svc.Deliver(map[string]any{
+        "reference": "approval-123-user-9",      // makes a retry safe
+        "key": "approval-requested", "userId": "user-9", "subject": "…",
+        "channels": []string{"web", "email"},
+        "data": map[string]any{"owner": "ada@example.com", "name": "Ada"},
+    })
+}
+```
+
+`Deliver` returns an error unless every requested channel delivered. A reference
+that was delivered is not sent twice; one that failed is sent again on the same
+log row and its in-app message is not duplicated. `NewAppService(db, provider.NewService(db, hmacKey))`
+builds the service without the DI container.
 
 ## Module
 

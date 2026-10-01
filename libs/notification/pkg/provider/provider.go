@@ -222,6 +222,10 @@ func (s *ProviderService) smsProvider(providerName string, msg SMSMessage) bool 
 }
 
 func (s *ProviderService) saveWebMessage(log *notificationlog.Log, to string) bool {
+	// A retry of the same notification must not show the person a second copy.
+	if prior, err := s.messageEntity.First(`"reference" = ? AND "user_id" = ?`, log.Reference, derefStr(log.UserId)); err == nil && prior != nil {
+		return true
+	}
 	channel := "web"
 	m := &notificationmessage.Message{
 		UserId:      log.UserId,
@@ -314,4 +318,11 @@ func toStrSlice(v any) []string {
 		}
 	}
 	return out
+}
+
+func derefStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }

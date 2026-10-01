@@ -195,13 +195,29 @@ func (s *AppService) UpdateSubscription(ref string, rules json.RawMessage) (*rul
 // queue/apps/notification/message (when AppController.OnRegister wired the
 // queuePump) or runs synchronous Send as a fallback.
 func (s *AppService) OnMessageNew(p map[string]any) {
-	if s.logEntity == nil {
+	l, err := s.persist(p)
+	if err != nil || l == nil {
 		return
+	}
+	// Dispatch the freshly-persisted Log row through the ProviderService.
+	// When a QueuePusher is wired (set via ProviderService.SetQueuePusher),
+	// the dispatch enqueues a `queue/apps/notification/message` job for
+	// durable retry; otherwise it falls through to synchronous Send.
+	if s.provider != nil {
+		s.provider.Dispatch(l)
+	}
+}
+
+// persist stores the Log row for a message.new payload (nil, nil when the
+// payload names no reference or key).
+func (s *AppService) persist(p map[string]any) (*log.Log, error) {
+	if s.logEntity == nil {
+		return nil, errors.New("notification: not configured")
 	}
 	ref, _ := p["reference"].(string)
 	key, _ := p["key"].(string)
 	if ref == "" || key == "" {
-		return
+		return nil, nil
 	}
 	l := &log.Log{
 		Reference: ref,
@@ -267,13 +283,7 @@ func (s *AppService) OnMessageNew(p map[string]any) {
 	status := string(MessageStatusNew)
 	l.Status = &status
 	if err := s.logEntity.Insert(l); err != nil {
-		return
+		return nil, err
 	}
-	// Dispatch the freshly-persisted Log row through the ProviderService.
-	// When a QueuePusher is wired (set via ProviderService.SetQueuePusher),
-	// the dispatch enqueues a `queue/apps/notification/message` job for
-	// durable retry; otherwise it falls through to synchronous Send.
-	if s.provider != nil {
-		s.provider.Dispatch(l)
-	}
+	return l, nil
 }

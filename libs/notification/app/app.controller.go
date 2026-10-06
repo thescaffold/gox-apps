@@ -1,7 +1,10 @@
 package app
 
 import (
+	"crypto/subtle"
 	"encoding/json"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/awesome-goose/goose/types"
@@ -206,4 +209,19 @@ func identityFromContext(ntx ntxctx.NTXContext) (string, string, string) {
 		workspaceID = ntx.WorkspaceID
 	}
 	return userID, clientID, workspaceID
+}
+
+// Capture lists captured messages, newest first. It does not exist (404) in
+// production or when NOTIFICATION_CAPTURE_TOKEN is unset, and needs the token.
+func (c *AppController) Capture(dto *CaptureDto) types.Output {
+	title := "Notification capture"
+	if !notificationprovider.CaptureEnabled() {
+		return response.NotFound(title, "Not found")
+	}
+	want := os.Getenv("NOTIFICATION_CAPTURE_TOKEN")
+	if subtle.ConstantTimeCompare([]byte(dto.Token), []byte(want)) != 1 {
+		return response.Unauthorized(title, "Invalid capture token")
+	}
+	limit, _ := strconv.Atoi(dto.Limit)
+	return response.Success(notificationprovider.Captures(dto.To, limit), title, "Captured messages", nil)
 }

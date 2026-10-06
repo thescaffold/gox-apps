@@ -79,3 +79,16 @@ app.AppModule{}
 go test ./...
 go build ./...
 ```
+
+## Provider failover and the capture driver
+
+A channel's provider setting may list several providers, tried in order:
+
+```
+NOTIFICATION_SMS_DEFAULT_PROVIDER=termii,africastalking
+NOTIFICATION_EMAIL_DEFAULT_PROVIDER=zoho,mailgun
+```
+
+A provider that fails `NOTIFICATION_BREAKER_FAILS` times in a row (default 3) is skipped for `NOTIFICATION_BREAKER_COOLDOWN_SECS` (default 60), then given one trial. If every circuit is open the first provider is still tried, so a message is never dropped silently. A single name behaves as before. Hosts can add providers with `provider.RegisterEmailProvider` / `RegisterSMSProvider`.
+
+`NOTIFICATION_DEFAULT_PROVIDER=capture` (or a channel override) stores messages in memory instead of sending them, so tests can read OTPs and links. It is refused when `NODE_ENV` or `APP_ENV` is `production`. `GET /capture?to=&limit=` returns them, newest first, only when `NOTIFICATION_CAPTURE_TOKEN` is set, the request carries it as `X-Capture-Token`, and the process is not production (otherwise 404).

@@ -55,3 +55,12 @@ const (
 	MessageStatusFailed  MessageStatusType = "failed"
 	MessageStatusSuccess MessageStatusType = "success"
 )
+
+// CaptureDto carries GET /capture: read the messages the capture provider
+// stored (NOTIFICATION_DEFAULT_PROVIDER=capture), so end-to-end tests can read
+// OTPs and links. The caller proves itself with X-Capture-Token.
+type CaptureDto struct {
+	Token string `header:"X-Capture-Token"`
+	To    string `query:"to"`
+	Limit string `query:"limit"`
+}

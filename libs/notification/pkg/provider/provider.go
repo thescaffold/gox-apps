@@ -195,8 +195,19 @@ func resolveProvider(channel string) string {
 	return "mailgun"
 }
 
-func (s *ProviderService) emailProvider(providerName string, msg EmailMessage) bool {
-	switch providerName {
+// emailProvider sends through the configured provider(s); a comma-separated
+// list is tried in order with a circuit breaker per provider.
+func (s *ProviderService) emailProvider(providerList string, msg EmailMessage) bool {
+	return sendWithFailover("email", providerList, func(name string) bool { return s.emailOne(name, msg) })
+}
+
+func (s *ProviderService) emailOne(name string, msg EmailMessage) bool {
+	if f, ok := customEmailFor(name); ok {
+		return f(msg)
+	}
+	switch name {
+	case "capture":
+		return capture(Captured{Channel: "email", To: msg.To, Subject: msg.Subject, Text: msg.Text, HTML: msg.HTML})
 	case "zoho":
 		return s.zoho.Email(msg)
 	case "cloudflare":
@@ -206,12 +217,21 @@ func (s *ProviderService) emailProvider(providerName string, msg EmailMessage) b
 	}
 }
 
-// smsProvider routes the sms channel to the configured default provider,
-// mirroring TS this.use(provider).sms(message). Only termii and africastalking
-// implement sms, so any other NOTIFICATION_DEFAULT_PROVIDER yields false —
-// matching mailgun/zoho whose .sms() return false in TS.
-func (s *ProviderService) smsProvider(providerName string, msg SMSMessage) bool {
-	switch providerName {
+// smsProvider routes the sms channel to the configured provider(s), mirroring
+// TS this.use(provider).sms(message). Only termii, africastalking and capture
+// implement sms, so any other name yields false (as mailgun/zoho do in TS);
+// with a list, the next provider is tried.
+func (s *ProviderService) smsProvider(providerList string, msg SMSMessage) bool {
+	return sendWithFailover("sms", providerList, func(name string) bool { return s.smsOne(name, msg) })
+}
+
+func (s *ProviderService) smsOne(name string, msg SMSMessage) bool {
+	if f, ok := customSMSFor(name); ok {
+		return f(msg)
+	}
+	switch name {
+	case "capture":
+		return capture(Captured{Channel: "sms", To: msg.To, Subject: msg.Subject, Text: msg.Text, HTML: msg.HTML})
 	case "termii":
 		return s.termii.SMS(msg)
 	case "africastalking":

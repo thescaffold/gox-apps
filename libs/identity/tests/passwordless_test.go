@@ -1,7 +1,12 @@
 package tests
 
 import (
+	"fmt"
+	"math/rand"
+	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/thescaffold/gox-apps/libs/identity/app/auth"
 )
@@ -20,6 +25,15 @@ func (r *rig) otpVerify(ref, code string) reply {
 	return decode(r.t, r.ctl.OtpVerify(&auth.OtpVerifyDto{Ref: ref, Code: code, ClientId: r.client}))
 }
 
+// uniq makes a sign-in reference nobody used in an earlier run (the test
+// database persists accounts).
+func uniq(tag string) string { return fmt.Sprintf("%s-%s@example.com", tag, uuid.NewString()[:8]) }
+
+func uniqPhone() (national, e164 string) {
+	n := fmt.Sprintf("%07d", rand.Intn(10_000_000))
+	return "0801" + n[:7], "+234801" + n[:7]
+}
+
 func data(rep reply) map[string]any {
 	d, _ := rep.body["data"].(map[string]any)
 	return d
@@ -27,7 +41,8 @@ func data(rep reply) map[string]any {
 
 func TestPasswordless_FirstSignInCreatesTheAccountAndLaterOnesMatchIt(t *testing.T) {
 	r := plRig(t)
-	first := r.otpVerify("Ada@Example.com", "424242")
+	addr := uniq("ada")
+	first := r.otpVerify(strings.ToUpper(addr[:1])+addr[1:], "424242")
 	if first.code != 200 {
 		t.Fatalf("%d %v", first.code, first.body)
 	}
@@ -40,7 +55,7 @@ func TestPasswordless_FirstSignInCreatesTheAccountAndLaterOnesMatchIt(t *testing
 	}
 	user1 := d["user"].(map[string]any)["id"]
 
-	second := data(r.otpVerify("ada@example.com", "424242")) // the same address, different case
+	second := data(r.otpVerify(addr, "424242")) // the same address, different case
 	if second["isNew"] != false || second["user"].(map[string]any)["id"] != user1 {
 		t.Fatalf("a second sign-in must match the same user: %v", second)
 	}
@@ -48,7 +63,7 @@ func TestPasswordless_FirstSignInCreatesTheAccountAndLaterOnesMatchIt(t *testing
 		t.Fatalf("no second workspace: %v", second["workspaces"])
 	}
 	var n int64
-	r.db.Raw(`SELECT COUNT(*) FROM "IdentityUsers" WHERE email = 'ada@example.com'`).Scan(&n)
+	r.db.Raw(`SELECT COUNT(*) FROM "IdentityUsers" WHERE email = ?`, addr).Scan(&n)
 	if n != 1 {
 		t.Fatalf("%d users for one address", n)
 	}
@@ -56,14 +71,16 @@ func TestPasswordless_FirstSignInCreatesTheAccountAndLaterOnesMatchIt(t *testing
 
 func TestPasswordless_PhoneNumbersNormaliseToOneAccount(t *testing.T) {
 	r := plRig(t)
-	a := data(r.otpVerify("08012345678", "424242"))
-	b := data(r.otpVerify("+234 801 234 5678", "424242"))
+	national, e164 := uniqPhone()
+	spaced := e164[:4] + " " + e164[4:7] + " " + e164[7:10] + " " + e164[10:]
+	a := data(r.otpVerify(national, "424242"))
+	b := data(r.otpVerify(spaced, "424242"))
 	if a["isNew"] != true || b["isNew"] != false || a["user"].(map[string]any)["id"] != b["user"].(map[string]any)["id"] {
 		t.Fatalf("%v %v", a, b)
 	}
 	var phone string
-	r.db.Raw(`SELECT phone FROM "IdentityUsers" WHERE ref = '+2348012345678'`).Scan(&phone)
-	if phone != "+2348012345678" {
+	r.db.Raw(`SELECT phone FROM "IdentityUsers" WHERE ref = ?`, e164).Scan(&phone)
+	if phone != e164 {
 		t.Fatalf("phone stored as %q", phone)
 	}
 }
@@ -71,20 +88,21 @@ func TestPasswordless_PhoneNumbersNormaliseToOneAccount(t *testing.T) {
 func TestPasswordless_WrongCodesAreRefusedLockedAndTheAccountIsNotCreated(t *testing.T) {
 	r := plRig(t)
 	r.ctl.SigninForTest().Magic = ""
-	req := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: "lin@example.com", ClientId: r.client}))
+	lin := uniq("lin")
+	req := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: lin, ClientId: r.client}))
 	if req.code != 200 {
 		t.Fatalf("%d %v", req.code, req.body)
 	}
 	for i := 0; i < 5; i++ {
-		if rep := r.otpVerify("lin@example.com", "000000"); rep.code != 401 {
+		if rep := r.otpVerify(lin, "000000"); rep.code != 401 {
 			t.Fatalf("guess %d: %d", i, rep.code)
 		}
 	}
-	if rep := r.otpVerify("lin@example.com", "000000"); rep.code != 429 {
+	if rep := r.otpVerify(lin, "000000"); rep.code != 429 {
 		t.Fatalf("a locked code: %d", rep.code)
 	}
 	var n int64
-	r.db.Raw(`SELECT COUNT(*) FROM "IdentityUsers" WHERE email = 'lin@example.com'`).Scan(&n)
+	r.db.Raw(`SELECT COUNT(*) FROM "IdentityUsers" WHERE email = ?`, lin).Scan(&n)
 	if n != 0 {
 		t.Fatal("an account was created without a valid code")
 	}
@@ -92,10 +110,11 @@ func TestPasswordless_WrongCodesAreRefusedLockedAndTheAccountIsNotCreated(t *tes
 
 func TestPasswordless_RequestsAreThrottledAndInputIsValidated(t *testing.T) {
 	r := plRig(t)
-	if rep := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: "x@example.com", ClientId: r.client})); rep.code != 200 {
+	x := uniq("x")
+	if rep := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: x, ClientId: r.client})); rep.code != 200 {
 		t.Fatalf("%d", rep.code)
 	}
-	if rep := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: "x@example.com", ClientId: r.client})); rep.code != 429 {
+	if rep := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: x, ClientId: r.client})); rep.code != 429 {
 		t.Fatalf("a second request within the gap: %d", rep.code)
 	}
 	for _, bad := range []string{"nonsense", "12345", ""} {
@@ -110,9 +129,10 @@ func TestPasswordless_RequestsAreThrottledAndInputIsValidated(t *testing.T) {
 
 func TestPasswordless_TheRequestAnswerDoesNotRevealWhetherAnAccountExists(t *testing.T) {
 	r := plRig(t)
-	r.otpVerify("known@example.com", "424242") // creates the account
-	known := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: "known@example.com", ClientId: r.client}))
-	unknown := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: "stranger@example.com", ClientId: r.client}))
+	k, st := uniq("known"), uniq("stranger")
+	r.otpVerify(k, "424242") // creates the account
+	known := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: k, ClientId: r.client}))
+	unknown := decode(t, r.ctl.OtpRequest(&auth.OtpRequestDto{Ref: st, ClientId: r.client}))
 	if known.code != unknown.code || known.body["message"] != unknown.body["message"] {
 		t.Fatalf("existing and unknown accounts must look the same: %v vs %v", known.body, unknown.body)
 	}
@@ -120,27 +140,29 @@ func TestPasswordless_TheRequestAnswerDoesNotRevealWhetherAnAccountExists(t *tes
 
 func TestPasswordless_SuspendedAndClosedAccountsCannotSignIn(t *testing.T) {
 	r := plRig(t)
-	d := data(r.otpVerify("gone@example.com", "424242"))
+	gone := uniq("gone")
+	d := data(r.otpVerify(gone, "424242"))
 	id := d["user"].(map[string]any)["id"].(string)
 	r.db.Exec(`INSERT INTO "IdentityAttributes" (id, created_at, updated_at, user_id, key, value) VALUES (gen_random_uuid()::text, now(), now(), ?, 'suspended_at', 'x')`, id)
-	if rep := r.otpVerify("gone@example.com", "424242"); rep.code != 401 {
+	if rep := r.otpVerify(gone, "424242"); rep.code != 401 {
 		t.Fatalf("suspended: %d", rep.code)
 	}
 	r.db.Exec(`DELETE FROM "IdentityAttributes" WHERE user_id = ?`, id)
 	r.db.Exec(`INSERT INTO "IdentityAttributes" (id, created_at, updated_at, user_id, key, value) VALUES (gen_random_uuid()::text, now(), now(), ?, 'closed_at', 'x')`, id)
-	if rep := r.otpVerify("gone@example.com", "424242"); rep.code != 401 {
+	if rep := r.otpVerify(gone, "424242"); rep.code != 401 {
 		t.Fatalf("closed: %d", rep.code)
 	}
 }
 
 func TestPasswordless_AccountsHaveNoPasswordSoPasswordLoginCannotBeUsedToGetIn(t *testing.T) {
 	r := plRig(t)
-	r.otpVerify("nopass@example.com", "424242")
-	for _, guess := range []string{"", "password", "424242", "nopass@example.com"} {
+	np := uniq("nopass")
+	r.otpVerify(np, "424242")
+	for _, guess := range []string{"", "password", "424242", np} {
 		if guess == "" {
 			continue
 		}
-		rep := decode(t, r.ctl.Login(&auth.LoginDto{Ref: "nopass@example.com", Secret: guess, ClientId: r.client}))
+		rep := decode(t, r.ctl.Login(&auth.LoginDto{Ref: np, Secret: guess, ClientId: r.client}))
 		if rep.code != 401 {
 			t.Fatalf("password %q signed in: %d", guess, rep.code)
 		}
@@ -150,7 +172,7 @@ func TestPasswordless_AccountsHaveNoPasswordSoPasswordLoginCannotBeUsedToGetIn(t
 func TestPasswordless_TheMagicCodeIsRefusedInProduction(t *testing.T) {
 	r := plRig(t)
 	t.Setenv("NODE_ENV", "production")
-	if rep := r.otpVerify("prod@example.com", "424242"); rep.code != 401 {
+	if rep := r.otpVerify(uniq("prod"), "424242"); rep.code != 401 {
 		t.Fatalf("the sandbox code worked in production: %d", rep.code)
 	}
 }

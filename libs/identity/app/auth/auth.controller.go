@@ -59,8 +59,8 @@ import (
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identitypermissiontype "github.com/thescaffold/gox-apps/libs/identity/app/permissiontype"
 	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
-	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
+	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
@@ -71,6 +71,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
+	"sync"
 )
 
 // otpToken is the decoded shape of the base64 `token` field every
@@ -526,6 +527,44 @@ func (c *AuthController) Attributes(dto *AttributesQueryDto) types.Output {
 // silently overwrite.
 var createOnlyAttributeKeys = map[string]bool{"timezone": true, "country": true, "currency": true}
 
+// reservedAttributeKeys are written only by the server (account state, referral
+// links, anything a host stores such as a PIN hash or a verification result).
+// PATCH /attributes/:type rejects them: a user can edit their own preferences
+// and profile, never the facts the server holds about their account.
+var (
+	reservedMu             sync.RWMutex
+	reservedAttributeKeys  = map[string]bool{"closed_at": true, "suspended_at": true, "referrer_id": true}
+	reservedAttributeTypes = map[string]bool{"system": true, "security": true}
+)
+
+// ReserveAttributeKeys lets a host or plugin add server-owned keys at startup.
+// Keys (and types) starting with "_" are always reserved.
+func ReserveAttributeKeys(keys ...string) {
+	reservedMu.Lock()
+	defer reservedMu.Unlock()
+	for _, k := range keys {
+		reservedAttributeKeys[k] = true
+	}
+}
+
+// ReserveAttributeTypes reserves whole attribute types.
+func ReserveAttributeTypes(types ...string) {
+	reservedMu.Lock()
+	defer reservedMu.Unlock()
+	for _, t := range types {
+		reservedAttributeTypes[t] = true
+	}
+}
+
+func isReservedAttribute(attrType, key string) bool {
+	if strings.HasPrefix(key, "_") || strings.HasPrefix(attrType, "_") {
+		return true
+	}
+	reservedMu.RLock()
+	defer reservedMu.RUnlock()
+	return reservedAttributeKeys[key] || reservedAttributeTypes[attrType]
+}
+
 // UpdateAttribute mirrors TS PATCH /attributes/:type (:1618-1711).
 func (c *AuthController) UpdateAttribute(dto *UpdateAttributesDto) types.Output {
 	pref := dto.Ctx.Preference
@@ -538,6 +577,14 @@ func (c *AuthController) UpdateAttribute(dto *UpdateAttributesDto) types.Output 
 	if dto.Type == "" {
 		return response.NotFound(title,
 			c.lang.Translate("apps.identity.app.patch.attributes.error.not-found", nil, pref))
+	}
+
+	// Check every key before writing any, so a rejected request changes nothing.
+	for key := range dto.Body {
+		if isReservedAttribute(dto.Type, key) {
+			return response.Forbidden(title,
+				c.lang.Translate("apps.identity.app.patch.attributes.error.reserved", map[string]any{"key": key}, pref))
+		}
 	}
 
 	for key, raw := range dto.Body {

@@ -6,6 +6,7 @@ use ../../awesome-goose/goose
 // Shared gox-packages
 use ../gox-packages/libs/core
 use ../gox-packages/libs/blobs
+use ../gox-packages/libs/webhook
 
 // App modules
 use (
@@ -35,3 +36,5 @@ use (
 // consumers of the published modules.
 replace github.com/thescaffold/gox-packages/libs/core v0.0.7 => ../gox-packages/libs/core
 replace github.com/thescaffold/gox-packages/libs/blobs v0.0.7 => ../gox-packages/libs/blobs
+
+replace github.com/thescaffold/gox-packages/libs/webhook v0.0.0 => ../gox-packages/libs/webhook

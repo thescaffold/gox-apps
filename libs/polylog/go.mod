@@ -6,6 +6,8 @@ require github.com/awesome-goose/goose v0.0.6
 
 require github.com/thescaffold/gox-packages/libs/core v0.0.7
 
+require github.com/thescaffold/gox-packages/libs/webhook v0.0.0
+
 require (
 	github.com/cbroglie/mustache v1.4.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect

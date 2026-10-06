@@ -18,6 +18,7 @@ import (
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
+	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
 	"gorm.io/gorm"
 	"time"
 )
@@ -45,6 +46,7 @@ func NewAuthControllerForTest(db *gorm.DB) *AuthController {
 	c.permissionEntity = &identitypermission.PermissionEntity{Entity: (&sql.Entity[identitypermission.Permission]{}).With(q)}
 	c.cache = services.NewMemoryBackend()
 	c.otpSvc = otp.New(c.cache, 7*time.Minute)
+	c.signin = &identityotp.Service{DB: db}
 	c.roleTypeEntity.OnRegister()
 	c.permissionTypeEntity.OnRegister()
 	c.permissionEntity.OnRegister()
@@ -70,3 +72,7 @@ func (c *AuthController) SeedRegistrationForTest(id, ref, clientID string) strin
 	c.cache.Set(registerVerifyPrefix+id, string(entry), tempEntryTTL)
 	return o.Hashed
 }
+
+// SigninForTest exposes the passwordless code service so a test can set its
+// magic code or clock.
+func (c *AuthController) SigninForTest() *identityotp.Service { return c.signin }

@@ -49,6 +49,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
@@ -70,6 +71,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/security"
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
+	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 	"sync"
 )
@@ -146,9 +148,16 @@ type AuthController struct {
 	// which would hand this a zero-value Service (nil cache). Constructing
 	// it ourselves from a field we already know is wired removes the doubt.
 	otpSvc *otp.Service
+
+	// db backs the passwordless sign-in codes (durable, unlike the cache).
+	db     *sql.Db                 `inject:""`
+	signin *identityotp.Service
 }
 
 func (c *AuthController) Boot(_ types.Kernel) error {
+	if c.signin == nil && c.db != nil {
+		c.signin = &identityotp.Service{DB: c.db.DB}
+	}
 	if c.otpSvc == nil {
 		c.otpSvc = otp.New(c.cache, 7*time.Minute)
 	}

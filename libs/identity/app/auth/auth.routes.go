@@ -11,6 +11,9 @@ var ROUTES = router.ForRoutes(
 	router.Post("/verify", []any{AuthController{}, "Verify"}),
 	router.Post("/secret", []any{AuthController{}, "Secret"}),
 	router.Post("/login", []any{AuthController{}, "Login"}),
+	// Passwordless sign-in: ask for a code, verify it, get tokens (creates the account on first use).
+	router.Post("/otp", []any{AuthController{}, "OtpRequest"}),
+	router.Post("/otp/verify", []any{AuthController{}, "OtpVerify"}),
 	router.Post("/switch", []any{AuthController{}, "SwitchWorkspace"}, requireUser()...),
 	router.Post("/reset-secret/initiate", []any{AuthController{}, "ResetSecretInitiate"}),
 	router.Post("/reset-secret/verify", []any{AuthController{}, "ResetSecretVerify"}),

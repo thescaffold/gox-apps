@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/awesome-goose/goose/modules/router"
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
 	capitalaccount "github.com/thescaffold/gox-apps/libs/capital/app/account"
@@ -57,7 +58,9 @@ func (m *AppModule) Imports() []types.Module {
 		&capitalvouchertype.VoucherTypeModule{},
 		&capitalvoucher.VoucherModule{},
 		&capitalwallet.WalletModule{},
-		&queueapp.AppModule{},
+		// Services only: importing the module whole would also serve the queue's
+		// API (GET / -> Pop, queue/job/log CRUD) under this app's prefix.
+		router.Silent(&queueapp.AppModule{}),
 		&flagsapp.FlagModule{},
 		ROUTES,
 	}

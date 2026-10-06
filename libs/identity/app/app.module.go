@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/awesome-goose/goose/modules/sql"
 	"github.com/awesome-goose/goose/types"
+	identityapikey "github.com/thescaffold/gox-apps/libs/identity/app/apikey"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identityauth "github.com/thescaffold/gox-apps/libs/identity/app/auth"
 	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
@@ -43,6 +44,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityInvites{},
 	&migrations.CreateIdentityProviders{},
 	&migrations.CreateIdentityProviderLogs{},
+	&migrations.CreateIdentityApiKeys{},
 	// Phase 4 schema alignment — adds TS-side columns alongside existing gox
 	// columns (User.ref+type, Permission.role_type_id+permission_type_id,
 	// Provider.key+name+desc+..., Device.os+agent+engine+cpu, DeviceLog.ip+
@@ -71,6 +73,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identityclient.ClientModule{},
 		&identityclientlog.ClientLogModule{},
 		&identityworkspace.WorkspaceModule{},
+		&identityapikey.ApiKeyModule{},
 		&identityucw.UserClientWorkspaceModule{},
 		&identityroletype.RoleTypeModule{},
 		&identityrole.RoleModule{},

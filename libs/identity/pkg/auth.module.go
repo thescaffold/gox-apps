@@ -23,7 +23,7 @@ func jwtSecret() string {
 }
 
 // AuthMiddleware is the pre-built goose middleware that validates Bearer JWTs.
-var AuthMiddleware = &coreauth.AuthMiddleware{Secret: jwtSecret()}
+var AuthMiddleware = &coreauth.AuthMiddleware{SecretFn: jwtSecret}
 
 var authRoutes = router.ForRoutes(
 	router.Post("/auth/login", []any{AuthAppController{}, "Login"}),

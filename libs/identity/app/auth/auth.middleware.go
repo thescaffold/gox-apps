@@ -45,17 +45,23 @@ func (m *claimsToContext) Handle(ctx types.Context) error {
 		if v, ok := claims["clientId"].(string); ok {
 			ntx.ClientID = v
 		}
+		if v, ok := claims["workspaceId"].(string); ok {
+			ntx.WorkspaceID = v
+		}
 	}
 	ntxctx.Set(ctx, ntx)
 	return nil
 }
+
+// RequireUser is requireUser for routes outside this package (the keys routes).
+func RequireUser() []types.Middleware { return requireUser() }
 
 // requireUser is the middleware pair every authenticated route in this
 // package applies: verify the Bearer JWT, then translate its claims into
 // the NTXContext handlers read via dto.Ctx.
 func requireUser() []types.Middleware {
 	return []types.Middleware{
-		&coreauth.AuthMiddleware{Secret: jwtSecret()},
+		&coreauth.AuthMiddleware{SecretFn: jwtSecret},
 		&claimsToContext{},
 	}
 }
@@ -76,6 +82,9 @@ func (m *optionalClaimsToContext) Handle(ctx types.Context) error {
 				}
 				if v, ok := claims["clientId"].(string); ok {
 					ntx.ClientID = v
+				}
+				if v, ok := claims["workspaceId"].(string); ok {
+					ntx.WorkspaceID = v
 				}
 			}
 		}

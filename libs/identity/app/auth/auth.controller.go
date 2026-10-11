@@ -633,7 +633,11 @@ func (c *AuthController) sendVerificationEmail(ref, userId, clientId, code strin
 		"clientId":  clientId,
 		"key":       "email-verification",
 		"channels":  []string{"email"},
-		"data":      map[string]any{"code": code, "ref": ref},
+		// owner is the address notification delivers to. Without it the
+		// provider falls back to resolving the user by id, which fails for a
+		// registration in progress (the user row does not exist yet) — so a
+		// verification code was generated and never sent.
+		"data": map[string]any{"code": code, "ref": ref, "owner": ref},
 		"subject":   "Email Verification",
 		"type":      "security",
 		"priority":  "medium",

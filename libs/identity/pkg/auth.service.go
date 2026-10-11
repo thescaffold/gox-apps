@@ -388,6 +388,8 @@ func (s *AuthService) buildClaims(u *user.User, clientId, workspaceId string) ma
 		"sub":      u.Id,
 		"email":    u.Email,
 		"clientId": clientId,
+		// Issue time in milliseconds: what revocation compares against.
+		"iatMs": time.Now().UnixMilli(),
 	}
 	if workspaceId != "" {
 		claims["workspaceId"] = workspaceId

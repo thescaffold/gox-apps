@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	"os"
 
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
@@ -23,7 +24,7 @@ func jwtSecret() string {
 }
 
 // AuthMiddleware is the pre-built goose middleware that validates Bearer JWTs.
-var AuthMiddleware = &coreauth.AuthMiddleware{SecretFn: jwtSecret}
+var AuthMiddleware = &coreauth.AuthMiddleware{SecretFn: jwtSecret, Revoked: revocation.Check}
 
 var authRoutes = router.ForRoutes(
 	router.Post("/auth/login", []any{AuthAppController{}, "Login"}),

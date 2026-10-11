@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/awesome-goose/goose/types"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
@@ -61,7 +62,7 @@ func RequireUser() []types.Middleware { return requireUser() }
 // the NTXContext handlers read via dto.Ctx.
 func requireUser() []types.Middleware {
 	return []types.Middleware{
-		&coreauth.AuthMiddleware{SecretFn: jwtSecret},
+		&coreauth.AuthMiddleware{SecretFn: jwtSecret, Revoked: revocation.Check},
 		&claimsToContext{},
 	}
 }

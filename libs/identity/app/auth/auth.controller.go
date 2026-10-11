@@ -74,6 +74,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 	"sync"
@@ -172,6 +173,7 @@ func (c *AuthController) Boot(_ types.Kernel) error {
 		c.ssoStore = &sso.Store{DB: c.db.DB}
 		c.ssoClient = sso.New(os.Getenv("SSO_ALLOW_PRIVATE") == "true")
 		sso.SetStore(c.ssoStore)
+		revocation.SetStore(&revocation.Store{DB: c.db.DB})
 	}
 	return nil
 }

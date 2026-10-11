@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	"os"
 	"sort"
 	"strconv"
@@ -267,6 +269,16 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 			return response.InternalServerError(title, err.Error())
 		}
 	}
+	// "Sign out everywhere" also ends the access tokens already handed out
+	// (they are stateless and would otherwise live out their 15 minutes).
+	// Signing out one device cannot: a token is not bound to a device.
+	// Only for a verified caller signing themselves out: the userId a request
+	// merely names is not proof of anything.
+	if dto.Ctx.UserID != "" && device == "" && (dto.UserId == "" || dto.UserId == dto.Ctx.UserID) {
+		if _, err := revocation.RevokeUser(context.Background(), dto.Ctx.UserID, "signout_all"); err != nil {
+			return response.InternalServerError(title, "could not end your sessions")
+		}
+	}
 	out := response.Success(map[string]any{"deviceId": device}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
 	if device != "" && dto.UserId == "" {
 		out.Headers()["Set-Cookie"] = deviceCookie("", 0)
@@ -340,4 +352,3 @@ func (c *AuthController) RegisterClientLog(dto *ClientLogRegisterDto) types.Outp
 	}
 	return response.Success(map[string]any{}, title, c.lang.Translate("apps.identity.app.post.client-log.success", nil, pref), nil)
 }
-

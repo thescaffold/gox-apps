@@ -344,3 +344,40 @@ func personAt(r *rig, email string) {
 		r.t.Fatal(err)
 	}
 }
+
+func TestMyWorkspaces_AreTheCallersOwnAndCreationIsBoundToTheToken(t *testing.T) {
+	r := newRig(t)
+	a, _ := r.person("alice")
+	b, _ := r.person("bob")
+	ctxA := ntxctx.NTXContext{UserID: a.Id, ClientID: r.client}
+
+	created := decode(t, r.ctl.CreateMyWorkspace(&auth.CreateMyWorkspaceDto{Ctx: ctxA, Name: "  Brightleaf  "}))
+	if created.code != 201 || created.data()["name"] != "Brightleaf" || created.data()["role"] != "owner" {
+		t.Fatalf("create: %d %v", created.code, created.body)
+	}
+	list := decode(t, r.ctl.MyWorkspaces(&auth.MyWorkspacesDto{Ctx: ctxA}))
+	names := map[string]bool{}
+	for _, w := range list.list() {
+		names[w.(map[string]any)["name"].(string)] = true
+	}
+	if !names["Brightleaf"] || len(names) != 2 {
+		t.Fatalf("alice's workspaces = %v", names)
+	}
+	// Bob sees none of Alice's, and the new workspace is switchable only by its owner.
+	other := decode(t, r.ctl.MyWorkspaces(&auth.MyWorkspacesDto{Ctx: ntxctx.NTXContext{UserID: b.Id, ClientID: r.client}}))
+	for _, w := range other.list() {
+		if w.(map[string]any)["name"] == "Brightleaf" {
+			t.Fatal("another person's workspace leaked")
+		}
+	}
+	id := created.data()["id"].(string)
+	if rep := decode(t, r.ctl.SwitchWorkspace(&auth.SwitchWorkspaceDto{Ctx: ntxctx.NTXContext{UserID: b.Id, ClientID: r.client}, WorkspaceId: id})); rep.code != 401 {
+		t.Fatalf("bob switching into alice's workspace: %d", rep.code)
+	}
+	if rep := decode(t, r.ctl.SwitchWorkspace(&auth.SwitchWorkspaceDto{Ctx: ctxA, WorkspaceId: id})); rep.code != 200 {
+		t.Fatalf("alice switching into her new workspace: %d", rep.code)
+	}
+	if rep := decode(t, r.ctl.CreateMyWorkspace(&auth.CreateMyWorkspaceDto{Ctx: ctxA, Name: ""})); rep.code != 400 {
+		t.Fatalf("empty name: %d", rep.code)
+	}
+}

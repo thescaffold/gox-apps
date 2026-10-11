@@ -23,6 +23,8 @@ var ROUTES = router.ForRoutes(
 	router.Get("/sso/connection", []any{AuthController{}, "SsoGetConnection"}, requireUser()...),
 	router.Put("/sso/connection", []any{AuthController{}, "SsoPutConnection"}, requireUser()...),
 	router.Delete("/sso/connection", []any{AuthController{}, "SsoDeleteConnection"}, requireUser()...),
+	router.Get("/my/workspaces", []any{AuthController{}, "MyWorkspaces"}, requireUser()...),
+	router.Post("/my/workspaces", []any{AuthController{}, "CreateMyWorkspace"}, requireUser()...),
 	router.Post("/switch", []any{AuthController{}, "SwitchWorkspace"}, requireUser()...),
 	router.Post("/reset-secret/initiate", []any{AuthController{}, "ResetSecretInitiate"}),
 	router.Post("/reset-secret/verify", []any{AuthController{}, "ResetSecretVerify"}),

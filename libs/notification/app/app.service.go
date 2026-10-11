@@ -26,6 +26,14 @@ type AppService struct {
 // GetHello mirrors TS getHello() — "Hello World!".
 func (s *AppService) GetHello() string { return "Hello World!" }
 
+// OnRegister runs after the container has injected this instance. It is where
+// the package-level singleton (used by the bus subscription handlers and
+// Service()) must be taken from: Declarations() builds a throwaway
+// &AppService{} that the container does not hydrate, so a singleton assigned
+// there has no entities or provider and every message.new event silently
+// fails to persist or send.
+func (s *AppService) OnRegister() { notificationAppSvc = s }
+
 // OnMessageJob mirrors TS jobs[0] for `queue/apps/notification`:
 // look up the persisted Log by reference and dispatch it through the
 // ProviderService. Returns a logged payload + nil error so the worker

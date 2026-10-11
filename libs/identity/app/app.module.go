@@ -47,6 +47,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityApiKeys{},
 	&migrations.CreateIdentityOtps{},
 	&migrations.CreateIdentitySsoConnections{},
+	&migrations.CreateIdentitySsoRecoveries{},
 	// Phase 4 schema alignment — adds TS-side columns alongside existing gox
 	// columns (User.ref+type, Permission.role_type_id+permission_type_id,
 	// Provider.key+name+desc+..., Device.os+agent+engine+cpu, DeviceLog.ip+

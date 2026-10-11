@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
@@ -449,6 +451,53 @@ func (c *AuthController) SsoDeleteConnection(dto *SsoWorkspaceDto) types.Output 
 		return response.InternalServerError(title, "could not remove")
 	}
 	return response.Success(map[string]any{"configured": false}, title, "removed", nil)
+}
+
+// SsoRecoveryDto carries POST /sso/recovery/start and /sso/recovery/verify.
+type SsoRecoveryDto struct {
+	Ctx   ntxctx.NTXContext `context:"ntx"`
+	Email string            `json:"email" binding:"required"`
+}
+
+// SsoRecoveryStart is the break-glass for a company locked out of its
+// identity provider: it names a DNS TXT record that, once published, proves
+// control of the domain.
+func (c *AuthController) SsoRecoveryStart(dto *SsoRecoveryDto) types.Output {
+	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if !c.ssoReady() {
+		return response.NotFound(title, "single sign-on is not available")
+	}
+	ch, err := c.ssoStore.StartRecovery(context.Background(), dto.Email)
+	switch {
+	case errors.Is(err, sso.ErrRecoveryNotNeeded):
+		return response.NotFound(title, "this address does not require single sign-on")
+	case errors.Is(err, sso.ErrRecoveryThrottled):
+		return response.Error(title, "too many recovery requests; try again later", 429)
+	case err != nil:
+		return response.InternalServerError(title, "could not start recovery")
+	}
+	return response.Success(ch, title, "publish this record, then check it", nil)
+}
+
+// SsoRecoveryVerify checks the TXT record. On success enforcement is lifted
+// for the address for 30 minutes; the person still signs in with an emailed
+// code or a password.
+func (c *AuthController) SsoRecoveryVerify(dto *SsoRecoveryDto) types.Output {
+	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if !c.ssoReady() {
+		return response.NotFound(title, "single sign-on is not available")
+	}
+	until, err := c.ssoStore.VerifyRecovery(context.Background(), dto.Email)
+	switch {
+	case errors.Is(err, sso.ErrRecoveryPending):
+		return response.NotFound(title, "start recovery first")
+	case errors.Is(err, sso.ErrRecoveryNotFound):
+		return response.Success(map[string]any{"granted": false}, title, "the record was not found yet; DNS can take a few minutes", nil)
+	case err != nil:
+		return response.InternalServerError(title, "could not check the record")
+	}
+	slog.Warn("sso: enforcement lifted by DNS recovery", "email_domain", sso.EmailDomain(dto.Email), "until", until)
+	return response.Success(map[string]any{"granted": true, "until": until}, title, "you can now sign in with an emailed code", nil)
 }
 
 // ssoEnforcedResponse is the answer to a password or code sign-in for an

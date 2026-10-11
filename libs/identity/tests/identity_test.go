@@ -208,8 +208,8 @@ func (s *AppModuleSuite) TestMigrations_Count() {
 	// migration (AlignIdentityWithNtx) + 3 credentials-at-rest migrations
 	// (PLAN M1-03: HashRefreshTokens, EncryptProviderTokens,
 	// ScrubProviderLogTokens) = 21, + 1 (PLAN M1-40: DeviceSessionClient) = 22,
-	// + 1 (CreateIdentityApiKeys: hashed machine credentials) = 23, + 1 (CreateIdentityOtps: durable one-time codes) = 24, + 1 (CreateIdentitySsoConnections) = 25.
-	s.T.Expect(len(app.Migrations)).ToEqual(25)
+	// + 1 (CreateIdentityApiKeys: hashed machine credentials) = 23, + 1 (CreateIdentityOtps: durable one-time codes) = 24, + 1 (CreateIdentitySsoConnections) = 25, + 1 (CreateIdentitySsoRecoveries) = 26.
+	s.T.Expect(len(app.Migrations)).ToEqual(26)
 }
 func (s *AppModuleSuite) TestName() {
 	s.T.Expect(app.Name).ToEqual("identity")

@@ -381,3 +381,97 @@ func TestMyWorkspaces_AreTheCallersOwnAndCreationIsBoundToTheToken(t *testing.T)
 		t.Fatalf("empty name: %d", rep.code)
 	}
 }
+
+func TestSSO_DNSRecoveryLiftsEnforcementBrieflyAndOnlyForTheProvenAddress(t *testing.T) {
+	w := ssoRig(t)
+	w.connect(true)
+	store := w.r.ctl.SsoStoreForTest()
+	clock := time.Now()
+	store.Now = func() time.Time { return clock }
+	var published []string
+	store.LookupTXT = func(_ context.Context, name string) ([]string, error) {
+		if name != "_envelope-sso-recovery."+w.domain {
+			return nil, nil
+		}
+		return published, nil
+	}
+	t.Cleanup(func() { w.r.db.Exec(`DELETE FROM "IdentitySsoRecoveries" WHERE domain = ?`, w.domain) })
+
+	email := "owner-" + uuid.NewString()[:6] + "@" + w.domain
+	personAt(w.r, email)
+	login := func(ref string) int {
+		return decode(t, w.r.ctl.Login(&auth.LoginDto{Ref: ref, Secret: testPassword, ClientId: w.r.client})).code
+	}
+	if login(email) != 403 {
+		t.Fatal("enforcement should be on")
+	}
+
+	// An address that does not need recovery is told so.
+	if rep := decode(t, w.r.ctl.SsoRecoveryStart(&auth.SsoRecoveryDto{Email: "x@elsewhere.test"})); rep.code != 404 {
+		t.Fatalf("no SSO: %d", rep.code)
+	}
+	// Verifying before starting is a clear error, and grants nothing.
+	if rep := decode(t, w.r.ctl.SsoRecoveryVerify(&auth.SsoRecoveryDto{Email: email})); rep.code != 404 {
+		t.Fatalf("verify before start: %d", rep.code)
+	}
+
+	start := decode(t, w.r.ctl.SsoRecoveryStart(&auth.SsoRecoveryDto{Email: strings.ToUpper(email)}))
+	if start.code != 200 || start.data()["host"] != "_envelope-sso-recovery."+w.domain || start.data()["type"] != "TXT" {
+		t.Fatalf("start: %d %v", start.code, start.body)
+	}
+	value := start.data()["value"].(string)
+	if !strings.HasPrefix(value, "envelope-sso-recovery=") {
+		t.Fatalf("value = %q", value)
+	}
+	var stored string
+	w.r.db.Raw(`SELECT token_hash FROM "IdentitySsoRecoveries" WHERE email = ?`, email).Scan(&stored)
+	if stored == "" || strings.Contains(value, stored) || strings.Contains(stored, strings.TrimPrefix(value, "envelope-sso-recovery=")) {
+		t.Fatal("only a hash of the proof may be stored")
+	}
+
+	granted := func() bool {
+		rep := decode(t, w.r.ctl.SsoRecoveryVerify(&auth.SsoRecoveryDto{Email: email}))
+		return rep.code == 200 && rep.data()["granted"] == true
+	}
+	// Not published yet, then a wrong value: nothing happens.
+	if granted() || login(email) != 403 {
+		t.Fatal("must not grant without the record")
+	}
+	published = []string{"envelope-sso-recovery=not-the-token", "v=spf1 -all"}
+	if granted() || login(email) != 403 {
+		t.Fatal("a wrong token must not grant")
+	}
+
+	// The real record, quoted the way DNS providers often return it.
+	published = []string{`"` + value + `"`}
+	if !granted() {
+		t.Fatal("the published challenge should grant")
+	}
+	if login(email) != 200 {
+		t.Fatal("after recovery the person can sign in normally")
+	}
+	// Only the proven address: a colleague is still held to SSO.
+	other := "other-" + uuid.NewString()[:6] + "@" + w.domain
+	personAt(w.r, other)
+	if login(other) != 403 {
+		t.Fatal("recovery must not lift enforcement for other people")
+	}
+	// And only for a while.
+	clock = clock.Add(31 * time.Minute)
+	if login(email) != 403 {
+		t.Fatal("the grant must expire")
+	}
+}
+
+func TestSSO_RecoveryIsThrottledPerDomain(t *testing.T) {
+	w := ssoRig(t)
+	w.connect(true)
+	t.Cleanup(func() { w.r.db.Exec(`DELETE FROM "IdentitySsoRecoveries" WHERE domain = ?`, w.domain) })
+	var last int
+	for i := 0; i < 7; i++ {
+		last = decode(t, w.r.ctl.SsoRecoveryStart(&auth.SsoRecoveryDto{Email: "a@" + w.domain})).code
+	}
+	if last != 429 {
+		t.Fatalf("the 7th request in an hour: %d, want 429", last)
+	}
+}

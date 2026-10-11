@@ -20,6 +20,8 @@ var ROUTES = router.ForRoutes(
 	router.Post("/sso/start", []any{AuthController{}, "SsoStart"}),
 	router.Get("/sso/callback", []any{AuthController{}, "SsoCallback"}),
 	router.Post("/sso/exchange", []any{AuthController{}, "SsoExchange"}),
+	router.Post("/sso/recovery/start", []any{AuthController{}, "SsoRecoveryStart"}),
+	router.Post("/sso/recovery/verify", []any{AuthController{}, "SsoRecoveryVerify"}),
 	router.Get("/sso/connection", []any{AuthController{}, "SsoGetConnection"}, requireUser()...),
 	router.Put("/sso/connection", []any{AuthController{}, "SsoPutConnection"}, requireUser()...),
 	router.Delete("/sso/connection", []any{AuthController{}, "SsoDeleteConnection"}, requireUser()...),

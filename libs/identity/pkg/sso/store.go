@@ -60,7 +60,12 @@ func (c Connection) Domains() []string {
 }
 
 // Store persists connections.
-type Store struct{ DB *gorm.DB }
+type Store struct {
+	DB *gorm.DB
+	// LookupTXT and Now are seams for tests; nil means the real resolver and clock.
+	LookupTXT func(ctx context.Context, name string) ([]string, error)
+	Now       func() time.Time
+}
 
 // ErrNotFound is returned when no connection matches.
 var ErrNotFound = errors.New("sso: no connection")
@@ -103,7 +108,11 @@ func (s *Store) ForEmail(ctx context.Context, email string) (*Connection, error)
 // code sign-in are refused for it).
 func (s *Store) Enforced(ctx context.Context, email string) bool {
 	c, err := s.ForEmail(ctx, email)
-	return err == nil && c.Enforce
+	if err != nil || !c.Enforce {
+		return false
+	}
+	// A DNS-proven recovery lifts enforcement for that address for a while.
+	return !s.recoveryGranted(ctx, email)
 }
 
 // Save inserts or replaces a workspace's connection.

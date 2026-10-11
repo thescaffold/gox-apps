@@ -80,3 +80,7 @@ func (c *AuthController) SeedRegistrationForTest(id, ref, clientID string) strin
 // SigninForTest exposes the passwordless code service so a test can set its
 // magic code or clock.
 func (c *AuthController) SigninForTest() *identityotp.Service { return c.signin }
+
+// SsoStoreForTest exposes the connection store so a test can set its DNS
+// resolver and clock.
+func (c *AuthController) SsoStoreForTest() *sso.Store { return c.ssoStore }

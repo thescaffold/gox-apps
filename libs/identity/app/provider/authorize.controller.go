@@ -6,6 +6,7 @@
 package provider
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -27,6 +28,7 @@ import (
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 	identityproviderpkg "github.com/thescaffold/gox-apps/libs/identity/pkg/provider"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/events"
 	"github.com/thescaffold/gox-packages/libs/core/i18n"
@@ -153,6 +155,12 @@ func (c *AuthorizeController) Authorize(dto *AuthorizeProviderDto) types.Output 
 	profile, err := prov.Profile(tok.AccessToken)
 	if err != nil || profile == nil {
 		return response.BadRequest(title, "profile fetch failed")
+	}
+
+	// A company that requires single sign-on cannot be bypassed through a
+	// consumer provider that happens to hold the same address.
+	if sso.Enforced(context.Background(), profile.Email) {
+		return response.Forbidden(title, "your company requires single sign-on")
 	}
 
 	// 4. Persist a Profile-typed ProviderLog row.

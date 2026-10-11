@@ -9,6 +9,7 @@ import (
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
@@ -45,6 +46,9 @@ func (c *AuthController) OtpRequest(dto *OtpRequestDto) types.Output {
 	ref, typ, err := identityotp.Normalize(dto.Ref)
 	if err != nil {
 		return response.BadRequest(title, err.Error())
+	}
+	if sso.Enforced(context.Background(), ref) {
+		return c.ssoEnforcedResponse(dto.Ctx.Preference)
 	}
 	code, err := c.signin.Issue(context.Background(), ref, dto.ClientId)
 	switch {
@@ -86,6 +90,9 @@ func (c *AuthController) OtpVerify(dto *OtpVerifyDto) types.Output {
 	ref, typ, nerr := identityotp.Normalize(dto.Ref)
 	if nerr != nil {
 		return response.BadRequest(title, nerr.Error())
+	}
+	if sso.Enforced(context.Background(), ref) {
+		return c.ssoEnforcedResponse(pref)
 	}
 	if err := c.signin.Check(context.Background(), ref, dto.ClientId, dto.Code); err != nil {
 		if errors.Is(err, identityotp.ErrLocked) {

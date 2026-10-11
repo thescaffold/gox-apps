@@ -43,9 +43,11 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -72,6 +74,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 	"sync"
 )
@@ -152,6 +155,10 @@ type AuthController struct {
 	// db backs the passwordless sign-in codes (durable, unlike the cache).
 	db     *sql.Db                 `inject:""`
 	signin *identityotp.Service
+
+	// Single sign-on (sso.go). Built at Boot; nil when no database.
+	ssoStore  *sso.Store
+	ssoClient *sso.Client
 }
 
 func (c *AuthController) Boot(_ types.Kernel) error {
@@ -160,6 +167,11 @@ func (c *AuthController) Boot(_ types.Kernel) error {
 	}
 	if c.otpSvc == nil {
 		c.otpSvc = otp.New(c.cache, 7*time.Minute)
+	}
+	if c.ssoStore == nil && c.db != nil {
+		c.ssoStore = &sso.Store{DB: c.db.DB}
+		c.ssoClient = sso.New(os.Getenv("SSO_ALLOW_PRIVATE") == "true")
+		sso.SetStore(c.ssoStore)
 	}
 	return nil
 }
@@ -171,6 +183,9 @@ func (c *AuthController) Initiate(dto *InitiateDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
+	if sso.Enforced(context.Background(), dto.Ref) {
+		return c.ssoEnforcedResponse(pref)
+	}
 	if existing, _ := c.userEntity.First(`"ref" = ? OR "email" = ?`, dto.Ref, dto.Ref); existing != nil {
 		return response.BadRequest(title,
 			c.lang.Translate("apps.identity.app.post.initiate.error.duplicate", nil, pref))
@@ -339,6 +354,9 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
+	if sso.Enforced(context.Background(), dto.Ref) {
+		return c.ssoEnforcedResponse(pref)
+	}
 	u, err := c.auth.VerifyCredentials(dto.Ref, dto.Secret)
 	if err != nil {
 		return response.Unauthorized(title,

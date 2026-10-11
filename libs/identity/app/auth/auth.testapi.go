@@ -19,6 +19,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"gorm.io/gorm"
 	"time"
 )
@@ -45,6 +46,9 @@ func NewAuthControllerForTest(db *gorm.DB) *AuthController {
 	c.permissionTypeEntity = &identitypermissiontype.PermissionTypeEntity{Entity: (&sql.Entity[identitypermissiontype.PermissionType]{}).With(q)}
 	c.permissionEntity = &identitypermission.PermissionEntity{Entity: (&sql.Entity[identitypermission.Permission]{}).With(q)}
 	c.cache = services.NewMemoryBackend()
+	c.ssoStore = &sso.Store{DB: db}
+	c.ssoClient = sso.New(true) // tests talk to loopback identity providers
+	sso.SetStore(c.ssoStore)
 	c.otpSvc = otp.New(c.cache, 7*time.Minute)
 	c.signin = &identityotp.Service{DB: db}
 	c.roleTypeEntity.OnRegister()

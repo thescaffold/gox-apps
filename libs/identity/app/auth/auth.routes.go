@@ -14,6 +14,15 @@ var ROUTES = router.ForRoutes(
 	// Passwordless sign-in: ask for a code, verify it, get tokens (creates the account on first use).
 	router.Post("/otp", []any{AuthController{}, "OtpRequest"}),
 	router.Post("/otp/verify", []any{AuthController{}, "OtpVerify"}),
+	// Enterprise single sign-on (OpenID Connect). start/callback/exchange are
+	// the browser flow and carry no session; connection is the admin's.
+	router.Post("/sso/discover", []any{AuthController{}, "SsoDiscover"}),
+	router.Post("/sso/start", []any{AuthController{}, "SsoStart"}),
+	router.Get("/sso/callback", []any{AuthController{}, "SsoCallback"}),
+	router.Post("/sso/exchange", []any{AuthController{}, "SsoExchange"}),
+	router.Get("/sso/connection", []any{AuthController{}, "SsoGetConnection"}, requireUser()...),
+	router.Put("/sso/connection", []any{AuthController{}, "SsoPutConnection"}, requireUser()...),
+	router.Delete("/sso/connection", []any{AuthController{}, "SsoDeleteConnection"}, requireUser()...),
 	router.Post("/switch", []any{AuthController{}, "SwitchWorkspace"}, requireUser()...),
 	router.Post("/reset-secret/initiate", []any{AuthController{}, "ResetSecretInitiate"}),
 	router.Post("/reset-secret/verify", []any{AuthController{}, "ResetSecretVerify"}),

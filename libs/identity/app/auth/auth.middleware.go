@@ -76,8 +76,11 @@ type optionalClaimsToContext struct{}
 func (m *optionalClaimsToContext) Handle(ctx types.Context) error {
 	ntx := ntxctx.NTXContext{}
 	if vs := ctx.Request().Headers()["Authorization"]; len(vs) > 0 {
-		if token, ok := strings.CutPrefix(vs[0], "Bearer "); ok {
-			if claims, err := coreauth.Verify(token, jwtSecret()); err == nil {
+		// The scheme is case-insensitive (RFC 7235); browsers' interceptors
+		// commonly send "bearer".
+		if h := vs[0]; len(h) > 7 && strings.EqualFold(h[:7], "bearer ") {
+			token := strings.TrimSpace(h[7:])
+			if claims, err := coreauth.Verify(token, jwtSecret()); err == nil && !revocation.Check(claims) {
 				if v, ok := claims["sub"].(string); ok {
 					ntx.UserID = v
 				}

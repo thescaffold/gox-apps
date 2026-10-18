@@ -7,6 +7,8 @@ import (
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
+	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
 	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
 	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
@@ -45,6 +47,8 @@ func (m *AuthModule) Imports() []types.Module {
 		&identitytoken.TokenModule{},
 		&identityrole.RoleModule{},
 		&identitypermission.PermissionModule{},
+		&identityroletype.RoleTypeModule{},
+		&identityucw.UserClientWorkspaceModule{},
 		&identityattribute.AttributeModule{},
 	}
 }

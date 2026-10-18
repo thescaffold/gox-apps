@@ -2,12 +2,15 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
+	"strings"
 
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
 	identityinvite "github.com/thescaffold/gox-apps/libs/identity/app/invite"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
 	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
 	"github.com/thescaffold/gox-packages/libs/core/events"
 )
@@ -19,6 +22,7 @@ import (
 type AppService struct {
 	roleEntity          *identityrole.RoleEntity                   `inject:""`
 	permissionEntity    *identitypermission.PermissionEntity       `inject:""`
+	roleTypeEntity      *identityroletype.RoleTypeEntity           `inject:""`
 	attributeEntity     *identityattribute.AttributeEntity         `inject:""`
 	deviceSessionEntity *identitydevicesession.DeviceSessionEntity `inject:""`
 	inviteEntity        *identityinvite.InviteEntity               `inject:""`
@@ -26,17 +30,36 @@ type AppService struct {
 	bus                 *events.Bus                                `inject:""`
 }
 
+// OnRegister runs after the container has injected this instance, which is
+// where the package-level singleton (used by the bus handlers and
+// RegisterRolePermissions) must be taken from: an instance built in
+// Declarations() is never hydrated, so a singleton assigned there has no
+// entities and silently does nothing.
+func (s *AppService) OnRegister() { identityAppSvc = s }
+
 func (s *AppService) GetHello() string { return "Hello World!" }
 
 // RBACRegisterPayload is the apps.identity.rbac.register event payload.
 type RBACRegisterPayload struct {
-	Roles       []any `json:"roles,omitempty"`
-	Permissions []any `json:"permissions,omitempty"`
+	// RolePermissions is the complete grant list of each named role
+	// (role name -> permission strings such as
+	// "member:read:apps:directory:*:*:workspace"). A user holding that role in
+	// a workspace carries these in their token. Registering a role replaces
+	// its earlier list, so a permission that is no longer listed stops being
+	// granted.
+	RolePermissions map[string][]string `json:"rolePermissions,omitempty"`
+	Roles           []any               `json:"roles,omitempty"`
+	Permissions     []any               `json:"permissions,omitempty"`
 }
 
 // OnRBACRegister persists incoming role + permission definitions, upserting
 // each by name (roles) or by key (permissions). Mirrors TS subscription body.
 func (s *AppService) OnRBACRegister(p RBACRegisterPayload) error {
+	for role, keys := range p.RolePermissions {
+		if err := s.registerRolePermissions(role, keys); err != nil {
+			return err
+		}
+	}
 	for _, raw := range p.Roles {
 		m, ok := raw.(map[string]any)
 		if !ok {
@@ -328,4 +351,54 @@ func stringify(v any) string {
 		return ""
 	}
 	return string(b)
+}
+
+// registerRolePermissions makes keys the full grant list of the named role:
+// template rows (no user, no workspace) hanging off the role's RoleType.
+// Role names are matched case-insensitively and stored lower-case.
+func (s *AppService) registerRolePermissions(role string, keys []string) error {
+	role = strings.ToLower(strings.TrimSpace(role))
+	if role == "" {
+		return nil
+	}
+	if s.roleTypeEntity == nil || s.permissionEntity == nil {
+		return errors.New("identity: role and permission storage is not wired")
+	}
+	rt, _ := s.roleTypeEntity.First(`LOWER("name") = ?`, role)
+	if rt == nil {
+		rt = &identityroletype.RoleType{Name: role}
+		if err := s.roleTypeEntity.Insert(rt); err != nil {
+			return err
+		}
+	}
+	want := map[string]bool{}
+	for _, k := range keys {
+		if k = strings.TrimSpace(k); k != "" {
+			want[k] = true
+		}
+	}
+	have, _ := s.permissionEntity.Find(0, 0, `"user_id" IS NULL AND "role_type_id" = ?`, rt.Id)
+	for i := range have {
+		if want[have[i].Key] {
+			delete(want, have[i].Key)
+			continue
+		}
+		_, _ = s.permissionEntity.Delete(`id = ?`, have[i].Id)
+	}
+	rtID := rt.Id
+	for k := range want {
+		// role:action:namespace...:scope — the verb is the second segment and
+		// the scope the last.
+		parts := strings.Split(k, ":")
+		action, scope, resource := "*", "workspace", k
+		if len(parts) >= 3 {
+			action, scope, resource = parts[1], parts[len(parts)-1], strings.Join(parts[2:len(parts)-1], ":")
+		}
+		if err := s.permissionEntity.Insert(&identitypermission.Permission{
+			RoleTypeId: &rtID, Key: k, Action: action, Scope: scope, Resource: resource,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

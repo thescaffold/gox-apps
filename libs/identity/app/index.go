@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identityclient "github.com/thescaffold/gox-apps/libs/identity/app/client"
 	identityclientlog "github.com/thescaffold/gox-apps/libs/identity/app/clientlog"
@@ -75,6 +76,22 @@ var DefaultPermissions = map[string][]string{
 // closures below can dispatch to typed AppService methods after DI.
 var identityAppSvc *AppService
 
+// RegisterRolePermissions sets the complete grant list of each named role
+// (role name -> permission strings). A user holding the role in a workspace
+// then carries those permissions in the tokens identity issues for that
+// workspace. A host calls it once at startup with the permissions its apps
+// declare; calling it again replaces each listed role's grants.
+//
+// The same registration is available as the apps.identity.rbac.register event
+// (payload key rolePermissions), but nothing subscribes handlers to a bus on
+// its own, so a host that needs it to take effect calls this directly.
+func RegisterRolePermissions(rolePermissions map[string][]string) error {
+	if identityAppSvc == nil {
+		return errors.New("identity: not initialised")
+	}
+	return identityAppSvc.OnRBACRegister(RBACRegisterPayload{RolePermissions: rolePermissions})
+}
+
 // payloadOf extracts the "payload" map from a polylog/eventbus envelope.
 func payloadOf(v any) map[string]any {
 	if m, ok := v.(map[string]any); ok {
@@ -127,6 +144,20 @@ var Subscriptions = map[string]events.EventHandler{
 		}
 		if v, ok := p["permissions"].([]any); ok {
 			rp.Permissions = v
+		}
+		if v, ok := p["rolePermissions"].(map[string]any); ok {
+			rp.RolePermissions = map[string][]string{}
+			for role, list := range v {
+				items, _ := list.([]any)
+				for _, it := range items {
+					if str, ok := it.(string); ok {
+						rp.RolePermissions[role] = append(rp.RolePermissions[role], str)
+					}
+				}
+				if _, ok := rp.RolePermissions[role]; !ok {
+					rp.RolePermissions[role] = nil
+				}
+			}
 		}
 		_ = identityAppSvc.OnRBACRegister(rp)
 	},

@@ -1,10 +1,12 @@
 package pkg
 
 import (
-	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
+	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	mrand "math/rand"
 	"os"
 	"strings"
@@ -32,13 +34,15 @@ const (
 )
 
 type AuthService struct {
-	userEntity       *user.UserEntity                     `inject:""`
-	tokenEntity      *token.TokenEntity                   `inject:""`
-	roleEntity       *identityrole.RoleEntity             `inject:""`
-	permissionEntity *identitypermission.PermissionEntity `inject:""`
-	attributeEntity  *identityattribute.AttributeEntity   `inject:""`
-	cache            services.CacheBackend                `inject:""`
-	tracker          *events.TrackerService               `inject:""`
+	userEntity       *user.UserEntity                       `inject:""`
+	tokenEntity      *token.TokenEntity                     `inject:""`
+	roleEntity       *identityrole.RoleEntity               `inject:""`
+	permissionEntity *identitypermission.PermissionEntity   `inject:""`
+	roleTypeEntity   *identityroletype.RoleTypeEntity       `inject:""`
+	ucwEntity        *identityucw.UserClientWorkspaceEntity `inject:""`
+	attributeEntity  *identityattribute.AttributeEntity     `inject:""`
+	cache            services.CacheBackend                  `inject:""`
+	tracker          *events.TrackerService                 `inject:""`
 }
 
 // GenerateOTP produces a 6-digit numeric one-time code and stores it under
@@ -350,14 +354,67 @@ func (s *AuthService) ResolveRoles(_, clientId, workspaceId string) ([]identityr
 	return s.roleEntity.Find(0, 0, query, args...)
 }
 
-// ResolvePermissions returns all permission records for a user in a client workspace.
+// membershipRoles returns the role names a user holds in a workspace, from
+// their membership row. An owner also holds the admin grants. Empty when the
+// user is not a member of the workspace (or no workspace is given), so a
+// token never carries role grants for a workspace the user does not belong to.
+func (s *AuthService) membershipRoles(userId, clientId, workspaceId string) []string {
+	if s.ucwEntity == nil || workspaceId == "" {
+		return nil
+	}
+	m, _ := s.ucwEntity.First(`"user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`, userId, clientId, workspaceId)
+	if m == nil || m.Status == nil || *m.Status == "" {
+		return nil
+	}
+	role := strings.ToLower(*m.Status)
+	if role == "owner" {
+		return []string{"owner", "admin"}
+	}
+	return []string{role}
+}
+
+// rolePermissions returns the catalog grants (RegisterRolePermissions) of the
+// given role names.
+func (s *AuthService) rolePermissions(roles []string) []identitypermission.Permission {
+	if s.roleTypeEntity == nil || len(roles) == 0 {
+		return nil
+	}
+	types, _ := s.roleTypeEntity.Find(0, 0, `LOWER("name") IN ?`, roles)
+	ids := make([]string, 0, len(types))
+	for i := range types {
+		ids = append(ids, types[i].Id)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	out, _ := s.permissionEntity.Find(0, 0, `"user_id" IS NULL AND "role_type_id" IN ?`, ids)
+	return out
+}
+
+// ResolvePermissions returns the permissions a user holds in a client
+// workspace: their own per-user grants, plus the catalog grants of the role
+// their membership of that workspace carries.
 func (s *AuthService) ResolvePermissions(userId, clientId, workspaceId string) ([]identitypermission.Permission, error) {
 	query := `"user_id" = ? AND "client_id" = ?`
 	args := []any{userId, clientId}
 	clause, extra := workspaceScope(workspaceId)
 	query += clause
 	args = append(args, extra...)
-	return s.permissionEntity.Find(0, 0, query, args...)
+	own, err := s.permissionEntity.Find(0, 0, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	for i := range own {
+		seen[own[i].Key] = true
+	}
+	for _, p := range s.rolePermissions(s.membershipRoles(userId, clientId, workspaceId)) {
+		if !seen[p.Key] {
+			seen[p.Key] = true
+			own = append(own, p)
+		}
+	}
+	return own, nil
 }
 
 // ResolvePreference returns the user's preference attributes for a client workspace.
@@ -399,6 +456,9 @@ func (s *AuthService) buildClaims(u *user.User, clientId, workspaceId string) ma
 	roleNames := make([]string, 0, len(roles))
 	for i := range roles {
 		roleNames = append(roleNames, roles[i].Name)
+	}
+	for _, r := range s.membershipRoles(u.Id, clientId, workspaceId) {
+		roleNames = append(roleNames, r)
 	}
 	claims["roles"] = roleNames
 

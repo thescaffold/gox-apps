@@ -99,7 +99,5 @@ func (m *AppModule) Imports() []types.Module {
 func (m *AppModule) Exports() []any { return []any{&AppService{}} }
 
 func (m *AppModule) Declarations() []any {
-	svc := &AppService{}
-	identityAppSvc = svc
-	return []any{&AppController{}, svc}
+	return []any{&AppController{}, &AppService{}}
 }

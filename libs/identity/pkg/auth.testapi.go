@@ -1,12 +1,14 @@
 package pkg
 
 import (
+	"github.com/awesome-goose/goose/modules/sql"
 	identityattribute "github.com/thescaffold/gox-apps/libs/identity/app/attribute"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
+	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
 	"github.com/thescaffold/gox-apps/libs/identity/app/token"
 	"github.com/thescaffold/gox-apps/libs/identity/app/user"
-	"github.com/awesome-goose/goose/modules/sql"
+	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
 	"gorm.io/gorm"
 )
 
@@ -35,6 +37,12 @@ func NewAuthServiceForTest(db *gorm.DB) *AuthService {
 	permissionEntity := &identitypermission.PermissionEntity{Entity: (&sql.Entity[identitypermission.Permission]{}).With(q)}
 	permissionEntity.OnRegister()
 
+	roleTypeEntity := &identityroletype.RoleTypeEntity{Entity: (&sql.Entity[identityroletype.RoleType]{}).With(q)}
+	roleTypeEntity.OnRegister()
+
+	ucwEntity := &identityucw.UserClientWorkspaceEntity{Entity: (&sql.Entity[identityucw.UserClientWorkspace]{}).With(q)}
+	ucwEntity.OnRegister()
+
 	attributeEntity := &identityattribute.AttributeEntity{Entity: (&sql.Entity[identityattribute.Attribute]{}).With(q)}
 	attributeEntity.OnRegister()
 
@@ -43,6 +51,8 @@ func NewAuthServiceForTest(db *gorm.DB) *AuthService {
 		tokenEntity:      tokenEntity,
 		roleEntity:       roleEntity,
 		permissionEntity: permissionEntity,
+		roleTypeEntity:   roleTypeEntity,
+		ucwEntity:        ucwEntity,
 		attributeEntity:  attributeEntity,
 	}
 }

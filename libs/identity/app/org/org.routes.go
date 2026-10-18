@@ -11,6 +11,7 @@ import (
 //
 //	GET    /org/members                              people with their teams and roles
 //	GET    /org/catalog                              apps and actions a role can grant (admin)
+//	GET    /org/activity                             recent changes (admin)
 //	GET    /org/teams                                teams, groups and departments
 //	POST   /org/teams                                create (admin)
 //	PUT    /org/teams/:id                            rename, re-describe, move (admin)
@@ -28,6 +29,7 @@ import (
 var ROUTES = router.ForRoutes(
 	router.Get("/org/members", []any{OrgController{}, "Members"}, auth.RequireUser()...),
 	router.Get("/org/catalog", []any{OrgController{}, "Catalog"}, auth.RequireUser()...),
+	router.Get("/org/activity", []any{OrgController{}, "Activity"}, auth.RequireUser()...),
 	router.Get("/org/teams", []any{OrgController{}, "ListTeams"}, auth.RequireUser()...),
 	router.Post("/org/teams", []any{OrgController{}, "CreateTeam"}, auth.RequireUser()...),
 	router.Put("/org/teams/:id", []any{OrgController{}, "UpdateTeam"}, auth.RequireUser()...),

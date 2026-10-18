@@ -492,6 +492,9 @@ func (s *AuthService) buildClaims(u *user.User, clientId, workspaceId string) ma
 	if g := s.organisation(u.Id, workspaceId); len(g.Teams) > 0 || len(g.Roles) > 0 {
 		claims["teams"] = g.Teams
 		claims["customRoles"] = g.Roles
+		// What an app switch written for a team, a department or a role is matched against.
+		claims["orgUnits"] = g.OrgUnits
+		claims["roleIds"] = g.RoleIDs
 	}
 
 	return claims

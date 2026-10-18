@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +57,76 @@ var (
 	ErrCycle      = errors.New("a team cannot sit beneath itself")
 	ErrPermission = errors.New("invalid permission")
 )
+
+type actorKey struct{}
+
+// WithActor records who is making the changes in ctx, so they are written to the
+// audit trail. Calls without an actor change things and leave no event.
+func WithActor(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, actorKey{}, userID)
+}
+
+func actorOf(ctx context.Context) string { s, _ := ctx.Value(actorKey{}).(string); return s }
+
+// Notifier tells a person something happened to their place in the organisation
+// (added to a team, given a role). The host connects it to its notification centre.
+type Notifier func(ctx context.Context, workspaceID, userID, title, body, link string)
+
+var notifier struct {
+	mu sync.RWMutex
+	fn Notifier
+}
+
+// SetNotifier installs the host's notifier; with none, nobody is notified.
+func SetNotifier(fn Notifier) {
+	notifier.mu.Lock()
+	notifier.fn = fn
+	notifier.mu.Unlock()
+}
+
+func (s *Service) tell(ctx context.Context, ws, user, title, body string) {
+	notifier.mu.RLock()
+	fn := notifier.fn
+	notifier.mu.RUnlock()
+	if fn != nil && user != "" && user != actorOf(ctx) { // you are not told about what you did yourself
+		fn(context.WithoutCancel(ctx), ws, user, title, body, "/personal")
+	}
+}
+
+// Event is one entry of the audit trail.
+type Event struct {
+	ID          string          `json:"id"`
+	ActorID     string          `json:"actorId" gorm:"column:actor_id"`
+	ActorName   string          `json:"actorName" gorm:"column:actor_name"`
+	Action      string          `json:"action"`
+	SubjectType string          `json:"subjectType" gorm:"column:subject_type"`
+	SubjectID   string          `json:"subjectId" gorm:"column:subject_id"`
+	Detail      json.RawMessage `json:"detail"`
+	CreatedAt   time.Time       `json:"createdAt" gorm:"column:created_at"`
+}
+
+// log appends to the audit trail when an actor is known. It never fails the change.
+func (s *Service) log(ctx context.Context, ws, action, subjectType, subjectID string, detail map[string]any) {
+	actor := actorOf(ctx)
+	if actor == "" {
+		return
+	}
+	raw, _ := json.Marshal(detail)
+	_ = s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentityOrgEvents" (id, workspace_id, actor_id, action, subject_type, subject_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)`,
+		uuid.NewString(), ws, actor, action, subjectType, subjectID, string(raw)).Error
+}
+
+// Activity returns the workspace's most recent organisation changes, newest first.
+func (s *Service) Activity(ctx context.Context, ws string, limit int) ([]Event, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	out := []Event{}
+	err := s.DB.WithContext(ctx).Raw(`SELECT e.id, e.actor_id, COALESCE(u.name, '') AS actor_name, e.action, e.subject_type, e.subject_id, e.detail, e.created_at
+		FROM "IdentityOrgEvents" e LEFT JOIN "IdentityUsers" u ON u.id = e.actor_id
+		WHERE e.workspace_id = ? ORDER BY e.created_at DESC, e.id DESC LIMIT ?`, ws, limit).Scan(&out).Error
+	return out, err
+}
 
 // Service is the organisation store.
 type Service struct{ DB *gorm.DB }
@@ -139,6 +210,7 @@ func (s *Service) CreateTeam(ctx context.Context, ws, name, kind, description, p
 		}
 		return nil, err
 	}
+	s.log(ctx, ws, "team.created", "team", t.ID, map[string]any{"name": t.Name, "kind": t.Kind})
 	return t, nil
 }
 
@@ -194,13 +266,15 @@ func (s *Service) UpdateTeam(ctx context.Context, ws, id string, name, descripti
 		}
 		return nil, err
 	}
+	s.log(ctx, ws, "team.updated", "team", id, map[string]any{"name": t.Name})
 	return t, nil
 }
 
 // DeleteTeam removes a team, its memberships and the roles it held. A team that
 // still has teams beneath it is refused.
 func (s *Service) DeleteTeam(ctx context.Context, ws, id string) error {
-	if _, err := s.team(ctx, ws, id); err != nil {
+	team, err := s.team(ctx, ws, id)
+	if err != nil {
 		return err
 	}
 	var kids int64
@@ -210,7 +284,7 @@ func (s *Service) DeleteTeam(ctx context.Context, ws, id string) error {
 	if kids > 0 {
 		return ErrHasChild
 	}
-	return s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(`DELETE FROM "IdentityTeamMembers" WHERE team_id = ? AND workspace_id = ?`, id, ws).Error; err != nil {
 			return err
 		}
@@ -218,7 +292,11 @@ func (s *Service) DeleteTeam(ctx context.Context, ws, id string) error {
 			return err
 		}
 		return tx.Exec(`DELETE FROM "IdentityTeams" WHERE id = ? AND workspace_id = ?`, id, ws).Error
-	})
+	}); err != nil {
+		return err
+	}
+	s.log(ctx, ws, "team.deleted", "team", id, map[string]any{"name": team.Name})
+	return nil
 }
 
 // ancestors returns the ids of id and every team above it.
@@ -284,8 +362,22 @@ func (s *Service) AddMember(ctx context.Context, ws, teamID, userID, role string
 	} else if !ok {
 		return ErrNotMember
 	}
-	return s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentityTeamMembers" (team_id, user_id, workspace_id, role) VALUES (?, ?, ?, ?)
-		ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role`, teamID, userID, ws, role).Error
+	var had int64
+	s.DB.WithContext(ctx).Table(`"IdentityTeamMembers"`).Where("team_id = ? AND user_id = ?", teamID, userID).Count(&had)
+	if err := s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentityTeamMembers" (team_id, user_id, workspace_id, role) VALUES (?, ?, ?, ?)
+		ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role`, teamID, userID, ws, role).Error; err != nil {
+		return err
+	}
+	team, _ := s.team(ctx, ws, teamID)
+	name := ""
+	if team != nil {
+		name = team.Name
+	}
+	s.log(ctx, ws, "team.member.added", "team", teamID, map[string]any{"userId": userID, "role": role, "team": name})
+	if had == 0 {
+		s.tell(ctx, ws, userID, "You were added to "+name, "You are now part of the "+name+" "+map[string]string{TeamLead: "team as its lead", TeamMember: "team"}[role]+".")
+	}
+	return nil
 }
 
 // RemoveMember takes a person out of a team; not being in it is not an error.
@@ -293,7 +385,11 @@ func (s *Service) RemoveMember(ctx context.Context, ws, teamID, userID string) e
 	if _, err := s.team(ctx, ws, teamID); err != nil {
 		return err
 	}
-	return s.DB.WithContext(ctx).Exec(`DELETE FROM "IdentityTeamMembers" WHERE team_id = ? AND user_id = ? AND workspace_id = ?`, teamID, userID, ws).Error
+	if err := s.DB.WithContext(ctx).Exec(`DELETE FROM "IdentityTeamMembers" WHERE team_id = ? AND user_id = ? AND workspace_id = ?`, teamID, userID, ws).Error; err != nil {
+		return err
+	}
+	s.log(ctx, ws, "team.member.removed", "team", teamID, map[string]any{"userId": userID})
+	return nil
 }
 
 // TeamMembers lists a team's people, leads first.
@@ -536,6 +632,7 @@ func (s *Service) CreateRole(ctx context.Context, ws, name, description string, 
 		return nil, err
 	}
 	r := row.role()
+	s.log(ctx, ws, "role.created", "role", r.ID, map[string]any{"name": r.Name, "permissions": r.Permissions})
 	return &r, nil
 }
 
@@ -594,20 +691,26 @@ func (s *Service) UpdateRole(ctx context.Context, ws, id string, name, descripti
 		}
 		return nil, err
 	}
+	s.log(ctx, ws, "role.updated", "role", id, map[string]any{"name": r.Name, "permissions": r.Permissions})
 	return r, nil
 }
 
 // DeleteRole removes a role and takes it from everyone who held it.
 func (s *Service) DeleteRole(ctx context.Context, ws, id string) error {
-	if _, err := s.role(ctx, ws, id); err != nil {
+	r, err := s.role(ctx, ws, id)
+	if err != nil {
 		return err
 	}
-	return s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(`DELETE FROM "IdentityRoleAssignments" WHERE role_id = ? AND workspace_id = ?`, id, ws).Error; err != nil {
 			return err
 		}
 		return tx.Exec(`DELETE FROM "IdentityCustomRoles" WHERE id = ? AND workspace_id = ?`, id, ws).Error
-	})
+	}); err != nil {
+		return err
+	}
+	s.log(ctx, ws, "role.deleted", "role", id, map[string]any{"name": r.Name})
+	return nil
 }
 
 // Assignment is who holds a role.
@@ -619,7 +722,8 @@ type Assignment struct {
 
 // Assign gives a role to a person or a team of the workspace.
 func (s *Service) Assign(ctx context.Context, ws, roleID, subjectType, subjectID string) error {
-	if _, err := s.role(ctx, ws, roleID); err != nil {
+	role, err := s.role(ctx, ws, roleID)
+	if err != nil {
 		return err
 	}
 	switch subjectType {
@@ -636,17 +740,68 @@ func (s *Service) Assign(ctx context.Context, ws, roleID, subjectType, subjectID
 	default:
 		return fmt.Errorf("%w: subjectType must be user or team", ErrInvalid)
 	}
-	return s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentityRoleAssignments" (role_id, subject_type, subject_id, workspace_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
-		roleID, subjectType, subjectID, ws).Error
+	res := s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentityRoleAssignments" (role_id, subject_type, subject_id, workspace_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+		roleID, subjectType, subjectID, ws)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil // already held
+	}
+	s.log(ctx, ws, "role.assigned", "role", roleID, map[string]any{"name": role.Name, "subjectType": subjectType, "subjectId": subjectID})
+	// Tell everyone who now holds the role through this: the person, or the team's people and those of the teams beneath it.
+	for _, u := range s.recipients(ctx, ws, subjectType, subjectID) {
+		s.tell(ctx, ws, u, "You were given the role "+role.Name, "A workspace admin gave you the "+role.Name+" role. What it allows is now part of your access.")
+	}
+	return nil
+}
+
+// recipients returns the people a role given to subject reaches.
+func (s *Service) recipients(ctx context.Context, ws, subjectType, subjectID string) []string {
+	if subjectType == SubjectUser {
+		return []string{subjectID}
+	}
+	var all []Team
+	if err := s.DB.WithContext(ctx).Where("workspace_id = ?", ws).Find(&all).Error; err != nil {
+		return nil
+	}
+	kids := map[string][]string{}
+	for _, t := range all {
+		if t.ParentID != nil {
+			kids[*t.ParentID] = append(kids[*t.ParentID], t.ID)
+		}
+	}
+	ids, queue, seen := []string{}, []string{subjectID}, map[string]bool{}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if seen[cur] {
+			continue
+		}
+		seen[cur] = true
+		ids = append(ids, cur)
+		queue = append(queue, kids[cur]...)
+	}
+	var users []string
+	s.DB.WithContext(ctx).Raw(`SELECT DISTINCT user_id FROM "IdentityTeamMembers" WHERE workspace_id = ? AND team_id IN ?`, ws, ids).Scan(&users)
+	return users
 }
 
 // Unassign takes a role from a person or team; not holding it is not an error.
 func (s *Service) Unassign(ctx context.Context, ws, roleID, subjectType, subjectID string) error {
-	if _, err := s.role(ctx, ws, roleID); err != nil {
+	role, err := s.role(ctx, ws, roleID)
+	if err != nil {
 		return err
 	}
-	return s.DB.WithContext(ctx).Exec(`DELETE FROM "IdentityRoleAssignments" WHERE role_id = ? AND subject_type = ? AND subject_id = ? AND workspace_id = ?`,
-		roleID, subjectType, subjectID, ws).Error
+	res := s.DB.WithContext(ctx).Exec(`DELETE FROM "IdentityRoleAssignments" WHERE role_id = ? AND subject_type = ? AND subject_id = ? AND workspace_id = ?`,
+		roleID, subjectType, subjectID, ws)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		s.log(ctx, ws, "role.unassigned", "role", roleID, map[string]any{"name": role.Name, "subjectType": subjectType, "subjectId": subjectID})
+	}
+	return nil
 }
 
 // Assignments lists who holds a role, with names.
@@ -670,13 +825,17 @@ func (s *Service) Assignments(ctx context.Context, ws, roleID string) ([]Assignm
 type Granted struct {
 	Permissions []string // custom-role permission strings
 	Roles       []string // custom role names
-	Teams       []string // team ids
+	RoleIDs     []string // custom role ids
+	Teams       []string // team ids the person is directly in
+	// OrgUnits is Teams plus every team above them, so a rule written for a
+	// department (an app switched off for it) applies to the teams beneath it.
+	OrgUnits []string
 }
 
 // For resolves a person's custom roles and teams in the workspace. A person who
 // holds no seat in it gets nothing, whatever rows exist.
 func (s *Service) For(ctx context.Context, ws, userID string) (Granted, error) {
-	g := Granted{Permissions: []string{}, Roles: []string{}, Teams: []string{}}
+	g := Granted{Permissions: []string{}, Roles: []string{}, RoleIDs: []string{}, Teams: []string{}, OrgUnits: []string{}}
 	if ws == "" || userID == "" {
 		return g, nil
 	}
@@ -704,6 +863,8 @@ func (s *Service) For(ctx context.Context, ws, userID string) (Granted, error) {
 	for id := range subject {
 		ids = append(ids, id)
 	}
+	sort.Strings(ids)
+	g.OrgUnits = ids
 	var rows []roleRow
 	q := s.DB.WithContext(ctx).Table(`"IdentityCustomRoles" r`).Select("r.*").
 		Joins(`JOIN "IdentityRoleAssignments" a ON a.role_id = r.id AND a.workspace_id = r.workspace_id`).
@@ -720,6 +881,7 @@ func (s *Service) For(ctx context.Context, ws, userID string) (Granted, error) {
 	for _, r := range rows {
 		role := r.role()
 		g.Roles = append(g.Roles, role.Name)
+		g.RoleIDs = append(g.RoleIDs, role.ID)
 		for _, p := range role.Permissions {
 			if !seen[p] {
 				seen[p] = true
@@ -729,5 +891,6 @@ func (s *Service) For(ctx context.Context, ws, userID string) (Granted, error) {
 	}
 	sort.Strings(g.Permissions)
 	sort.Strings(g.Roles)
+	sort.Strings(g.RoleIDs)
 	return g, nil
 }

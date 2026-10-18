@@ -29,11 +29,16 @@ func fail(err error) types.Output {
 }
 
 // member checks the caller holds a seat in their token's workspace.
+// ctxOf is the request context carrying who is acting, for the audit trail.
+func ctxOf(n ntxctx.NTXContext) context.Context {
+	return orgsvc.WithActor(context.Background(), n.UserID)
+}
+
 func (c *OrgController) member(ctx ntxctx.NTXContext) (string, types.Output) {
 	if ctx.UserID == "" || ctx.WorkspaceID == "" {
 		return "", response.Unauthorized(title, "sign in to a workspace first")
 	}
-	ok, err := c.svc.Org().IsMember(context.Background(), ctx.WorkspaceID, ctx.UserID)
+	ok, err := c.svc.Org().IsMember(ctxOf(ctx), ctx.WorkspaceID, ctx.UserID)
 	if err != nil {
 		return "", fail(err)
 	}
@@ -50,7 +55,7 @@ func (c *OrgController) admin(ctx ntxctx.NTXContext) (string, types.Output) {
 	if ctx.UserID == "" || ctx.WorkspaceID == "" {
 		return "", response.Unauthorized(title, "sign in to a workspace first")
 	}
-	ok, err := c.svc.Org().IsAdmin(context.Background(), ctx.WorkspaceID, ctx.UserID)
+	ok, err := c.svc.Org().IsAdmin(ctxOf(ctx), ctx.WorkspaceID, ctx.UserID)
 	if err != nil {
 		return "", fail(err)
 	}
@@ -65,7 +70,7 @@ func (c *OrgController) Members(dto *Ctx) types.Output {
 	if bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().Members(context.Background(), ws)
+	out, err := c.svc.Org().Members(ctxOf(dto.Ctx), ws)
 	if err != nil {
 		return fail(err)
 	}
@@ -76,7 +81,7 @@ func (c *OrgController) Catalog(dto *Ctx) types.Output {
 	if _, bad := c.admin(dto.Ctx); bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().Catalog(context.Background())
+	out, err := c.svc.Org().Catalog(ctxOf(dto.Ctx))
 	if err != nil {
 		return fail(err)
 	}
@@ -90,7 +95,7 @@ func (c *OrgController) ListTeams(dto *Ctx) types.Output {
 	if bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().ListTeams(context.Background(), ws)
+	out, err := c.svc.Org().ListTeams(ctxOf(dto.Ctx), ws)
 	if err != nil {
 		return fail(err)
 	}
@@ -102,7 +107,7 @@ func (c *OrgController) CreateTeam(dto *TeamReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	t, err := c.svc.Org().CreateTeam(context.Background(), ws, dto.Name, dto.Kind, dto.Description, dto.ParentID)
+	t, err := c.svc.Org().CreateTeam(ctxOf(dto.Ctx), ws, dto.Name, dto.Kind, dto.Description, dto.ParentID)
 	if err != nil {
 		return fail(err)
 	}
@@ -114,7 +119,7 @@ func (c *OrgController) UpdateTeam(dto *TeamUpdateReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	t, err := c.svc.Org().UpdateTeam(context.Background(), ws, dto.Id, dto.Name, dto.Description, dto.ParentID)
+	t, err := c.svc.Org().UpdateTeam(ctxOf(dto.Ctx), ws, dto.Id, dto.Name, dto.Description, dto.ParentID)
 	if err != nil {
 		return fail(err)
 	}
@@ -126,7 +131,7 @@ func (c *OrgController) DeleteTeam(dto *IDReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().DeleteTeam(context.Background(), ws, dto.Id); err != nil {
+	if err := c.svc.Org().DeleteTeam(ctxOf(dto.Ctx), ws, dto.Id); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"id": dto.Id, "deleted": true}, title, "deleted", nil)
@@ -137,7 +142,7 @@ func (c *OrgController) TeamMembers(dto *IDReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().TeamMembers(context.Background(), ws, dto.Id)
+	out, err := c.svc.Org().TeamMembers(ctxOf(dto.Ctx), ws, dto.Id)
 	if err != nil {
 		return fail(err)
 	}
@@ -149,7 +154,7 @@ func (c *OrgController) AddTeamMember(dto *MemberReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().AddMember(context.Background(), ws, dto.Id, dto.UserID, dto.Role); err != nil {
+	if err := c.svc.Org().AddMember(ctxOf(dto.Ctx), ws, dto.Id, dto.UserID, dto.Role); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"teamId": dto.Id, "userId": dto.UserID}, title, "added", nil)
@@ -160,7 +165,7 @@ func (c *OrgController) RemoveTeamMember(dto *MemberRemoveReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().RemoveMember(context.Background(), ws, dto.Id, dto.UserID); err != nil {
+	if err := c.svc.Org().RemoveMember(ctxOf(dto.Ctx), ws, dto.Id, dto.UserID); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"teamId": dto.Id, "userId": dto.UserID, "removed": true}, title, "removed", nil)
@@ -173,7 +178,7 @@ func (c *OrgController) ListRoles(dto *Ctx) types.Output {
 	if bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().ListRoles(context.Background(), ws)
+	out, err := c.svc.Org().ListRoles(ctxOf(dto.Ctx), ws)
 	if err != nil {
 		return fail(err)
 	}
@@ -185,7 +190,7 @@ func (c *OrgController) CreateRole(dto *RoleReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	r, err := c.svc.Org().CreateRole(context.Background(), ws, dto.Name, dto.Description, dto.Permissions)
+	r, err := c.svc.Org().CreateRole(ctxOf(dto.Ctx), ws, dto.Name, dto.Description, dto.Permissions)
 	if err != nil {
 		return fail(err)
 	}
@@ -197,7 +202,7 @@ func (c *OrgController) UpdateRole(dto *RoleUpdateReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	r, err := c.svc.Org().UpdateRole(context.Background(), ws, dto.Id, dto.Name, dto.Description, dto.Permissions)
+	r, err := c.svc.Org().UpdateRole(ctxOf(dto.Ctx), ws, dto.Id, dto.Name, dto.Description, dto.Permissions)
 	if err != nil {
 		return fail(err)
 	}
@@ -209,7 +214,7 @@ func (c *OrgController) DeleteRole(dto *IDReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().DeleteRole(context.Background(), ws, dto.Id); err != nil {
+	if err := c.svc.Org().DeleteRole(ctxOf(dto.Ctx), ws, dto.Id); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"id": dto.Id, "deleted": true}, title, "deleted", nil)
@@ -220,7 +225,7 @@ func (c *OrgController) Assignments(dto *IDReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	out, err := c.svc.Org().Assignments(context.Background(), ws, dto.Id)
+	out, err := c.svc.Org().Assignments(ctxOf(dto.Ctx), ws, dto.Id)
 	if err != nil {
 		return fail(err)
 	}
@@ -232,7 +237,7 @@ func (c *OrgController) Assign(dto *AssignReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().Assign(context.Background(), ws, dto.Id, dto.SubjectType, dto.SubjectID); err != nil {
+	if err := c.svc.Org().Assign(ctxOf(dto.Ctx), ws, dto.Id, dto.SubjectType, dto.SubjectID); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"roleId": dto.Id, "subjectType": dto.SubjectType, "subjectId": dto.SubjectID}, title, "assigned", nil)
@@ -243,8 +248,21 @@ func (c *OrgController) Unassign(dto *UnassignReq) types.Output {
 	if bad != nil {
 		return bad
 	}
-	if err := c.svc.Org().Unassign(context.Background(), ws, dto.Id, dto.SubjectType, dto.SubjectID); err != nil {
+	if err := c.svc.Org().Unassign(ctxOf(dto.Ctx), ws, dto.Id, dto.SubjectType, dto.SubjectID); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"roleId": dto.Id, "removed": true}, title, "removed", nil)
+}
+
+// Activity returns the workspace's recent organisation changes (admins only).
+func (c *OrgController) Activity(dto *Ctx) types.Output {
+	ws, bad := c.admin(dto.Ctx)
+	if bad != nil {
+		return bad
+	}
+	out, err := c.svc.Org().Activity(ctxOf(dto.Ctx), ws, 100)
+	if err != nil {
+		return fail(err)
+	}
+	return response.Success(out, title, "activity", nil)
 }

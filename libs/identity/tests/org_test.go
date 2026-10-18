@@ -279,6 +279,10 @@ func TestOrg_RolesCatalogAndResolution(t *testing.T) {
 	if len(g.Teams) != 1 || g.Teams[0] != team.ID || len(g.Roles) != 1 || g.Roles[0] != "Calendar reader" {
 		t.Fatalf("granted = %+v", g)
 	}
+	// An app switch written for a department must match people in the teams beneath it.
+	if len(g.OrgUnits) != 2 || !contains(g.OrgUnits, team.ID) || !contains(g.OrgUnits, dept.ID) || len(g.RoleIDs) != 1 || g.RoleIDs[0] != reader.ID {
+		t.Fatalf("org units / role ids = %+v", g)
+	}
 	// ...but not upward: a role on a sub-team does not reach people who are only in its department.
 	webOnly, _ := e.svc.CreateRole(e.ctx, ws, "Web only", "", []string{"create:apps:files:*:*:workspace"})
 	_ = e.svc.Assign(e.ctx, ws, webOnly.ID, org.SubjectTeam, team.ID)
@@ -484,6 +488,15 @@ func TestOrgController_WhoMayDoWhat(t *testing.T) {
 	if rs, _ := e.svc.ListRoles(e.ctx, ws); rs[0].Name != "Reviewer" {
 		t.Fatalf("a foreign request changed our role: %+v", rs[0])
 	}
+	if got := code(c.Activity(&orgapp.Ctx{Ctx: ntx(member, ws)})); got != 403 {
+		t.Errorf("a member reads the audit trail: %d", got)
+	}
+	if got := code(c.Activity(&orgapp.Ctx{Ctx: ntx(owner, ws)})); got != 200 {
+		t.Errorf("an owner reads the audit trail: %d", got)
+	}
+	if got := code(c.Activity(&orgapp.Ctx{Ctx: asStranger})); got != 403 {
+		t.Errorf("a stranger reads the audit trail: %d", got)
+	}
 	if got := code(c.ListTeams(&orgapp.Ctx{Ctx: ntx("", "")})); got != 401 {
 		t.Errorf("no identity: %d", got)
 	}
@@ -492,5 +505,75 @@ func TestOrgController_WhoMayDoWhat(t *testing.T) {
 	e.db.Exec(`UPDATE "IdentityUserClientWorkspaces" SET status = 'member' WHERE user_id = ? AND workspace_id = ?`, admin, ws)
 	if got := code(c.CreateTeam(&orgapp.TeamReq{Ctx: ntx(admin, ws), Name: "After demotion"})); got != 403 {
 		t.Errorf("a demoted admin created a team: %d", got)
+	}
+}
+
+func TestOrg_AuditTrailAndNotifications(t *testing.T) {
+	e := newOrgEnv(t)
+	ws := newWS()
+	admin := e.seat(t, ws, "Boole", "admin")
+	ada := e.seat(t, ws, "Ada", "member")
+	grace := e.seat(t, ws, "Grace", "member")
+	linus := e.seat(t, ws, "Linus", "member")
+
+	type note struct{ user, title string }
+	var notes []note
+	org.SetNotifier(func(_ context.Context, w, user, title, _, link string) {
+		if w == ws {
+			notes = append(notes, note{user, title})
+		}
+	})
+	t.Cleanup(func() { org.SetNotifier(nil) })
+	ctx := org.WithActor(e.ctx, admin)
+
+	dept, _ := e.svc.CreateTeam(ctx, ws, "Engineering", org.KindDepartment, "", "")
+	web, _ := e.svc.CreateTeam(ctx, ws, "Web", org.KindTeam, "", dept.ID)
+	_ = e.svc.AddMember(ctx, ws, web.ID, ada, "")
+	_ = e.svc.AddMember(ctx, ws, dept.ID, grace, "")
+	_ = e.svc.AddMember(ctx, ws, web.ID, ada, org.TeamLead) // a role change in the team, not news
+	_ = e.svc.AddMember(ctx, ws, web.ID, admin, "")         // the actor is not told about what they did
+	if len(notes) != 2 || notes[0].user != ada || notes[1].user != grace || !strings.Contains(notes[0].title, "Web") {
+		t.Fatalf("after adding people: %+v", notes)
+	}
+
+	notes = nil
+	role, _ := e.svc.CreateRole(ctx, ws, "Reviewer", "", []string{"read:apps:files:*:*:workspace"})
+	_ = e.svc.Assign(ctx, ws, role.ID, org.SubjectTeam, dept.ID) // reaches the department and the team beneath it
+	_ = e.svc.Assign(ctx, ws, role.ID, org.SubjectTeam, dept.ID) // already held: no second notice
+	got := map[string]int{}
+	for _, n := range notes {
+		got[n.user]++
+		if !strings.Contains(n.title, "Reviewer") {
+			t.Fatalf("title = %q", n.title)
+		}
+	}
+	if len(got) != 2 || got[ada] != 1 || got[grace] != 1 || got[linus] != 0 || got[admin] != 0 {
+		t.Fatalf("a role on a department must notify its people and those beneath it, once: %v", got)
+	}
+
+	// Changes made without an actor leave no trail; with one they are all recorded, newest first.
+	_, _ = e.svc.CreateTeam(e.ctx, ws, "Unrecorded", "", "", "")
+	_ = e.svc.RemoveMember(ctx, ws, web.ID, ada)
+	_ = e.svc.Unassign(ctx, ws, role.ID, org.SubjectTeam, dept.ID)
+	_, _ = e.svc.UpdateRole(ctx, ws, role.ID, ptr("Reviewer+"), nil, nil)
+	_ = e.svc.DeleteRole(ctx, ws, role.ID)
+	evs, err := e.svc.Activity(e.ctx, ws, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var actions []string
+	for _, ev := range evs {
+		actions = append(actions, ev.Action)
+		if ev.ActorName != "Boole" {
+			t.Fatalf("actor = %+v", ev)
+		}
+	}
+	want := []string{"role.deleted", "role.updated", "role.unassigned", "team.member.removed", "role.assigned", "role.created", "team.member.added", "team.member.added", "team.member.added", "team.member.added", "team.created", "team.created"}
+	if strings.Join(actions, ",") != strings.Join(want, ",") {
+		t.Fatalf("trail =\n%v\nwant\n%v", actions, want)
+	}
+	// Another workspace's trail is its own.
+	if other, _ := e.svc.Activity(e.ctx, newWS(), 100); len(other) != 0 {
+		t.Fatalf("another workspace sees %d events", len(other))
 	}
 }

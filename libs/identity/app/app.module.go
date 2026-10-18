@@ -47,6 +47,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityProviderLogs{},
 	&migrations.CreateIdentityApiKeys{},
 	&migrations.CreateIdentityTeamsRoles{},
+	&migrations.CreateIdentityOrgEvents{},
 	&migrations.CreateIdentityOtps{},
 	&migrations.CreateIdentitySsoConnections{},
 	&migrations.CreateIdentitySsoRecoveries{},

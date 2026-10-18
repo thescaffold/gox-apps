@@ -374,7 +374,6 @@ type Role struct {
 	CreatedAt   time.Time `json:"createdAt" gorm:"column:created_at"`
 	// Holders is filled by ListRoles: people and teams holding the role.
 	Holders int `json:"holders" gorm:"->;column:holders"`
-
 }
 
 func (Role) TableName() string { return "IdentityCustomRoles" }

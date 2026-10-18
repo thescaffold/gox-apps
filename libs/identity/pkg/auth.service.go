@@ -1,11 +1,14 @@
 package pkg
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/awesome-goose/goose/modules/sql"
 	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
 	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/org"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	mrand "math/rand"
 	"os"
@@ -38,6 +41,7 @@ type AuthService struct {
 	tokenEntity      *token.TokenEntity                     `inject:""`
 	roleEntity       *identityrole.RoleEntity               `inject:""`
 	permissionEntity *identitypermission.PermissionEntity   `inject:""`
+	db               *sql.Db                                `inject:""`
 	roleTypeEntity   *identityroletype.RoleTypeEntity       `inject:""`
 	ucwEntity        *identityucw.UserClientWorkspaceEntity `inject:""`
 	attributeEntity  *identityattribute.AttributeEntity     `inject:""`
@@ -414,7 +418,24 @@ func (s *AuthService) ResolvePermissions(userId, clientId, workspaceId string) (
 			own = append(own, p)
 		}
 	}
+	// Roles the company defined, held by this person or by a team they are in.
+	for _, key := range s.organisation(userId, workspaceId).Permissions {
+		if !seen[key] {
+			seen[key] = true
+			own = append(own, identitypermission.Permission{Key: key})
+		}
+	}
 	return own, nil
+}
+
+// organisation resolves the person's custom roles and teams in the workspace. A
+// failure to read them grants nothing rather than failing the sign-in.
+func (s *AuthService) organisation(userId, workspaceId string) org.Granted {
+	if s.db == nil || s.db.DB == nil || workspaceId == "" {
+		return org.Granted{}
+	}
+	g, _ := org.New(s.db.DB).For(context.Background(), workspaceId, userId)
+	return g
 }
 
 // ResolvePreference returns the user's preference attributes for a client workspace.
@@ -468,6 +489,10 @@ func (s *AuthService) buildClaims(u *user.User, clientId, workspaceId string) ma
 		permKeys = append(permKeys, permissions[i].Key)
 	}
 	claims["permissions"] = permKeys
+	if g := s.organisation(u.Id, workspaceId); len(g.Teams) > 0 || len(g.Roles) > 0 {
+		claims["teams"] = g.Teams
+		claims["customRoles"] = g.Roles
+	}
 
 	return claims
 }

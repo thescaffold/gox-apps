@@ -12,6 +12,7 @@ import (
 	identitydevicelog "github.com/thescaffold/gox-apps/libs/identity/app/devicelog"
 	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
 	identityinvite "github.com/thescaffold/gox-apps/libs/identity/app/invite"
+	identityorg "github.com/thescaffold/gox-apps/libs/identity/app/org"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identitypermissiontype "github.com/thescaffold/gox-apps/libs/identity/app/permissiontype"
 	identityprovider "github.com/thescaffold/gox-apps/libs/identity/app/provider"
@@ -45,6 +46,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityProviders{},
 	&migrations.CreateIdentityProviderLogs{},
 	&migrations.CreateIdentityApiKeys{},
+	&migrations.CreateIdentityTeamsRoles{},
 	&migrations.CreateIdentityOtps{},
 	&migrations.CreateIdentitySsoConnections{},
 	&migrations.CreateIdentitySsoRecoveries{},
@@ -78,6 +80,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identityclientlog.ClientLogModule{},
 		&identityworkspace.WorkspaceModule{},
 		&identityapikey.ApiKeyModule{},
+		&identityorg.OrgModule{},
 		&identityucw.UserClientWorkspaceModule{},
 		&identityroletype.RoleTypeModule{},
 		&identityrole.RoleModule{},

@@ -47,6 +47,7 @@ func NewAuthServiceForTest(db *gorm.DB) *AuthService {
 	attributeEntity.OnRegister()
 
 	return &AuthService{
+		db:               &sql.Db{DB: db},
 		userEntity:       userEntity,
 		tokenEntity:      tokenEntity,
 		roleEntity:       roleEntity,

@@ -137,6 +137,7 @@ type AuthController struct {
 	deviceLogEntity      *identitydevicelog.DeviceLogEntity           `inject:""`
 	clientEntity         *identityclient.ClientEntity                 `inject:""`
 	clientLogEntity      *identityclientlog.ClientLogEntity           `inject:""`
+	clientLog            *identityclientlog.ClientLogService
 	roleTypeEntity       *identityroletype.RoleTypeEntity             `inject:""`
 	permissionTypeEntity *identitypermissiontype.PermissionTypeEntity `inject:""`
 	permissionEntity     *identitypermission.PermissionEntity         `inject:""`

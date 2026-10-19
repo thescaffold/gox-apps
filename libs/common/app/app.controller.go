@@ -49,13 +49,7 @@ func (c *AppController) GetLocation(dto *GetLocationDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.common.title", nil, pref)
 
-	ipValue := dto.Ip
-	if ipValue == "" {
-		ipValue = dto.HeaderIP
-	}
-	if ipValue == "" {
-		return response.BadRequest(title, "ip is required")
-	}
+	ipValue := LocationIP(dto)
 
 	loc, err := c.appService.GetLocation(ipValue)
 	if err != nil || loc == nil {
@@ -128,4 +122,21 @@ func (c *AppController) GetLocation(dto *GetLocationDto) types.Output {
 		title,
 		c.lang.Translate("apps.common.get.location.success", nil, pref),
 		nil)
+}
+
+// LocationIP is the address a location is looked up for: the `ip` query when the caller gives one,
+// else the request's own address (first hop of x-forwarded-for, then the context's), so a browser
+// never has to ask a third party for its public IP. A request with no address at all (a local
+// host, a test) is looked up as loopback, which resolves to the default country.
+func LocationIP(dto *GetLocationDto) string {
+	if v := strings.TrimSpace(dto.Ip); v != "" {
+		return v
+	}
+	if first, _, _ := strings.Cut(dto.HeaderIP, ","); strings.TrimSpace(first) != "" {
+		return strings.TrimSpace(first)
+	}
+	if v := strings.TrimSpace(dto.Ctx.IP); v != "" {
+		return v
+	}
+	return "127.0.0.1"
 }

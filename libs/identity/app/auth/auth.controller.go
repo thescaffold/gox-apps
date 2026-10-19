@@ -47,6 +47,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -210,7 +211,7 @@ func (c *AuthController) Initiate(dto *InitiateDto) types.Output {
 	}
 
 	rec := c.otpSvc.Initiate(dto.Type, id, dto.Ref, "register")
-	c.sendVerificationEmail(dto.Ref, id, dto.ClientId, rec.Value)
+	c.sendVerificationEmail(dto.Ref, id, dto.ClientId, rec)
 
 	return response.Success(map[string]any{"id": id}, title,
 		c.lang.Translate("apps.identity.app.post.initiate.success", map[string]any{"type": dto.Type}, pref), nil)
@@ -248,7 +249,7 @@ func (c *AuthController) Verify(dto *VerifyDto) types.Output {
 	bytes, _ := json.Marshal(entry)
 	c.cache.Set(registerVerifyPrefix+tok.UserID, string(bytes), tempEntryTTL)
 
-	return response.Success(map[string]any{"id": tok.UserID, "userAlreadyExist": false}, title,
+	return response.Success(map[string]any{"id": tok.UserID, "userAlreadyExist": false, "client": c.clientInfo(entry.ClientId)}, title,
 		c.lang.Translate("apps.identity.app.post.verify.success.new", nil, pref), nil)
 }
 
@@ -456,7 +457,7 @@ func (c *AuthController) ResetSecretInitiate(dto *InitiateDto) types.Output {
 		c.cache.Set(key, string(bytes), tempEntryTTL)
 
 		rec := c.otpSvc.Initiate(dto.Type, u.Id, dto.Ref, "reset")
-		c.sendVerificationEmail(dto.Ref, u.Id, dto.ClientId, rec.Value)
+		c.sendVerificationEmail(dto.Ref, u.Id, dto.ClientId, rec)
 	}
 
 	return response.Success(map[string]any{"ref": dto.Ref}, title,
@@ -483,7 +484,7 @@ func (c *AuthController) ResetSecretVerify(dto *VerifyDto) types.Output {
 			c.lang.Translate("apps.identity.app.post.reset-secret.verify.error.mismatch", nil, pref))
 	}
 
-	return response.Success(map[string]any{"id": tok.UserID}, title,
+	return response.Success(map[string]any{"id": tok.UserID, "client": c.clientInfo(c.pendingClientID(resetInitiatePrefix, tok))}, title,
 		c.lang.Translate("apps.identity.app.post.reset-secret.verify.success", nil, pref), nil)
 }
 
@@ -636,7 +637,11 @@ func (c *AuthController) UpdateAttribute(dto *UpdateAttributesDto) types.Output 
 // sendVerificationEmail dispatches the OTP over email, best-effort — a nil
 // tracker (or one that no notification channel is wired to) just means no
 // email goes out; it never fails the request.
-func (c *AuthController) sendVerificationEmail(ref, userId, clientId, code string) {
+//
+// The email carries the code and the link the sign-up and reset screens open: they read `token`
+// from the address and verify it, so the link must hold the OTP's hashed form, point at the
+// right screen (`source`: register or reset) and start from this host's address (baseUrl).
+func (c *AuthController) sendVerificationEmail(ref, userId, clientId string, rec *otp.OTP) {
 	if c.tracker == nil {
 		return
 	}
@@ -650,7 +655,11 @@ func (c *AuthController) sendVerificationEmail(ref, userId, clientId, code strin
 		// provider falls back to resolving the user by id, which fails for a
 		// registration in progress (the user row does not exist yet) — so a
 		// verification code was generated and never sent.
-		"data": map[string]any{"code": code, "ref": ref, "owner": ref},
+		"data": map[string]any{
+			"code": rec.Value, "ref": ref, "owner": ref,
+			"hashed": rec.Hashed, "token": url.QueryEscape(rec.Hashed), "source": rec.Source, "isRegister": rec.IsRegister, "isReset": rec.IsReset,
+			"baseUrl": publicBaseURL(),
+		},
 		"subject":   "Email Verification",
 		"type":      "security",
 		"priority":  "medium",
@@ -846,4 +855,18 @@ func maskUser(u *identityuser.User) map[string]any {
 		out["type"] = *u.Type
 	}
 	return out
+}
+
+// publicBaseURL is the address people reach this host at, for links in email: PUBLIC_BASE_URL, else
+// the origin of GUARD_BASE_URL (the sign-in screens' address), else the product's own.
+func publicBaseURL() string {
+	if v := strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/"); v != "" {
+		return v
+	}
+	if g := os.Getenv("GUARD_BASE_URL"); g != "" {
+		if u, err := url.Parse(g); err == nil && u.Scheme != "" && u.Host != "" {
+			return u.Scheme + "://" + u.Host
+		}
+	}
+	return "https://envelope.mx"
 }

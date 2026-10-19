@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/awesome-goose/goose/types"
@@ -82,21 +83,32 @@ func (c *AuthController) oauthInitiate(dto *OAuthInitiateDto, kind string) types
 	if err != nil || row == nil {
 		return response.InternalServerError(title, "could not initiate session")
 	}
-	out := map[string]any{
-		"id":          dto.ClientId,
-		"clientId":    dto.ClientId,
-		"sessionId":   row.Id,
-		"state":       state,
-		"scope":       scope,
-		"kind":        kind,
-		"redirectUrl": oauthRedirectURL(),
-	}
+	out := c.clientInfo(dto.ClientId)
+	out["sessionId"], out["state"], out["scope"], out["kind"] = row.Id, state, scope, kind
+	return response.Success(out, title, kind+" initiate", nil)
+}
+
+// clientInfo describes the client app a person is signing in to, as the sign-in screens read it
+// from initiate and verify. `id` is the client id, which they key their storage on.
+func (c *AuthController) clientInfo(clientID string) map[string]any {
+	out := map[string]any{"id": clientID, "clientId": clientID, "redirectUrl": oauthRedirectURL()}
 	if c.clientEntity != nil {
-		if cl, _ := c.clientEntity.First(`"id" = ? OR "key" = ?`, dto.ClientId, dto.ClientId); cl != nil {
+		if cl, _ := c.clientEntity.First(`"id" = ? OR "key" = ?`, clientID, clientID); cl != nil {
 			out["name"] = cl.Name
 		}
 	}
-	return response.Success(out, title, kind+" initiate", nil)
+	return out
+}
+
+// pendingClientID is the client a pending register or reset started from.
+func (c *AuthController) pendingClientID(prefix string, tok otpToken) string {
+	if cached, ok := c.cache.Get(prefix + tok.Owner + ":" + tok.Type); ok {
+		var e registerInitiateEntry
+		if json.Unmarshal([]byte(cached), &e) == nil {
+			return e.ClientId
+		}
+	}
+	return ""
 }
 
 // oauthRedirectURL is where the sign-in screens send the person back with their code: the

@@ -11,6 +11,7 @@ import (
 	"context"
 	"time"
 
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +21,11 @@ type Store struct{ DB *gorm.DB }
 var store *Store
 
 // SetStore registers the store used by Check.
-func SetStore(s *Store) { store = s }
+func SetStore(s *Store) {
+	store = s
+	// Every module's default session guard asks Check, so a revoked session is refused everywhere.
+	coreauth.SetSessionRevoked(Check)
+}
 
 // RevokeUser invalidates every access token issued to the person before now.
 func (s *Store) RevokeUser(ctx context.Context, userID, reason string) error {

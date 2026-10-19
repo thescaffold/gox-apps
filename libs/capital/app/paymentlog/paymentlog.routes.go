@@ -1,8 +1,11 @@
 package paymentlog
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('payment-log') — singular kebab-case segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("payment-log", PaymentLogController{}).All(),
+	coreauth.Secure(router.Resource("payment-log", PaymentLogController{}).All()),
 )

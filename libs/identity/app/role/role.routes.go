@@ -1,6 +1,9 @@
 package role
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('role') — singular path segment.
 // /role/attach|detach|sync precede the Resource catch-all so they aren't
@@ -9,5 +12,5 @@ var ROUTES = router.ForRoutes(
 	router.Post("/role/attach", []any{RoleController{}, "Attach"}),
 	router.Post("/role/detach", []any{RoleController{}, "Detach"}),
 	router.Post("/role/sync", []any{RoleController{}, "Sync"}),
-	router.Resource("role", RoleController{}).All(),
+	coreauth.Secure(router.Resource("role", RoleController{}).All()),
 )

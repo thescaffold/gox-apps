@@ -1,8 +1,11 @@
 package tag
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('tag') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("tag", TagController{}).All(),
+	coreauth.Secure(router.Resource("tag", TagController{}).All()),
 )

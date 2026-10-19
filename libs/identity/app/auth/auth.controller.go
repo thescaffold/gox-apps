@@ -325,10 +325,6 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 		return response.Unauthorized(title, err.Error())
 	}
 
-	var workspaces []identityworkspace.Workspace
-	if ws != nil {
-		workspaces = []identityworkspace.Workspace{*ws}
-	}
 	// the new account is signed in on this browser: open its device session too
 	deviceId := ""
 	if ws != nil {
@@ -336,12 +332,11 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 		deviceId, sessionId = c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
 		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 	}
-	return withDeviceCookie(response.Success(map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(newUser, entry.ClientId, map[string]any{
 		"user":         maskUser(newUser),
-		"workspaces":   workspaces,
 		"accessToken":  access,
 		"refreshToken": refresh,
-	}, title, c.lang.Translate("apps.identity.app.post.secret.success", nil, pref), nil), deviceId)
+	}), title, c.lang.Translate("apps.identity.app.post.secret.success", nil, pref), nil), deviceId)
 }
 
 // Login mirrors TS POST /login (app.controller.ts:1196-1363). Credential
@@ -392,7 +387,6 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
 	}
 
-	attributes := c.attributesForUser(u.Id)
 	deviceId := ""
 	if len(workspaces) > 0 {
 		var sessionId string
@@ -400,13 +394,11 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 	}
 
-	return withDeviceCookie(response.Success(map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(u, dto.ClientId, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,
-		"workspaces":   workspaces,
-		"attributes":   attributes,
-	}, title, c.lang.Translate("apps.identity.app.post.login.success", nil, pref), nil), deviceId)
+	}), title, c.lang.Translate("apps.identity.app.post.login.success", nil, pref), nil), deviceId)
 }
 
 // SwitchWorkspace mirrors TRD §6.14/U-S9's "a workspace switch re-issues

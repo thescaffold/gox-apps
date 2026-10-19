@@ -150,12 +150,10 @@ func (c *AuthController) OtpVerify(dto *OtpVerifyDto) types.Output {
 		deviceID, sessionID = c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
 		c.logDeviceLogin(deviceID, sessionID, dto.Ctx)
 	}
-	return withDeviceCookie(response.Success(map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(u, dto.ClientId, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,
-		"workspaces":   workspaces,
-		"attributes":   c.attributesForUser(u.Id),
 		"isNew":        isNew,
-	}, title, "signed in", nil), deviceID)
+	}), title, "signed in", nil), deviceID)
 }

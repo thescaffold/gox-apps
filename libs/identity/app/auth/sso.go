@@ -308,14 +308,12 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 		deviceID, sessionID = c.bootstrapDevice(u.Id, res.ClientID, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
 		c.logDeviceLogin(deviceID, sessionID, dto.Ctx)
 	}
-	return withDeviceCookie(response.Success(map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(u, res.ClientID, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,
-		"workspaces":   workspaces,
-		"attributes":   c.attributesForUser(u.Id),
 		"isNew":        res.IsNew,
-	}, title, "signed in", nil), deviceID)
+	}), title, "signed in", nil), deviceID)
 }
 
 // ssoAdmin authorizes the caller to manage the token's workspace's SSO: they

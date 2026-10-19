@@ -82,3 +82,31 @@ func TestACodeCannotBeMintedWithoutASignedInPersonOrForAnotherSession(t *testing
 func signedIn(userID, workspaceID string) ntxctx.NTXContext {
 	return ntxctx.NTXContext{UserID: userID, WorkspaceID: workspaceID}
 }
+
+// The shell's USER_LOGIN effect takes a sign-in response whole: it needs the account's `id` and a
+// token under `workspaces[].workspace.token`. Without them the browser signed in with no token.
+func TestEverySignInAnswersInTheShapeTheShellReads(t *testing.T) {
+	r := newRig(t)
+	u, ws := r.person("eve")
+	d := r.login(u, "").data()
+	if d["id"] != u.Id {
+		t.Errorf("id = %v, want %s", d["id"], u.Id)
+	}
+	if s, _ := d["token"].(string); s == "" {
+		t.Errorf("no token for the first workspace in %v", d)
+	}
+	links, _ := d["workspaces"].([]any)
+	if len(links) != 1 {
+		t.Fatalf("workspaces = %v", d["workspaces"])
+	}
+	link := links[0].(map[string]any)
+	if link["id"] != ws || link["workspaceId"] != ws || link["userId"] != u.Id {
+		t.Errorf("link = %v", link)
+	}
+	if tok, _ := link["workspace"].(map[string]any)["token"].(string); tok == "" {
+		t.Errorf("no workspace token in %v", link)
+	}
+	if s, _ := d["accessToken"].(string); s == "" {
+		t.Errorf("the existing accessToken field is gone")
+	}
+}

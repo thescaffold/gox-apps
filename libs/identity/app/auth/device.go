@@ -203,7 +203,7 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 			ws["token"] = t
 		}
 		links = append(links, map[string]any{
-			"userId": u.Id, "clientId": clientID, "workspaceId": w.Id, "type": kind, "workspace": ws,
+			"id": w.Id, "userId": u.Id, "clientId": clientID, "workspaceId": w.Id, "type": kind, "workspace": ws,
 		})
 	}
 	if links == nil {
@@ -229,6 +229,18 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		user["token"] = t
 	}
 	return user
+}
+
+// sessionPayload is what every sign-in answers with: the fields the call already returns, plus
+// the account as the shell reads it (id, a token per workspace under `workspaces`, roles and
+// permissions, and a token for the first workspace). The shell's USER_LOGIN effect takes this
+// response whole and reads `id` and `workspaces[].workspace.token` from it; without them it signs
+// in with no token and the next request is refused.
+func (c *AuthController) sessionPayload(u *identityuser.User, clientID string, base map[string]any) map[string]any {
+	for k, v := range c.sessionUser(u, clientID) {
+		base[k] = v
+	}
+	return base
 }
 
 // Logout is POST /logout: sign accounts out of a device. `device` says whose

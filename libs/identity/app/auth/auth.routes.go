@@ -7,6 +7,13 @@ import "github.com/awesome-goose/goose/modules/router"
 // apps/identity by identity/app.module.go, so e.g. Login resolves to
 // apps/identity/login.
 var ROUTES = router.ForRoutes(
+	router.Post("/oauth/web/initiate", []any{AuthController{}, "OAuthWebInitiate"}),
+	router.Post("/oauth/server/initiate", []any{AuthController{}, "OAuthServerInitiate"}),
+	router.Post("/oauth/device/initiate", []any{AuthController{}, "OAuthDeviceInitiate"}),
+	router.Post("/oauth/server/auth-code", []any{AuthController{}, "OAuthAuthCode"}, requireUser()...),
+	router.Post("/oauth/web/access-token", []any{AuthController{}, "OAuthAccessToken"}),
+	router.Post("/oauth/server/access-token", []any{AuthController{}, "OAuthAccessToken"}),
+	router.Post("/oauth/device/access-token", []any{AuthController{}, "OAuthAccessToken"}),
 	router.Post("/initiate", []any{AuthController{}, "Initiate"}),
 	router.Post("/verify", []any{AuthController{}, "Verify"}),
 	router.Post("/secret", []any{AuthController{}, "Secret"}),

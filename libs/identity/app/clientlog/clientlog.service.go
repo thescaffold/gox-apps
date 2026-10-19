@@ -18,6 +18,10 @@ type ClientLogService struct {
 	entity *ClientLogEntity `inject:""`
 }
 
+// NewService builds a ClientLogService over an entity the caller already holds (the auth
+// controller, and tests, which have no DI container).
+func NewService(e *ClientLogEntity) *ClientLogService { return &ClientLogService{entity: e} }
+
 // Entity returns the underlying entity for callers needing low-level access.
 func (s *ClientLogService) Entity() *ClientLogEntity { return s.entity }
 

@@ -1,6 +1,9 @@
 package provider
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('provider') — singular path segment.
 // /provider/providers + /provider/:provider/provider precede the Resource
@@ -10,5 +13,5 @@ var ROUTES = router.ForRoutes(
 	router.Get("/provider/providers", []any{ProviderController{}, "Providers"}),
 	router.Get("/provider/:provider/provider", []any{ProviderController{}, "Provider"}),
 	router.Post("/provider/:provider/authorize", []any{AuthorizeController{}, "Authorize"}),
-	router.Resource("provider", ProviderController{}).All(),
+	coreauth.Secure(router.Resource("provider", ProviderController{}).All(), "List"),
 )

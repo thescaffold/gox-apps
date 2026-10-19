@@ -1,8 +1,11 @@
 package account
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('account') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("account", AccountController{}).All(),
+	coreauth.Secure(router.Resource("account", AccountController{}).All()),
 )

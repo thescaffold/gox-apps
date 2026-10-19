@@ -1,7 +1,10 @@
 package file
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 var ROUTES = router.ForRoutes(
-	router.Resource("file", FileController{}).All(),
+	coreauth.Secure(router.Resource("file", FileController{}).All()),
 )

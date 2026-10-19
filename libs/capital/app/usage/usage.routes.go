@@ -1,8 +1,11 @@
 package usage
 
-import "github.com/awesome-goose/goose/modules/router"
+import (
+	"github.com/awesome-goose/goose/modules/router"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
+)
 
 // ROUTES mirrors TS @Controller('usage') — singular path segment.
 var ROUTES = router.ForRoutes(
-	router.Resource("usage", UsageController{}).All(),
+	coreauth.Secure(router.Resource("usage", UsageController{}).All()),
 )

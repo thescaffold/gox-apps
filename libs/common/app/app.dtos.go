@@ -18,7 +18,7 @@ type GetCurrencyDto struct {
 // for i18n; HeaderIP captures the X-Forwarded-For / Remote IP fallback that TS
 // resolves via @GetIP().
 type GetLocationDto struct {
-	Ip       string            `form:"ip"`
+	Ip       string            `query:"ip"`
 	HeaderIP string            `header:"x-forwarded-for"`
 	Ctx      ntxctx.NTXContext `context:"ntx"`
 }

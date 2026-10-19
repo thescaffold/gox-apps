@@ -86,3 +86,29 @@ func (s *AppModuleSuite) TestSubscriptions_HasWeekly() {
 	_, ok := app.Subscriptions["apps.cron.heartbeat.weekly"]
 	s.T.Expect(ok).ToEqual(true)
 }
+
+func TestLocationIP(t *testing.T) {
+	goosetest.NewSuiteRunner(t, &LocationIPSuite{}).Run()
+}
+
+type LocationIPSuite struct{ goosetest.Suite }
+
+func (s *LocationIPSuite) TestQueryWins() {
+	dto := &app.GetLocationDto{Ip: "203.0.113.9", HeaderIP: "198.51.100.1"}
+	s.T.Expect(app.LocationIP(dto)).ToEqual("203.0.113.9")
+}
+
+func (s *LocationIPSuite) TestFirstForwardedHop() {
+	dto := &app.GetLocationDto{HeaderIP: "198.51.100.1, 10.0.0.2"}
+	s.T.Expect(app.LocationIP(dto)).ToEqual("198.51.100.1")
+}
+
+func (s *LocationIPSuite) TestContextAddress() {
+	dto := &app.GetLocationDto{}
+	dto.Ctx.IP = "192.0.2.7"
+	s.T.Expect(app.LocationIP(dto)).ToEqual("192.0.2.7")
+}
+
+func (s *LocationIPSuite) TestLoopbackWhenNothingKnown() {
+	s.T.Expect(app.LocationIP(&app.GetLocationDto{})).ToEqual("127.0.0.1")
+}

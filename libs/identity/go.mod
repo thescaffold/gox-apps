@@ -2,15 +2,15 @@ module github.com/thescaffold/gox-apps/libs/identity
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.18
+require github.com/awesome-goose/goose v0.0.26
 
-require github.com/thescaffold/gox-packages/libs/core v0.0.14
+require github.com/thescaffold/gox-packages/libs/core v0.0.18
 
-require github.com/thescaffold/gox-apps/libs/assets v0.0.7
+require github.com/thescaffold/gox-apps/libs/assets v0.0.8
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/thescaffold/gox-apps/libs/flags v0.0.7
+	github.com/thescaffold/gox-apps/libs/flags v0.0.8
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )

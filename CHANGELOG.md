@@ -5,7 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## identity v0.0.14 — RBAC writes are authorised
+## identity v0.0.15 — RBAC writes are authorised
+
+Use v0.0.15: v0.0.14 carries the same fix but does not build outside the workspace.
 
 Security fix. Anyone could grant themselves any role: `POST /role/attach`, `detach`, `sync` and the `permission` equivalents needed no session, and `ResolveRoles` ignored the user, so a role attached to one person reached their whole workspace.
 

@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## identity v0.0.14 — RBAC writes are authorised
+
+Security fix. Anyone could grant themselves any role: `POST /role/attach`, `detach`, `sync` and the `permission` equivalents needed no session, and `ResolveRoles` ignored the user, so a role attached to one person reached their whole workspace.
+
+- `role` and `permission` link routes need a session.
+- Writes to `role`, `role-type`, `permission` and `permission-type` need a platform admin (`ROOT_USER_ID`, or a `root` / `global-admin` role) or the owner or admin of the token's workspace. Ordinary members get 403.
+- A workspace admin's role links stay in their own client and workspace, and can't touch `root`, `global-admin` or `global-member`.
+- A role attached to a user now applies to that user only. Rows with no user entity still apply to everyone in scope.
+- Tokens add the name of each attached role type to `roles`, beside the existing id.
+
+**Opt-in:** `IDENTITY_RBAC_STRICT=true` makes every RBAC write platform-admin only. Role types and permissions are global tables, so by default a workspace owner can still change them for every tenant; the console's Roles and Permissions screens depend on that. Self-serve products should turn this on.
+
+**Check your data:** any `IdentityRoles` row you can't account for, especially one naming `global-admin`, may have been created through the open routes.
+
 ## [Unreleased]
 
 ### Added

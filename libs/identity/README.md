@@ -70,3 +70,7 @@ authpkg.AuthModule{}
 go test ./...
 go build ./...
 ```
+
+## RBAC writes
+
+Role and permission writes need a platform admin, or the owner or admin of the token's workspace, who can't touch platform roles. Set `IDENTITY_RBAC_STRICT=true` to make them platform-admin only, which also protects the global role-type and permission tables. See `pkg/rbac`.

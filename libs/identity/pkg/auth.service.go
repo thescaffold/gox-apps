@@ -348,14 +348,43 @@ func workspaceScope(workspaceId string) (clause string, args []any) {
 	return ` AND "workspace_id" IS NULL`, nil
 }
 
-// ResolveRoles returns all role records for a client (optionally scoped to workspace).
-func (s *AuthService) ResolveRoles(_, clientId, workspaceId string) ([]identityrole.Role, error) {
+// ResolveRoles returns the roles that apply to a user in a client (optionally
+// scoped to workspace). A row attached to a user applies to that user alone; a
+// row with no user entity applies to everyone in scope.
+func (s *AuthService) ResolveRoles(userId, clientId, workspaceId string) ([]identityrole.Role, error) {
 	query := `"client_id" = ?`
 	args := []any{clientId}
 	clause, extra := workspaceScope(workspaceId)
-	query += clause
-	args = append(args, extra...)
+	query += clause + ` AND ("entity_name" IS NULL OR "entity_name" <> 'user' OR "entity_id" = ?)`
+	args = append(append(args, extra...), userId)
 	return s.roleEntity.Find(0, 0, query, args...)
+}
+
+// roleTypeNames names the role types behind attached roles. An attached row
+// stores the type's id as its name, so without this a token never says what the
+// role is.
+func (s *AuthService) roleTypeNames(roles []identityrole.Role) []string {
+	if s.roleTypeEntity == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(roles))
+	for i := range roles {
+		if roles[i].RoleTypeId != nil {
+			ids = append(ids, *roles[i].RoleTypeId)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	types, err := s.roleTypeEntity.Find(0, 0, `"id" IN ?`, ids)
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(types))
+	for i := range types {
+		names = append(names, types[i].Name)
+	}
+	return names
 }
 
 // membershipRoles returns the role names a user holds in a workspace, from
@@ -481,7 +510,7 @@ func (s *AuthService) buildClaims(u *user.User, clientId, workspaceId string) ma
 	for _, r := range s.membershipRoles(u.Id, clientId, workspaceId) {
 		roleNames = append(roleNames, r)
 	}
-	claims["roles"] = roleNames
+	claims["roles"] = append(roleNames, s.roleTypeNames(roles)...)
 
 	permissions, _ := s.ResolvePermissions(u.Id, clientId, workspaceId)
 	permKeys := make([]string, 0, len(permissions))

@@ -108,6 +108,9 @@ type LogoutDto struct {
 	Device   string            `json:"device"`
 	UserId   string            `json:"userId"`
 	ClientId string            `json:"clientId"`
+	// RefreshToken ends that one session and nothing else: a native app has no
+	// device cookie, and signing out of one phone must not sign out the others.
+	RefreshToken string `json:"refreshToken"`
 }
 
 // UserClientsDto carries GET /user-clients: the signed-in user's apps.

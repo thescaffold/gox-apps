@@ -302,6 +302,17 @@ func (s *AuthService) Logout(tokenId string) error {
 	return err
 }
 
+// RevokeRefreshToken ends the one session a refresh token belongs to by deleting
+// its record. The token must verify, so a guess cannot delete anything; a token
+// already gone is not an error, so signing out twice is safe.
+func (s *AuthService) RevokeRefreshToken(refreshToken string) error {
+	if _, err := auth.Verify(refreshToken, s.jwtSecret()); err != nil {
+		return errors.New("invalid or expired token")
+	}
+	_, err := s.tokenEntity.Delete(`"token" = ? AND "type" = ?`, tokenstore.HashRefresh(refreshToken), tokenTypeRefresh)
+	return err
+}
+
 // ValidateToken verifies a JWT access token and returns its claims.
 func (s *AuthService) ValidateToken(tokenStr string) (map[string]any, error) {
 	return auth.Verify(tokenStr, s.jwtSecret())

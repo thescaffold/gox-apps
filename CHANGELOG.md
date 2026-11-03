@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## identity v0.0.17 — sign out one session with its refresh token
+
+Additive. `POST apps/identity/logout` accepts `{"refreshToken": "..."}` and ends that one session by deleting its record, so a native app can sign out of one phone without signing out the others or leaving the token usable. The token must verify; signing out twice is a 200. Without `refreshToken` the route behaves as before.
+
 ## identity v0.0.16 — `POST /refresh` for native apps
 
 Additive; nothing existing changes.

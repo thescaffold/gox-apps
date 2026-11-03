@@ -110,3 +110,27 @@ func TestRefresh_RefusesAWorkspaceThePersonHasLeft(t *testing.T) {
 		t.Fatalf("left the workspace: %d, want 401", rep.code)
 	}
 }
+
+func TestLogout_WithARefreshTokenEndsThatSessionOnly(t *testing.T) {
+	r := newRig(t)
+	ada, _ := r.person("ada")
+	phone := refreshTokenOf(t, r.login(ada, ""))
+	tablet := refreshTokenOf(t, r.login(ada, ""))
+
+	out := func(tok string) reply { return decode(t, r.ctl.Logout(&auth.LogoutDto{RefreshToken: tok})) }
+	if rep := out(phone); rep.code != 200 {
+		t.Fatalf("sign-out: %d %v", rep.code, rep.body)
+	}
+	if rep := r.refresh(phone); rep.code != 401 {
+		t.Errorf("the signed-out session still refreshes: %d", rep.code)
+	}
+	if rep := r.refresh(tablet); rep.code != 200 {
+		t.Errorf("another session of the same person was ended: %d", rep.code)
+	}
+	if rep := out(phone); rep.code != 200 {
+		t.Errorf("signing out twice: %d, want 200", rep.code)
+	}
+	if rep := out("not-a-token"); rep.code != 401 {
+		t.Errorf("a guess: %d, want 401", rep.code)
+	}
+}

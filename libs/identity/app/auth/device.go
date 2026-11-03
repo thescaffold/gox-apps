@@ -255,6 +255,15 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
+	// One session: retire this refresh token. Holding the token is the proof,
+	// so no bearer is needed (the access token may be the thing that expired).
+	if dto.RefreshToken != "" {
+		if err := c.auth.RevokeRefreshToken(dto.RefreshToken); err != nil {
+			return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.logout.error.unauthorized", nil, pref))
+		}
+		return response.Success(map[string]any{"deviceId": ""}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
+	}
+
 	device := ""
 	switch {
 	case dto.Device == "yes":

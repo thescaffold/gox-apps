@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## identity v0.0.16 — `POST /refresh` for native apps
+
+Additive; nothing existing changes.
+
+Sign-in has always returned a refresh token, but no route accepted it, so a native app could not stay signed in once the access token expired. `POST apps/identity/refresh` with `{"token": "<refreshToken>"}` returns `{accessToken, user}`.
+
+- Refused with one 401, whatever the reason: not a refresh token on record (signed out), expired, issued before a "sign out everywhere", account closed or suspended, or a workspace the person has left.
+- Claims are rebuilt from the database, so a role removed since sign-in is not carried into the new token.
+- Issues an access token only and writes nothing; the refresh token is not rotated.
+- The browser shell is unaffected: it keeps re-minting through its device cookie (`GET /sessions`).
+
 ## identity v0.0.15 — RBAC writes are authorised
 
 Use v0.0.15: v0.0.14 carries the same fix but does not build outside the workspace.

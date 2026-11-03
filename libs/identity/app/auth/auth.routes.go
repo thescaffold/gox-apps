@@ -18,6 +18,8 @@ var ROUTES = router.ForRoutes(
 	router.Post("/verify", []any{AuthController{}, "Verify"}),
 	router.Post("/secret", []any{AuthController{}, "Secret"}),
 	router.Post("/login", []any{AuthController{}, "Login"}),
+	// A native app's way to stay signed in: refresh token in, new access token out.
+	router.Post("/refresh", []any{AuthController{}, "Refresh"}),
 	// Passwordless sign-in: ask for a code, verify it, get tokens (creates the account on first use).
 	router.Post("/otp", []any{AuthController{}, "OtpRequest"}),
 	router.Post("/otp/verify", []any{AuthController{}, "OtpVerify"}),

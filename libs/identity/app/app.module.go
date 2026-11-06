@@ -22,6 +22,7 @@ import (
 	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
 	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	identityuserkey "github.com/thescaffold/gox-apps/libs/identity/app/userkey"
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	"github.com/thescaffold/gox-apps/libs/identity/migrations"
 	"github.com/thescaffold/gox-packages/libs/core/module"
@@ -66,6 +67,8 @@ var Migrations = []sql.Migration{
 	&migrations.DeviceSessionClient{},
 	// U-S20: two-factor sign-in (pkg/mfa).
 	&migrations.CreateIdentityMfa{},
+	// U-S22: a person's SSH and signing keys (pkg/userkey).
+	&migrations.CreateIdentityUserKeys{},
 }
 
 type AppModule struct{}
@@ -83,6 +86,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identityclientlog.ClientLogModule{},
 		&identityworkspace.WorkspaceModule{},
 		&identityapikey.ApiKeyModule{},
+		&identityuserkey.UserKeyModule{},
 		&identityorg.OrgModule{},
 		&identityucw.UserClientWorkspaceModule{},
 		&identityroletype.RoleTypeModule{},

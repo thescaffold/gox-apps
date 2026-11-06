@@ -9,10 +9,12 @@ require github.com/thescaffold/gox-packages/libs/core v0.0.22
 require github.com/thescaffold/gox-apps/libs/assets v0.0.8
 
 require (
+	github.com/ProtonMail/go-crypto v1.5.2
 	github.com/go-webauthn/webauthn v0.18.0
 	github.com/google/uuid v1.6.0
 	github.com/pquerna/otp v1.5.0
 	github.com/thescaffold/gox-apps/libs/flags v0.0.8
+	golang.org/x/crypto v0.55.0
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )
@@ -20,6 +22,7 @@ require (
 require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cbroglie/mustache v1.4.0 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.3 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -42,7 +45,6 @@ require (
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect

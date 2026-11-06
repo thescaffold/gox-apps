@@ -3,6 +3,7 @@ package org
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/awesome-goose/goose/types"
 	orgsvc "github.com/thescaffold/gox-apps/libs/identity/pkg/org"
@@ -24,6 +25,8 @@ func fail(err error) types.Output {
 		return response.Conflict(title, err.Error())
 	case errors.Is(err, orgsvc.ErrInvalid), errors.Is(err, orgsvc.ErrNotMember), errors.Is(err, orgsvc.ErrPermission):
 		return response.BadRequest(title, err.Error())
+	case errors.Is(err, orgsvc.ErrNotAllowed):
+		return response.Forbidden(title, err.Error())
 	}
 	return response.InternalServerError(title, "the change could not be made")
 }
@@ -86,6 +89,38 @@ func (c *OrgController) Catalog(dto *Ctx) types.Output {
 		return fail(err)
 	}
 	return response.Success(out, title, "catalog", nil)
+}
+
+// Seats lists the roles a workspace may grant, highest first.
+func (c *OrgController) Seats(dto *Ctx) types.Output {
+	if _, bad := c.member(dto.Ctx); bad != nil {
+		return bad
+	}
+	return response.Success(orgsvc.SeatRoles(), title, "seats", nil)
+}
+
+// SetSeat changes a member's seat. The service enforces who may grant what.
+func (c *OrgController) SetSeat(dto *SeatReq) types.Output {
+	ws, bad := c.admin(dto.Ctx)
+	if bad != nil {
+		return bad
+	}
+	if err := c.svc.Org().SetSeat(ctxOf(dto.Ctx), ws, dto.Ctx.UserID, dto.UserID, dto.Role); err != nil {
+		return fail(err)
+	}
+	return response.Success(map[string]any{"userId": dto.UserID, "role": strings.ToLower(strings.TrimSpace(dto.Role))}, title, "updated", nil)
+}
+
+// RemoveSeat takes a member out of the workspace.
+func (c *OrgController) RemoveSeat(dto *SeatRemoveReq) types.Output {
+	ws, bad := c.admin(dto.Ctx)
+	if bad != nil {
+		return bad
+	}
+	if err := c.svc.Org().RemoveSeat(ctxOf(dto.Ctx), ws, dto.Ctx.UserID, dto.UserID); err != nil {
+		return fail(err)
+	}
+	return response.Success(map[string]any{"userId": dto.UserID, "removed": true}, title, "removed", nil)
 }
 
 // --- teams ---

@@ -28,6 +28,9 @@ import (
 //	DELETE /org/roles/:id/assignments/:subjectType/:subjectId   take it away (admin)
 var ROUTES = router.ForRoutes(
 	router.Get("/org/members", []any{OrgController{}, "Members"}, auth.RequireUser()...),
+	router.Get("/org/seats", []any{OrgController{}, "Seats"}, auth.RequireUser()...),
+	router.Put("/org/members/:userId/seat", []any{OrgController{}, "SetSeat"}, auth.RequireUser()...),
+	router.Delete("/org/members/:userId", []any{OrgController{}, "RemoveSeat"}, auth.RequireUser()...),
 	router.Get("/org/catalog", []any{OrgController{}, "Catalog"}, auth.RequireUser()...),
 	router.Get("/org/activity", []any{OrgController{}, "Activity"}, auth.RequireUser()...),
 	router.Get("/org/teams", []any{OrgController{}, "ListTeams"}, auth.RequireUser()...),

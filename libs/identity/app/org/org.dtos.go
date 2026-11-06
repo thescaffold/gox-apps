@@ -68,3 +68,16 @@ type UnassignReq struct {
 	SubjectType string            `param:"subjectType"`
 	SubjectID   string            `param:"subjectId"`
 }
+
+// SeatReq changes a person's seat (owner, admin, member, guest… see org.SeatRoles).
+type SeatReq struct {
+	UserID string            `param:"userId"`
+	Role   string            `json:"role"`
+	Ctx    ntxctx.NTXContext `context:"ntx"`
+}
+
+// SeatRemoveReq takes a person out of the workspace.
+type SeatRemoveReq struct {
+	UserID string            `param:"userId"`
+	Ctx    ntxctx.NTXContext `context:"ntx"`
+}

@@ -1,9 +1,12 @@
 package log
 
 import (
+	"github.com/awesome-goose/goose/types"
+	"github.com/thescaffold/gox-apps/libs/audit/pkg/record"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/crud"
 	"github.com/thescaffold/gox-packages/libs/core/i18n"
+	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
 // LogController mirrors ntx-apps/libs/audit/src/api/log/log.controller.ts.
@@ -54,4 +57,39 @@ func (c *LogController) OnRegister() {
 		},
 	})
 	c.SetLang(c.lang)
+}
+
+// With append-only on (record.EnableAppendOnly), entries cannot be changed or
+// removed through the API. Without it these behave exactly as before.
+
+func appendOnlyRefusal() types.Output {
+	return response.Forbidden("audit", "the audit log is append-only")
+}
+
+func (c *LogController) Update(dto *crud.UpdateDto[UpdateLogDto]) types.Output {
+	if record.AppendOnly() {
+		return appendOnlyRefusal()
+	}
+	return c.CrudResource.Update(dto)
+}
+
+func (c *LogController) UpdatePut(dto *crud.UpdatePutDto[CreateLogDto]) types.Output {
+	if record.AppendOnly() {
+		return appendOnlyRefusal()
+	}
+	return c.CrudResource.UpdatePut(dto)
+}
+
+func (c *LogController) Upsert(dto *crud.UpsertDto[CreateLogDto]) types.Output {
+	if record.AppendOnly() {
+		return appendOnlyRefusal()
+	}
+	return c.CrudResource.Upsert(dto)
+}
+
+func (c *LogController) Delete(dto *crud.DeleteDto) types.Output {
+	if record.AppendOnly() {
+		return appendOnlyRefusal()
+	}
+	return c.CrudResource.Delete(dto)
 }

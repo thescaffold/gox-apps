@@ -160,3 +160,27 @@ func (s *Service) RemoveSeat(ctx context.Context, ws, actorID, userID string) er
 	s.log(ctx, ws, "member.seat.removed", "user", userID, map[string]any{"from": from})
 	return nil
 }
+
+// CheckGrant applies the rules for granting seat to someone new (an
+// invitation): the actor is an owner or admin, the seat exists, nobody grants
+// a seat above their own, and only an owner grants owner.
+func (s *Service) CheckGrant(ctx context.Context, ws, actorID, seat string) error {
+	seat = strings.ToLower(strings.TrimSpace(seat))
+	if seatRank(seat) == 0 {
+		return fmt.Errorf("%w: role must be one of %s", ErrInvalid, strings.Join(SeatRoles(), ", "))
+	}
+	actor, err := s.Seat(ctx, ws, actorID)
+	if err != nil {
+		return err
+	}
+	if actor != "owner" && actor != "admin" {
+		return fmt.Errorf("%w: only an owner or admin can invite people", ErrNotAllowed)
+	}
+	if seatRank(seat) > seatRank(actor) {
+		return fmt.Errorf("%w: you cannot invite someone above your own role", ErrNotAllowed)
+	}
+	if seat == "owner" && actor != "owner" {
+		return fmt.Errorf("%w: only an owner can invite an owner", ErrNotAllowed)
+	}
+	return nil
+}

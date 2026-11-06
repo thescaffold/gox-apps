@@ -50,6 +50,7 @@ var ROUTES = router.ForRoutes(
 	router.Put("/mfa/policy", []any{AuthController{}, "MfaSetPolicy"}, requireUser()...),
 	router.Get("/my/workspaces", []any{AuthController{}, "MyWorkspaces"}, requireUser()...),
 	router.Post("/my/workspaces", []any{AuthController{}, "CreateMyWorkspace"}, requireUser()...),
+	router.Patch("/my/workspaces/:id", []any{AuthController{}, "UpdateMyWorkspace"}, requireUser()...),
 	router.Post("/account/close", []any{AuthController{}, "CloseAccount"}, requireUser()...),
 	router.Post("/switch", []any{AuthController{}, "SwitchWorkspace"}, requireUser()...),
 	router.Post("/reset-secret/initiate", []any{AuthController{}, "ResetSecretInitiate"}),

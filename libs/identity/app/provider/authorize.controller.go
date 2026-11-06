@@ -29,6 +29,7 @@ import (
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 	identityproviderpkg "github.com/thescaffold/gox-apps/libs/identity/pkg/provider"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/mfa"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/org"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/events"
@@ -315,6 +316,15 @@ func (c *AuthorizeController) bootstrapWorkspace(user *identityuser.User, client
 	ws := &identityworkspace.Workspace{
 		UserId: user.Id, ClientId: clientId,
 		Name: name, Slug: slug,
+	}
+	// A readable handle from the person's address, and the default region.
+	local, _, _ := strings.Cut(user.Email, "@")
+	if h, err := org.FreeHandleWith(org.HandleFor(local), func(h string) (bool, error) {
+		n, err := c.workspaceEntity.Count(`lower("handle") = ?`, h)
+		return n > 0, err
+	}); err == nil {
+		region, _ := org.Region("")
+		ws.Handle, ws.Region = &h, &region
 	}
 	if err := c.workspaceEntity.Insert(ws); err != nil {
 		return nil

@@ -252,7 +252,7 @@ func TestMfa_ChangesNeedAFreshSecondFactor(t *testing.T) {
 	}
 }
 
-func (r *mfaRig) join(u *user.User, ws, seat string) {
+func (r *rig) join(u *user.User, ws, seat string) {
 	r.t.Helper()
 	link := &identityucw.UserClientWorkspace{UserId: u.Id, ClientId: r.client, WorkspaceId: ws, Status: &seat}
 	link.Id = uuid.NewString()

@@ -685,6 +685,12 @@ func (c *AuthController) bootstrapWorkspace(u *identityuser.User, clientId strin
 	ws := &identityworkspace.Workspace{
 		UserId: u.Id, ClientId: clientId, Name: "My Workspace", Slug: utils.Reference("WS", 16),
 	}
+	// Its handle comes from the person's address (renamed in onboarding).
+	local, _, _ := strings.Cut(u.Email, "@")
+	if local == "" {
+		local = u.Name
+	}
+	_ = c.assignHandle(ws, "", local, "")
 	if err := c.workspaceEntity.Insert(ws); err != nil {
 		return nil
 	}

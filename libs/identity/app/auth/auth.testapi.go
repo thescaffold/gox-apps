@@ -52,6 +52,7 @@ func NewAuthControllerForTest(db *gorm.DB) *AuthController {
 	sso.SetStore(c.ssoStore)
 	c.otpSvc = otp.New(c.cache, 7*time.Minute)
 	c.signin = &identityotp.Service{DB: db}
+	c.db = &sql.Db{DB: db}
 	c.mfa = &mfa.Service{DB: db}
 	mfa.SetDefault(c.mfa)
 	c.roleTypeEntity.OnRegister()

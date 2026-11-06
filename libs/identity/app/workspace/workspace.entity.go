@@ -16,6 +16,9 @@ type Workspace struct {
 	BannerUrl *string         `gorm:"column:banner_url;type:varchar(255)"         json:"bannerUrl,omitempty"`
 	Meta      json.RawMessage `gorm:"column:meta;type:jsonb"                      json:"meta,omitempty"`
 	Status    *string         `gorm:"column:status;type:varchar(255)"             json:"status,omitempty"`
+	// Handle is the readable, unique address (pkg/org); Region where the data lives.
+	Handle *string `gorm:"column:handle;type:varchar(40)" json:"handle,omitempty"`
+	Region *string `gorm:"column:region;type:varchar(16)" json:"region,omitempty"`
 }
 
 func (Workspace) TableName() string { return "IdentityWorkspaces" }

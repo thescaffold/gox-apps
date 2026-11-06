@@ -11,6 +11,7 @@ import (
 	identitydevice "github.com/thescaffold/gox-apps/libs/identity/app/device"
 	identitydevicelog "github.com/thescaffold/gox-apps/libs/identity/app/devicelog"
 	identitydevicesession "github.com/thescaffold/gox-apps/libs/identity/app/devicesession"
+	identityinvitation "github.com/thescaffold/gox-apps/libs/identity/app/invitation"
 	identityinvite "github.com/thescaffold/gox-apps/libs/identity/app/invite"
 	identityorg "github.com/thescaffold/gox-apps/libs/identity/app/org"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
@@ -69,6 +70,10 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityMfa{},
 	// U-S22: a person's SSH and signing keys (pkg/userkey).
 	&migrations.CreateIdentityUserKeys{},
+	// P0-U4: a readable workspace handle and its data region.
+	&migrations.WorkspaceHandleRegion{},
+	// PLT-03: invitations by email and link (pkg/invitation).
+	&migrations.CreateIdentityInvitations{},
 }
 
 type AppModule struct{}
@@ -87,6 +92,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identityworkspace.WorkspaceModule{},
 		&identityapikey.ApiKeyModule{},
 		&identityuserkey.UserKeyModule{},
+		&identityinvitation.InvitationModule{},
 		&identityorg.OrgModule{},
 		&identityucw.UserClientWorkspaceModule{},
 		&identityroletype.RoleTypeModule{},

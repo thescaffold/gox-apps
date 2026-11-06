@@ -39,6 +39,7 @@ var DefaultPermissions = map[string][]string{
 		"guest:create:apps:identity:verify:*:*",
 		"guest:create:apps:identity:secret:*:*",
 		"guest:create:apps:identity:login:*:*",
+		"guest:create:apps:identity:mfa:verify:*",
 		"guest:create:apps:identity:logout:*:*",
 		"guest:create:apps:identity:reset-secret:initiate:*",
 		"guest:create:apps:identity:reset-secret:verify:*",

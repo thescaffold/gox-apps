@@ -8,6 +8,7 @@ import (
 	"github.com/awesome-goose/goose/modules/sql"
 	identityroletype "github.com/thescaffold/gox-apps/libs/identity/app/roletype"
 	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/mfa"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/org"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
 	mrand "math/rand"
@@ -199,6 +200,10 @@ func (s *AuthService) IssueAccessToken(u *user.User, clientId, workspaceId strin
 	return auth.Sign(s.buildClaims(u, clientId, workspaceId), s.jwtSecret(), accessExpiry)
 }
 
+// ErrSecondFactorRequired: the person has two-factor authentication, so a
+// one-step sign-in is refused.
+var ErrSecondFactorRequired = errors.New("two-factor authentication is required; sign in with your second factor")
+
 // Login is VerifyCredentials + IssueTokens combined, for a caller that has
 // no reason to interleave anything between the two (see VerifyCredentials's
 // own doc comment for why identity/app/auth's real Login handler doesn't
@@ -207,6 +212,13 @@ func (s *AuthService) Login(handle, password, clientId, workspaceId string) (acc
 	u, err := s.VerifyCredentials(handle, password)
 	if err != nil {
 		return "", "", err
+	}
+	// This one-step sign-in has no second step: a person with 2FA signs in
+	// through apps/identity/login and /mfa/verify instead.
+	if m := mfa.Default(); m != nil {
+		if on, err := m.Enrolled(context.Background(), u.Id); err != nil || on {
+			return "", "", ErrSecondFactorRequired
+		}
 	}
 	return s.IssueTokens(u, clientId, workspaceId)
 }

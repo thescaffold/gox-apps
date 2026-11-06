@@ -19,6 +19,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/mfa"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"gorm.io/gorm"
 	"time"
@@ -51,6 +52,8 @@ func NewAuthControllerForTest(db *gorm.DB) *AuthController {
 	sso.SetStore(c.ssoStore)
 	c.otpSvc = otp.New(c.cache, 7*time.Minute)
 	c.signin = &identityotp.Service{DB: db}
+	c.mfa = &mfa.Service{DB: db}
+	mfa.SetDefault(c.mfa)
 	c.roleTypeEntity.OnRegister()
 	c.permissionTypeEntity.OnRegister()
 	c.permissionEntity.OnRegister()
@@ -80,6 +83,9 @@ func (c *AuthController) SeedRegistrationForTest(id, ref, clientID string) strin
 // SigninForTest exposes the passwordless code service so a test can set its
 // magic code or clock.
 func (c *AuthController) SigninForTest() *identityotp.Service { return c.signin }
+
+// MfaForTest is the controller's two-factor service (tests set Keys and Now on it).
+func (c *AuthController) MfaForTest() *mfa.Service { return c.mfa }
 
 // SsoStoreForTest exposes the connection store so a test can set its DNS
 // resolver and clock.

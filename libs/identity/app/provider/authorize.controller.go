@@ -28,6 +28,7 @@ import (
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
 	identityproviderpkg "github.com/thescaffold/gox-apps/libs/identity/pkg/provider"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/mfa"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/events"
@@ -207,6 +208,24 @@ func (c *AuthorizeController) Authorize(dto *AuthorizeProviderDto) types.Output 
 	// 8. Referral-code redemption (best-effort — no error on miss).
 	if dto.ReferralCode != "" {
 		_ = c.redeemReferralCode(existing.Id, dto.ReferralCode)
+	}
+
+	// A person with 2FA finishes at POST /mfa/verify: no device session and
+	// no tokens until the second factor is proven.
+	if m := mfa.Default(); m != nil {
+		on, err := m.Enrolled(context.Background(), existing.Id)
+		if err != nil {
+			return response.InternalServerError(title, "the sign-in could not be completed")
+		}
+		if on {
+			p, err := m.StartSignIn(context.Background(), existing.Id, dto.ClientId, dto.UserAgent)
+			if err != nil {
+				return response.InternalServerError(title, "the sign-in could not be completed")
+			}
+			return response.Success(map[string]any{
+				"mfaRequired": true, "challenge": p.Challenge, "methods": p.Methods, "expiresAt": p.ExpiresAt,
+			}, title, "enter your second factor", nil)
+		}
 	}
 
 	// 9. Device + Session + Log bootstrap.

@@ -64,6 +64,8 @@ var Migrations = []sql.Migration{
 	&migrations.ScrubProviderLogTokens{},
 	// PLAN M1-40: a device session remembers its client.
 	&migrations.DeviceSessionClient{},
+	// U-S20: two-factor sign-in (pkg/mfa).
+	&migrations.CreateIdentityMfa{},
 }
 
 type AppModule struct{}

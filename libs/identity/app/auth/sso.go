@@ -293,6 +293,9 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 	if u == nil {
 		return response.Unauthorized(title, "the sign-in link has expired")
 	}
+	if out, stop := c.secondStep(u, res.ClientID, dto.UserAgent, pref); stop {
+		return out
+	}
 	workspaces := c.workspacesForUser(u.Id, res.ClientID)
 	workspaceID := ""
 	if len(workspaces) > 0 {

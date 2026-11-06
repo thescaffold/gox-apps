@@ -76,6 +76,7 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/mfa"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"github.com/thescaffold/gox-packages/libs/core/utils"
 	"sync"
@@ -162,6 +163,9 @@ type AuthController struct {
 	// Single sign-on (sso.go). Built at Boot; nil when no database.
 	ssoStore  *sso.Store
 	ssoClient *sso.Client
+
+	// Two-factor sign-in (mfa.go). Built at Boot; nil when no database.
+	mfa *mfa.Service
 }
 
 func (c *AuthController) Boot(_ types.Kernel) error {
@@ -177,6 +181,7 @@ func (c *AuthController) Boot(_ types.Kernel) error {
 		sso.SetStore(c.ssoStore)
 		revocation.SetStore(&revocation.Store{DB: c.db.DB})
 	}
+	c.bootMfa()
 	return nil
 }
 
@@ -369,6 +374,10 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	if suspended, _ := c.attributeEntity.First(`"user_id" = ? AND "key" = ?`, u.Id, "suspended_at"); suspended != nil {
 		return response.Unauthorized(title,
 			c.lang.Translate("apps.identity.app.post.login.error.suspended", nil, pref))
+	}
+	// A person with 2FA finishes at POST /mfa/verify; nothing is issued yet.
+	if out, stop := c.secondStep(u, dto.ClientId, dto.UserAgent, pref); stop {
+		return out
 	}
 
 	// Login selects a workspace (U-S9, PLAN M1-02): the user's first

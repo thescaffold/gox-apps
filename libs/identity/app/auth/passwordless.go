@@ -130,6 +130,9 @@ func (c *AuthController) OtpVerify(dto *OtpVerifyDto) types.Output {
 		if suspended, _ := c.attributeEntity.First(`"user_id" = ? AND "key" = ?`, u.Id, "suspended_at"); suspended != nil {
 			return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.login.error.suspended", nil, pref))
 		}
+		if out, stop := c.secondStep(u, dto.ClientId, dto.UserAgent, pref); stop {
+			return out
+		}
 	}
 
 	workspaces := c.workspacesForUser(u.Id, dto.ClientId)

@@ -202,15 +202,24 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		if t, err := c.auth.IssueAccessToken(u, clientID, w.Id); err == nil {
 			ws["token"] = t
 		}
-		links = append(links, map[string]any{
+		link := map[string]any{
 			"id": w.Id, "userId": u.Id, "clientId": clientID, "workspaceId": w.Id, "type": kind, "workspace": ws,
-		})
+		}
+		if c.mfa != nil {
+			req, _ := c.mfa.Required(context.Background(), w.Id)
+			link["mfaRequired"] = req
+		}
+		links = append(links, link)
 	}
 	if links == nil {
 		links = []any{}
 	}
 	user["workspaces"] = links
 	user["attributes"] = c.attributesForUser(u.Id)
+	if c.mfa != nil {
+		on, _ := c.mfa.Enrolled(context.Background(), u.Id)
+		user["mfa"] = map[string]any{"enabled": on}
+	}
 	roles, permissions := []string{}, []string{}
 	if firstWorkspace != "" {
 		if rs, err := c.auth.ResolveRoles(u.Id, clientID, firstWorkspace); err == nil {

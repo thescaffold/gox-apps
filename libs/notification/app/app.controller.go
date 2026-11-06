@@ -1,8 +1,11 @@
 package app
 
 import (
+	"sync"
+
 	"crypto/subtle"
 	"encoding/json"
+	goqueues "github.com/awesome-goose/goose/modules/queues"
 	"os"
 	"strconv"
 	"time"
@@ -26,7 +29,7 @@ import (
 //	GET    /subscription    getSubscription
 //	PATCH  /subscription    updateSubscription
 type AppController struct {
-	appService *AppService                          `inject:""`
+	appService *AppService                           `inject:""`
 	provider   *notificationprovider.ProviderService `inject:""`
 	queue      *queueapp.AppService                  `inject:""`
 	cache      services.CacheBackend                 `inject:""`
@@ -36,12 +39,23 @@ type AppController struct {
 // OnRegister fires after DI completes; wires the queueapp-backed pusher
 // into the ProviderService so AppService.OnMessageNew dispatches durably
 // rather than running Send synchronously on the request goroutine.
+//
+// It also starts the workers that drain that queue (Jobs). Without them a
+// message pushed onto the queue was never sent: hosts were never told to
+// register Jobs, and none did.
 func (c *AppController) OnRegister() {
 	if c.provider == nil || c.queue == nil {
 		return
 	}
 	c.provider.SetQueuePusher(&queuePump{queue: c.queue})
+	jobsOnce.Do(func() { registerJobs(c.queue, Jobs) })
 }
+
+var (
+	jobsOnce sync.Once
+	// registerJobs starts workers for jobs (a seam for tests).
+	registerJobs = func(q *queueapp.AppService, jobs []*goqueues.JobHandler) { q.RegisterJobs(jobs) }
+)
 
 // hideKeyTTL is the duration the AppController marks a per-user message as
 // "already-shown" in cache. Long enough that the same user paging through

@@ -1,6 +1,7 @@
 package message
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
@@ -25,7 +26,18 @@ type MessageController struct {
 }
 
 func (c *MessageController) OnRegister() {
-	c.Hydrate(c.entity, crud.Config[Message, CreateMessageDto, UpdateMessageDto]{
+	c.Hydrate(c.entity, config())
+	c.SetLang(c.lang)
+}
+
+// config is the resource's crud configuration, read at registration: with
+// ScopeToOwner called first, every route is confined to the caller's own
+// messages in their workspace and fails closed without a verified caller.
+func config() crud.Config[Message, CreateMessageDto, UpdateMessageDto] {
+	scoped := ownerScoped.Load()
+	return crud.Config[Message, CreateMessageDto, UpdateMessageDto]{
+		WorkspaceScoped: scoped,
+		OwnerScoped:     scoped,
 		// Mirrors TS message.controller.ts:20 name = 'message'.
 		Name: "message",
 		// Mirrors TS message.controller.ts:21 searchable = ['subject','message'].
@@ -61,9 +73,30 @@ func (c *MessageController) OnRegister() {
 						p.WorkspaceId = &id
 					}
 				}
+				// A caller verified from token claims carries only the ids.
+				if p.UserId == nil && ctx.UserID != "" {
+					id := ctx.UserID
+					p.UserId = &id
+				}
+				if p.ClientId == nil && ctx.ClientID != "" {
+					id := ctx.ClientID
+					p.ClientId = &id
+				}
+				if p.WorkspaceId == nil && ctx.WorkspaceID != "" {
+					id := ctx.WorkspaceID
+					p.WorkspaceId = &id
+				}
+				// Scoped to the owner, a message always belongs to its creator:
+				// nobody files a message into someone else's inbox through it.
+				if scoped {
+					if ctx.UserID == "" || ctx.WorkspaceID == "" {
+						return nil, fmt.Errorf("message: a verified caller is required")
+					}
+					uid, ws := ctx.UserID, ctx.WorkspaceID
+					p.UserId, p.WorkspaceId = &uid, &ws
+				}
 				return p, nil
 			},
 		},
-	})
-	c.SetLang(c.lang)
+	}
 }

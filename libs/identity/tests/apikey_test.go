@@ -226,3 +226,29 @@ func TestApiKey_LastUsedIsRecordedButThrottled(t *testing.T) {
 		t.Fatal("last_used_at did not advance after the window")
 	}
 }
+
+// Another workspace on the same client cannot revoke or rotate a key, and a
+// listing says who issued each key.
+func TestApiKey_AnotherWorkspaceCannotRevokeOrRotate(t *testing.T) {
+	s, _ := keySvc(t)
+	k := issue(t, s, "c1", "w1", apikey.Secret, apikey.Test)
+	if err := s.RevokeIn(kctx, "c1", "w2", k.ID); !errors.Is(err, apikey.ErrNotFound) {
+		t.Fatalf("w2 revokes w1's key: %v", err)
+	}
+	if _, err := s.RotateIn(kctx, "u", "c1", "w2", k.ID, 0); !errors.Is(err, apikey.ErrNotFound) {
+		t.Fatalf("w2 rotates w1's key: %v", err)
+	}
+	if _, err := s.Authenticate(kctx, k.Secret); err != nil {
+		t.Fatalf("w1's key must still work: %v", err)
+	}
+	l, err := s.List(kctx, "c1", "w1")
+	if err != nil || len(l) != 1 || l[0].UserID != "usr-1" {
+		t.Fatalf("list: %+v %v", l, err)
+	}
+	if err := s.RevokeIn(kctx, "c1", "w1", k.ID); err != nil {
+		t.Fatalf("w1 revokes its own key: %v", err)
+	}
+	if _, err := s.Authenticate(kctx, k.Secret); !errors.Is(err, apikey.ErrRevoked) {
+		t.Fatalf("revoked key still works: %v", err)
+	}
+}

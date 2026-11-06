@@ -57,6 +57,7 @@ type Claims struct {
 // Key is a stored key as listed (never includes the secret value).
 type Key struct {
 	ID          string     `json:"id"`
+	UserID      string     `json:"user_id"` // who issued it
 	Name        string     `json:"name"`
 	Kind        string     `json:"kind"`
 	Environment string     `json:"environment"`
@@ -213,7 +214,7 @@ func (s *Service) List(ctx context.Context, clientID, workspaceID string) ([]Key
 	if clientID == "" {
 		return nil, ErrScopeRequired
 	}
-	q := `SELECT id, name, kind, environment, prefix, scopes, created_at, expires_at, revoked_at, last_used_at FROM "IdentityApiKeys" WHERE client_id = ?`
+	q := `SELECT id, user_id, name, kind, environment, prefix, scopes, created_at, expires_at, revoked_at, last_used_at FROM "IdentityApiKeys" WHERE client_id = ?`
 	args := []any{clientID}
 	if workspaceID != "" {
 		q += " AND workspace_id = ?"
@@ -221,10 +222,10 @@ func (s *Service) List(ctx context.Context, clientID, workspaceID string) ([]Key
 	}
 	q += " ORDER BY created_at DESC"
 	var rows []struct {
-		ID, Name, Kind, Environment, Prefix string
-		Scopes                              []byte
-		CreatedAt                           time.Time
-		ExpiresAt, RevokedAt, LastUsedAt    *time.Time
+		ID, UserID, Name, Kind, Environment, Prefix string
+		Scopes                                      []byte
+		CreatedAt                                   time.Time
+		ExpiresAt, RevokedAt, LastUsedAt            *time.Time
 	}
 	if err := s.DB.WithContext(ctx).Raw(q, args...).Scan(&rows).Error; err != nil {
 		return nil, err
@@ -233,7 +234,7 @@ func (s *Service) List(ctx context.Context, clientID, workspaceID string) ([]Key
 	for i, r := range rows {
 		var sc []string
 		_ = json.Unmarshal(r.Scopes, &sc)
-		out[i] = Key{ID: r.ID, Name: r.Name, Kind: r.Kind, Environment: r.Environment, Prefix: r.Prefix, Scopes: sc, CreatedAt: r.CreatedAt, ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt, LastUsedAt: r.LastUsedAt}
+		out[i] = Key{ID: r.ID, UserID: r.UserID, Name: r.Name, Kind: r.Kind, Environment: r.Environment, Prefix: r.Prefix, Scopes: sc, CreatedAt: r.CreatedAt, ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt, LastUsedAt: r.LastUsedAt}
 	}
 	return out, nil
 }
@@ -286,4 +287,39 @@ func (s *Service) Rotate(ctx context.Context, userID, clientID, id string, grace
 		return Key{}, err
 	}
 	return nk, nil
+}
+
+// RevokeIn is Revoke confined to one workspace: a key of another workspace on
+// the same client is not found. Use it wherever a workspace member acts.
+func (s *Service) RevokeIn(ctx context.Context, clientID, workspaceID, id string) error {
+	if clientID == "" || workspaceID == "" {
+		return ErrScopeRequired
+	}
+	if err := s.inWorkspace(ctx, clientID, workspaceID, id); err != nil {
+		return err
+	}
+	return s.Revoke(ctx, clientID, id)
+}
+
+// RotateIn is Rotate confined to one workspace.
+func (s *Service) RotateIn(ctx context.Context, userID, clientID, workspaceID, id string, grace time.Duration) (Key, error) {
+	if clientID == "" || workspaceID == "" {
+		return Key{}, ErrScopeRequired
+	}
+	if err := s.inWorkspace(ctx, clientID, workspaceID, id); err != nil {
+		return Key{}, err
+	}
+	return s.Rotate(ctx, userID, clientID, id, grace)
+}
+
+func (s *Service) inWorkspace(ctx context.Context, clientID, workspaceID, id string) error {
+	var n int64
+	if err := s.DB.WithContext(ctx).Table(`"IdentityApiKeys"`).
+		Where("id = ? AND client_id = ? AND workspace_id = ?", id, clientID, workspaceID).Count(&n).Error; err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

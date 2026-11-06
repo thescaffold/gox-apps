@@ -60,7 +60,7 @@ func (c *ApiKeyController) List(dto *ListReq) types.Output {
 }
 
 func (c *ApiKeyController) Revoke(dto *IDReq) types.Output {
-	if err := c.svc.Keys().Revoke(context.Background(), dto.Ctx.ClientID, dto.Id); err != nil {
+	if err := c.svc.Keys().RevokeIn(context.Background(), dto.Ctx.ClientID, dto.Ctx.WorkspaceID, dto.Id); err != nil {
 		return fail(err)
 	}
 	return response.Success(map[string]any{"id": dto.Id, "revoked": true}, title, "key revoked", nil)
@@ -68,7 +68,7 @@ func (c *ApiKeyController) Revoke(dto *IDReq) types.Output {
 
 func (c *ApiKeyController) Rotate(dto *IDReq) types.Output {
 	secs, _ := strconv.Atoi(dto.Grace)
-	k, err := c.svc.Keys().Rotate(context.Background(), dto.Ctx.UserID, dto.Ctx.ClientID, dto.Id, time.Duration(secs)*time.Second)
+	k, err := c.svc.Keys().RotateIn(context.Background(), dto.Ctx.UserID, dto.Ctx.ClientID, dto.Ctx.WorkspaceID, dto.Id, time.Duration(secs)*time.Second)
 	if err != nil {
 		return fail(err)
 	}

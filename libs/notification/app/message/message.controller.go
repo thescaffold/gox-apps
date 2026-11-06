@@ -1,12 +1,22 @@
 package message
 
 import (
+	"sync/atomic"
+
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/crud"
 	"github.com/thescaffold/gox-packages/libs/core/i18n"
 )
 
 // MessageController mirrors ntx-apps/libs/notification/src/api/message/message.controller.ts.
+var ownerScoped atomic.Bool
+
+// ScopeToOwner confines the message API to the caller's own messages in their
+// workspace (crud WorkspaceScoped + OwnerScoped): for a host where messages are
+// a person's inbox. Without it, as before, any signed-in caller can list every
+// message. Call it before the kernel boots.
+func ScopeToOwner() { ownerScoped.Store(true) }
+
 type MessageController struct {
 	crud.CrudResource[Message, CreateMessageDto, UpdateMessageDto]
 

@@ -154,7 +154,7 @@ func TestInvitations(t *testing.T) {
 		t.Fatalf("someone else accepts: %d", out.code)
 	}
 	// The host's seat limit refuses the join, with its own status and code.
-	invitation.SetJoinGuard(func(*gorm.DB, string) error { return seatLimit{} })
+	invitation.SetJoinGuard(func(*gorm.DB, string, string) error { return seatLimit{} })
 	if out := decode(t, c.Accept(&appinvitation.TokenReq{Ctx: ntxctx.NTXContext{UserID: dana.Id}, Token: tok})); out.code != 402 || out.body["code"] != "quota_exceeded" {
 		t.Fatalf("over the seat limit: %d %v", out.code, out.body)
 	}

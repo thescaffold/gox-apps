@@ -91,15 +91,19 @@ type Event struct {
 var (
 	mu       sync.RWMutex
 	observer func(context.Context, Event)
-	guard    func(tx *gorm.DB, workspaceID string) error
+	guard    func(tx *gorm.DB, workspaceID, seat string) error
 )
 
 // SetObserver registers the host's recorder (nil turns it off).
 func SetObserver(f func(context.Context, Event)) { mu.Lock(); observer = f; mu.Unlock() }
 
-// SetJoinGuard registers the host's check before someone joins (a seat
-// limit). It runs inside the accepting transaction; its error refuses the join.
-func SetJoinGuard(f func(tx *gorm.DB, workspaceID string) error) { mu.Lock(); guard = f; mu.Unlock() }
+// SetJoinGuard registers the host's check before someone joins with seat (a
+// seat limit). It runs inside the accepting transaction; its error refuses the join.
+func SetJoinGuard(f func(tx *gorm.DB, workspaceID, seat string) error) {
+	mu.Lock()
+	guard = f
+	mu.Unlock()
+}
 
 func emit(ctx context.Context, e Event) {
 	mu.RLock()
@@ -110,7 +114,7 @@ func emit(ctx context.Context, e Event) {
 	}
 }
 
-func joinGuard() func(tx *gorm.DB, workspaceID string) error {
+func joinGuard() func(tx *gorm.DB, workspaceID, seat string) error {
 	mu.RLock()
 	defer mu.RUnlock()
 	return guard
@@ -415,7 +419,7 @@ func (s *Service) Accept(ctx context.Context, token, userID, email string) (stri
 		}
 		if n == 0 {
 			if g := joinGuard(); g != nil {
-				if err := g(tx, ws); err != nil {
+				if err := g(tx, ws, inv.Seat); err != nil {
 					return err
 				}
 			}

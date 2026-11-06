@@ -34,6 +34,7 @@ var ROUTES = router.ForRoutes(
 	router.Get("/sso/connection", []any{AuthController{}, "SsoGetConnection"}, requireUser()...),
 	router.Put("/sso/connection", []any{AuthController{}, "SsoPutConnection"}, requireUser()...),
 	router.Delete("/sso/connection", []any{AuthController{}, "SsoDeleteConnection"}, requireUser()...),
+	router.Post("/secret/change", []any{AuthController{}, "ChangeSecret"}, requireUser()...),
 	// Two-factor sign-in (U-S20, mfa.go): the second step, then the person's own setup and the policy.
 	router.Post("/mfa/verify", []any{AuthController{}, "MfaVerify"}),
 	router.Post("/mfa/verify/key", []any{AuthController{}, "MfaKeyOptions"}),

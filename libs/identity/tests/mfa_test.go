@@ -368,3 +368,31 @@ func TestMfa_EverySignInPathAsksForTheSecondFactor(t *testing.T) {
 		t.Fatalf("keys without a relying party: %d %v", out.code, out.body)
 	}
 }
+
+func TestChangeSecret(t *testing.T) {
+	r := newMfaRig(t)
+	ada, ws := r.person("ada")
+	ctx := ctxOf(ada, ws)
+	for _, c := range []struct {
+		current, secret, code string
+	}{
+		{"wrong password", "new-secret-1", "secret_mismatch"},
+		{testPassword, "short", "secret_length"},
+		{testPassword, "this one is far too long", "secret_length"},
+	} {
+		out := decode(t, r.ctl.ChangeSecret(&auth.ChangeSecretDto{Ctx: ctx, Current: c.current, Secret: c.secret}))
+		if out.code != 400 || out.body["code"] != c.code {
+			t.Fatalf("%q → %q: %d %v", c.current, c.secret, out.code, out.body)
+		}
+	}
+	if out := decode(t, r.ctl.ChangeSecret(&auth.ChangeSecretDto{Ctx: ctx, Current: testPassword, Secret: "new-secret-1"})); out.code != 200 {
+		t.Fatalf("change: %d %v", out.code, out.body)
+	}
+	if old := r.login(ada, ""); old.code != 401 {
+		t.Fatalf("the old password still signs in: %d", old.code)
+	}
+	email := *ada.Ref
+	if fresh := decode(t, r.ctl.Login(&auth.LoginDto{Ref: email, Secret: "new-secret-1", ClientId: r.client})); fresh.code != 200 {
+		t.Fatalf("the new password: %d %v", fresh.code, fresh.body)
+	}
+}

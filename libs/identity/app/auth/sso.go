@@ -20,16 +20,23 @@ import (
 	"github.com/thescaffold/gox-packages/libs/core/response"
 )
 
-// Single sign-on (OpenID Connect). A workspace registers its identity
-// provider and the email domains it owns; people with those emails sign in
-// through it. Membership is by invitation only: SSO never creates access for
-// someone the company has not invited (see sso.Directory).
+// Single sign-on (OpenID Connect or SAML 2.0). A workspace registers its
+// identity provider and the email domains it owns; people with those emails
+// sign in through it. Membership is by invitation only: SSO never creates
+// access for someone the company has not invited (see sso.Directory).
 //
 // The browser flow is:
 //
 //	POST /sso/start      {email}          → {url}   (the IdP's authorize URL)
 //	GET  /sso/callback   ?code&state      → 302 to the app with a one-time ?code
 //	POST /sso/exchange   {code}           → the same body as /otp/verify
+//
+// A SAML connection has the same start and exchange; /start's url carries an
+// AuthnRequest (HTTP-Redirect), and the IdP posts its Response back to the
+// workspace's ACS instead of the callback:
+//
+//	POST /sso/saml/:workspace/acs   SAMLResponse&RelayState → 302 as the callback
+//	GET  /sso/saml/:workspace       this service provider's metadata
 //
 // Tokens never appear in a URL: the callback hands the app a short-lived,
 // single-use code that /sso/exchange turns into a session.
@@ -49,6 +56,8 @@ type ssoState struct {
 	ClientID     string `json:"cl"`
 	Email        string `json:"e"`
 	ReturnTo     string `json:"r"`
+	// RequestID is the SAML AuthnRequest the response must answer.
+	RequestID string `json:"q,omitempty"`
 }
 
 type ssoResult struct {
@@ -91,13 +100,34 @@ type SsoExchangeDto struct {
 
 // SsoConnectionDto carries PUT /sso/connection.
 type SsoConnectionDto struct {
-	Ctx          ntxctx.NTXContext `context:"ntx"`
-	Issuer       string            `json:"issuer"       binding:"required"`
-	OIDCClientID string            `json:"clientId"     binding:"required"`
+	Ctx ntxctx.NTXContext `context:"ntx"`
+	// Protocol is "oidc" (the default) or "saml".
+	Protocol string `json:"protocol"`
+	// OpenID Connect: the issuer and client.
+	Issuer       string `json:"issuer"`
+	OIDCClientID string `json:"clientId"`
 	// ClientSecret is write-only; leave empty on update to keep the stored one.
-	ClientSecret string   `json:"clientSecret"`
-	Domains      []string `json:"domains"`
-	Enforce      bool     `json:"enforce"`
+	ClientSecret string `json:"clientSecret"`
+	// SAML: the IdP's metadata, by URL (fetched now and refreshed hourly) or
+	// pasted. Neither on update keeps the stored metadata.
+	MetadataURL string   `json:"metadataUrl"`
+	MetadataXML string   `json:"metadataXml"`
+	Domains     []string `json:"domains"`
+	Enforce     bool     `json:"enforce"`
+}
+
+// SsoSamlMetadataDto carries GET /sso/saml/:workspace.
+type SsoSamlMetadataDto struct {
+	Ctx       ntxctx.NTXContext `context:"ntx"`
+	Workspace string            `param:"workspace"`
+}
+
+// SsoSamlAcsDto carries POST /sso/saml/:workspace/acs (HTTP-POST binding).
+type SsoSamlAcsDto struct {
+	Ctx          ntxctx.NTXContext `context:"ntx"`
+	Workspace    string            `param:"workspace"`
+	SAMLResponse string            `form:"SAMLResponse"`
+	RelayState   string            `form:"RelayState"`
 }
 
 // SsoWorkspaceDto carries GET/DELETE /sso/connection.
@@ -112,6 +142,37 @@ func ssoRedirectURI() string {
 		return v
 	}
 	return ssoBaseURL() + "/api/apps/identity/sso/callback"
+}
+
+// ssoSAMLBase is where the workspaces' SAML service providers live: each is
+// <base>/<workspace id>, its ACS <base>/<workspace id>/acs.
+func ssoSAMLBase() string {
+	if v := os.Getenv("SSO_SAML_BASE_URL"); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return ssoBaseURL() + "/api/apps/identity/sso/saml"
+}
+
+// samlSP is a workspace's service provider. One per workspace (as is the
+// connection), so its URLs are known before the connection is saved: the
+// company's admin registers them with the IdP first.
+func samlSP(workspaceID string) sso.SAMLServiceProvider {
+	e := ssoSAMLBase() + "/" + url.PathEscape(workspaceID)
+	return sso.SAMLServiceProvider{EntityID: e, ACSURL: e + "/acs"}
+}
+
+// samlIdP loads a SAML connection's IdP: from its metadata URL (cached for an
+// hour, so key rotations are picked up), else, or when that fails, from the
+// copy stored when it was saved.
+func (c *AuthController) samlIdP(ctx context.Context, conn *sso.Connection) (*sso.SAMLIdP, error) {
+	if conn.SAMLMetadataURL != "" {
+		if raw, err := c.ssoClient.FetchSAMLMetadata(ctx, conn.SAMLMetadataURL, false); err == nil {
+			if idp, err := c.ssoClient.ParseSAMLMetadata(raw); err == nil && idp.EntityID == conn.Issuer {
+				return idp, nil
+			}
+		}
+	}
+	return c.ssoClient.ParseSAMLMetadata([]byte(conn.SAMLMetadata))
 }
 
 // safeReturnTo accepts only a same-origin absolute path.
@@ -135,7 +196,7 @@ func (c *AuthController) SsoDiscover(dto *SsoDiscoverDto) types.Output {
 	if err != nil {
 		return response.Success(map[string]any{"sso": false, "enforced": false}, title, "ok", nil)
 	}
-	return response.Success(map[string]any{"sso": true, "enforced": conn.Enforce}, title, "ok", nil)
+	return response.Success(map[string]any{"sso": true, "enforced": conn.Enforce, "protocol": conn.Protocol}, title, "ok", nil)
 }
 
 // SsoStart begins a sign-in: it returns the identity provider's authorize URL.
@@ -148,6 +209,9 @@ func (c *AuthController) SsoStart(dto *SsoStartDto) types.Output {
 	conn, err := c.ssoStore.ForEmail(ctx, dto.Email)
 	if err != nil {
 		return response.NotFound(title, "single sign-on is not set up for this email")
+	}
+	if conn.SAML() {
+		return c.samlStart(ctx, conn, dto, title)
 	}
 	d, err := c.ssoClient.Discover(ctx, conn.Issuer)
 	if err != nil {
@@ -166,6 +230,28 @@ func (c *AuthController) SsoStart(dto *SsoStartDto) types.Output {
 	return response.Success(map[string]any{
 		"url": sso.AuthURL(d, conn.OIDCClientID, ssoRedirectURI(), state, nonce, challenge, st.Email),
 	}, title, "ok", nil)
+}
+
+// samlStart is SsoStart for a SAML connection: the url is the IdP's sign-on
+// service with an AuthnRequest; RelayState is the state key.
+func (c *AuthController) samlStart(ctx context.Context, conn *sso.Connection, dto *SsoStartDto, title string) types.Output {
+	idp, err := c.samlIdP(ctx, conn)
+	if err != nil {
+		return response.Error(title, "the company's identity provider is not reachable", 502)
+	}
+	state, err := sso.Random(24)
+	if err != nil {
+		return response.InternalServerError(title, "could not start sign-in")
+	}
+	redirect, requestID, err := c.ssoClient.SAMLAuthnRequest(samlSP(conn.WorkspaceID), idp, state)
+	if err != nil {
+		return response.InternalServerError(title, "could not start sign-in")
+	}
+	st := ssoState{ConnectionID: conn.ID, RequestID: requestID, ClientID: dto.ClientId,
+		Email: strings.ToLower(strings.TrimSpace(dto.Email)), ReturnTo: safeReturnTo(dto.ReturnTo)}
+	b, _ := json.Marshal(st)
+	c.cache.Set(ssoStatePrefix+state, string(b), ssoStateTTL)
+	return response.Success(map[string]any{"url": redirect}, title, "ok", nil)
 }
 
 // ssoFail sends the browser back to the app with a short error code. No
@@ -213,6 +299,81 @@ func (c *AuthController) SsoCallback(dto *SsoCallbackDto) types.Output {
 	if err != nil {
 		return ssoFail(st.ReturnTo, "invalid_token")
 	}
+	return c.ssoAdmit(ctx, conn, st, claims)
+}
+
+// SsoSamlAcs is where a SAML IdP posts its Response (the assertion consumer
+// service). Only answers to a sign-in this server started are taken: the
+// RelayState names the state SsoStart kept, which holds the AuthnRequest id
+// the response must answer. A response with no state (IdP-initiated) is
+// refused.
+func (c *AuthController) SsoSamlAcs(dto *SsoSamlAcsDto) types.Output {
+	if !c.ssoReady() || dto.RelayState == "" {
+		return ssoFail("", "invalid_request")
+	}
+	raw, ok := c.cache.Get(ssoStatePrefix + dto.RelayState)
+	c.cache.Del(ssoStatePrefix + dto.RelayState) // single use, even on failure
+	if !ok {
+		return ssoFail("", "expired")
+	}
+	var st ssoState
+	if json.Unmarshal([]byte(raw), &st) != nil || st.RequestID == "" {
+		return ssoFail("", "invalid_request")
+	}
+	ctx := context.Background()
+	conn, err := c.ssoStore.ByID(ctx, st.ConnectionID)
+	if err != nil || !conn.SAML() || conn.WorkspaceID != dto.Workspace {
+		return ssoFail(st.ReturnTo, "invalid_request")
+	}
+	if dto.SAMLResponse == "" {
+		return ssoFail(st.ReturnTo, "denied")
+	}
+	idp, err := c.samlIdP(ctx, conn)
+	if err != nil {
+		return ssoFail(st.ReturnTo, "misconfigured")
+	}
+	claims, err := c.ssoClient.SAMLVerify(samlSP(conn.WorkspaceID), idp, dto.SAMLResponse, st.RequestID, c.ssoStore.ReplayCache(conn.ID))
+	if errors.Is(err, sso.ErrSAMLDenied) {
+		return ssoFail(st.ReturnTo, "denied")
+	}
+	if err != nil {
+		// The reason is for the company's admin, in the logs.
+		slog.Warn("sso: SAML response refused", "workspace", conn.WorkspaceID, "reason", err.Error())
+		return ssoFail(st.ReturnTo, "invalid_token")
+	}
+	return c.ssoAdmit(ctx, conn, st, claims)
+}
+
+// SsoSamlMetadata is a workspace's service-provider metadata, for the
+// company's IdP admin (it holds the entity id and ACS; nothing secret).
+func (c *AuthController) SsoSamlMetadata(dto *SsoSamlMetadataDto) types.Output {
+	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if !c.ssoReady() || dto.Workspace == "" || len(dto.Workspace) > 64 {
+		return response.NotFound(title, "no such workspace")
+	}
+	if ws, _ := c.workspaceEntity.First(`"id" = ?`, dto.Workspace); ws == nil {
+		return response.NotFound(title, "no such workspace")
+	}
+	md, err := c.ssoClient.SAMLMetadata(samlSP(dto.Workspace))
+	if err != nil {
+		return response.InternalServerError(title, "could not build the metadata")
+	}
+	return xmlOutput(md)
+}
+
+// xmlOutput serves XML as it is.
+type xmlOutput []byte
+
+func (o xmlOutput) Data() any                  { return []byte(o) }
+func (o xmlOutput) Code() int                  { return 200 }
+func (o xmlOutput) Headers() map[string]string { return map[string]string{"Cache-Control": "no-cache"} }
+func (o xmlOutput) ContentType() string        { return "application/samlmetadata+xml" }
+
+// ssoAdmit is the end of every protocol's sign-in: the verified claims must be
+// an address of a domain the company claimed, invited to it; the person is
+// found or made, joins, and the browser goes back to the app with a one-time
+// code.
+func (c *AuthController) ssoAdmit(ctx context.Context, conn *sso.Connection, st ssoState, claims *sso.Claims) types.Output {
 	// The provider must vouch for the address, and it must be the one this
 	// company owns: a token for someone@other.example is not this company's.
 	if !claims.EmailVerified {
@@ -332,12 +493,23 @@ func (c *AuthController) ssoAdmin(ntx ntxctx.NTXContext) bool {
 	return *link.Status == "owner" || *link.Status == "admin"
 }
 
+// spView is what the console shows an admin to register with an IdP: the
+// OpenID redirect URI and the workspace's SAML service provider.
+func spView(workspaceID string) map[string]any {
+	sp := samlSP(workspaceID)
+	return map[string]any{"redirectUri": ssoRedirectURI(), "spEntityId": sp.EntityID, "acsUrl": sp.ACSURL, "spMetadataUrl": sp.EntityID}
+}
+
 func connectionView(conn *sso.Connection) map[string]any {
-	return map[string]any{
-		"issuer": conn.Issuer, "clientId": conn.OIDCClientID, "domains": conn.Domains(),
+	v := spView(conn.WorkspaceID)
+	for k, x := range map[string]any{
+		"protocol": conn.Protocol, "issuer": conn.Issuer, "clientId": conn.OIDCClientID, "domains": conn.Domains(),
 		"enforce": conn.Enforce, "hasSecret": conn.SecretSealed != "", "updatedAt": conn.UpdatedAt,
-		"redirectUri": ssoRedirectURI(),
+		"metadataUrl": conn.SAMLMetadataURL,
+	} {
+		v[k] = x
 	}
+	return v
 }
 
 // SsoGetConnection returns the workspace's SSO settings (never the secret).
@@ -353,7 +525,9 @@ func (c *AuthController) SsoGetConnection(dto *SsoWorkspaceDto) types.Output {
 	if err != nil {
 		// Not configured is a normal state; still tell the console the callback
 		// URL to register with the provider.
-		return response.Success(map[string]any{"configured": false, "redirectUri": ssoRedirectURI()}, title, "ok", nil)
+		v := spView(dto.Ctx.WorkspaceID)
+		v["configured"] = false
+		return response.Success(v, title, "ok", nil)
 	}
 	v := connectionView(conn)
 	v["configured"] = true
@@ -362,8 +536,8 @@ func (c *AuthController) SsoGetConnection(dto *SsoWorkspaceDto) types.Output {
 
 // SsoPutConnection creates or replaces the workspace's SSO settings. Every
 // claimed domain must be one the workspace has verified; the provider must be
-// reachable and speak OpenID Connect, so a typo is caught here rather than at
-// the first sign-in.
+// reachable and speak OpenID Connect, or its SAML metadata must be usable, so
+// a typo is caught here rather than at the first sign-in.
 func (c *AuthController) SsoPutConnection(dto *SsoConnectionDto) types.Output {
 	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
 	if !c.ssoReady() {
@@ -382,9 +556,46 @@ func (c *AuthController) SsoPutConnection(dto *SsoConnectionDto) types.Output {
 		return response.Error(title, "single sign-on is not configured on this server", 503)
 	}
 
-	issuer := strings.TrimRight(strings.TrimSpace(dto.Issuer), "/")
-	if _, err := c.ssoClient.Discover(ctx, issuer); err != nil {
-		return response.BadRequest(title, "the identity provider could not be reached, or is not an OpenID Connect provider")
+	protocol := strings.ToLower(strings.TrimSpace(dto.Protocol))
+	if protocol == "" {
+		protocol = sso.ProtocolOIDC
+	}
+	prev, _ := c.ssoStore.ForWorkspace(ctx, dto.Ctx.WorkspaceID)
+	conn := &sso.Connection{WorkspaceID: dto.Ctx.WorkspaceID, Protocol: protocol, Enforce: dto.Enforce}
+	switch protocol {
+	case sso.ProtocolOIDC:
+		issuer := strings.TrimRight(strings.TrimSpace(dto.Issuer), "/")
+		conn.Issuer, conn.OIDCClientID = issuer, strings.TrimSpace(dto.OIDCClientID)
+		if issuer == "" || conn.OIDCClientID == "" {
+			return response.BadRequest(title, "the issuer URL and client ID are required")
+		}
+		if _, err := c.ssoClient.Discover(ctx, issuer); err != nil {
+			return response.BadRequest(title, "the identity provider could not be reached, or is not an OpenID Connect provider")
+		}
+	case sso.ProtocolSAML:
+		var raw []byte
+		switch {
+		case strings.TrimSpace(dto.MetadataURL) != "":
+			conn.SAMLMetadataURL = strings.TrimSpace(dto.MetadataURL)
+			b, err := c.ssoClient.FetchSAMLMetadata(ctx, conn.SAMLMetadataURL, true)
+			if err != nil {
+				return response.BadRequest(title, "the metadata URL could not be read (it must be https and public)")
+			}
+			raw = b
+		case strings.TrimSpace(dto.MetadataXML) != "":
+			raw = []byte(dto.MetadataXML)
+		case prev != nil && prev.SAML():
+			conn.SAMLMetadataURL, raw = prev.SAMLMetadataURL, []byte(prev.SAMLMetadata)
+		default:
+			return response.BadRequest(title, "give the identity provider's SAML metadata URL or XML")
+		}
+		idp, err := c.ssoClient.ParseSAMLMetadata(raw)
+		if err != nil {
+			return response.BadRequest(title, "the SAML metadata is not usable: it needs the identity provider's entity ID, a signing certificate and an HTTP-Redirect sign-on URL")
+		}
+		conn.Issuer, conn.SAMLMetadata = idp.EntityID, string(raw)
+	default:
+		return response.BadRequest(title, "protocol must be oidc or saml")
 	}
 	var domains []string
 	seen := map[string]bool{}
@@ -416,20 +627,21 @@ func (c *AuthController) SsoPutConnection(dto *SsoConnectionDto) types.Output {
 		}
 	}
 
-	conn := &sso.Connection{WorkspaceID: dto.Ctx.WorkspaceID, Issuer: issuer, OIDCClientID: strings.TrimSpace(dto.OIDCClientID), Enforce: dto.Enforce}
 	db, _ := json.Marshal(domains)
 	conn.DomainsJSON = db
-	if dto.ClientSecret != "" {
-		sealed, err := tokenstore.SealProviderToken(dto.ClientSecret, key)
-		if err != nil {
-			return response.InternalServerError(title, "could not store the secret")
+	if protocol == sso.ProtocolOIDC {
+		if dto.ClientSecret != "" {
+			sealed, err := tokenstore.SealProviderToken(dto.ClientSecret, key)
+			if err != nil {
+				return response.InternalServerError(title, "could not store the secret")
+			}
+			conn.SecretSealed = sealed
+		} else if prev != nil && !prev.SAML() {
+			conn.SecretSealed = prev.SecretSealed
 		}
-		conn.SecretSealed = sealed
-	} else if prev, err := c.ssoStore.ForWorkspace(ctx, dto.Ctx.WorkspaceID); err == nil {
-		conn.SecretSealed = prev.SecretSealed
-	}
-	if conn.SecretSealed == "" {
-		return response.BadRequest(title, "a client secret is required")
+		if conn.SecretSealed == "" {
+			return response.BadRequest(title, "a client secret is required")
+		}
 	}
 	if err := c.ssoStore.Save(ctx, conn); err != nil {
 		return response.InternalServerError(title, "could not save")

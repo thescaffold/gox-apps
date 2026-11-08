@@ -1,9 +1,10 @@
 // Package sso is enterprise single sign-on for identity: OpenID Connect
-// (authorization-code flow with PKCE) against a company's own identity
-// provider. It is per-workspace configuration: a workspace registers its IdP
-// and the email domains it owns; people with those emails sign in through it.
+// (authorization-code flow with PKCE) or SAML 2.0 (saml.go) against a
+// company's own identity provider. It is per-workspace configuration: a
+// workspace registers its IdP and the email domains it owns; people with
+// those emails sign in through it.
 //
-// This file is the protocol client. It has no knowledge of identity's users
+// This file is the OpenID Connect client. It has no knowledge of identity's users
 // or tokens, so it can be tested against any OIDC server.
 package sso
 
@@ -62,6 +63,7 @@ type Client struct {
 	mu   sync.Mutex
 	disc map[string]discEntry
 	jwks map[string]jwksEntry
+	meta map[string]metaEntry // SAML metadata by URL (saml.go)
 }
 
 type discEntry struct {
@@ -80,7 +82,7 @@ const cacheTTL = time.Hour
 // unless allowPrivate is set (issuer URLs are supplied by workspace admins,
 // so they are untrusted input: SSRF).
 func New(allowPrivate bool) *Client {
-	c := &Client{AllowPrivate: allowPrivate, disc: map[string]discEntry{}, jwks: map[string]jwksEntry{}}
+	c := &Client{AllowPrivate: allowPrivate, disc: map[string]discEntry{}, jwks: map[string]jwksEntry{}, meta: map[string]metaEntry{}}
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	c.http = &http.Client{
 		Timeout: 10 * time.Second,

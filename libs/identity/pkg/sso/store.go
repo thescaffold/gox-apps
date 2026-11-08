@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crewjam/saml"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -36,21 +37,31 @@ func SetDirectory(d Directory) { directory = d }
 // CurrentDirectory returns the registered Directory, or nil.
 func CurrentDirectory() Directory { return directory }
 
-// Connection is one workspace's identity-provider registration.
+// Connection is one workspace's identity-provider registration. Protocol is
+// ProtocolOIDC (Issuer, client id and sealed secret) or ProtocolSAML (Issuer
+// is the IdP's entity id; the IdP metadata is kept, and its URL when it came
+// from one).
 type Connection struct {
 	ID           string          `gorm:"column:id;primaryKey" json:"id"`
 	WorkspaceID  string          `gorm:"column:workspace_id" json:"workspaceId"`
+	Protocol     string          `gorm:"column:protocol" json:"protocol"`
 	Issuer       string          `gorm:"column:issuer" json:"issuer"`
 	OIDCClientID string          `gorm:"column:oidc_client_id" json:"clientId"`
 	SecretSealed string          `gorm:"column:client_secret_sealed" json:"-"`
 	DomainsJSON  json.RawMessage `gorm:"column:domains;type:jsonb" json:"-"`
 	Enforce      bool            `gorm:"column:enforce" json:"enforce"`
-	CreatedAt    time.Time       `gorm:"column:created_at" json:"createdAt"`
-	UpdatedAt    time.Time       `gorm:"column:updated_at" json:"updatedAt"`
+	// SAML only.
+	SAMLMetadataURL string    `gorm:"column:saml_metadata_url" json:"metadataUrl"`
+	SAMLMetadata    string    `gorm:"column:saml_metadata" json:"-"`
+	CreatedAt       time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // TableName is the connections table.
 func (Connection) TableName() string { return "IdentitySsoConnections" }
+
+// SAML reports whether the connection speaks SAML 2.0.
+func (c Connection) SAML() bool { return c.Protocol == ProtocolSAML }
 
 // Domains decodes the claimed email domains.
 func (c Connection) Domains() []string {
@@ -120,6 +131,9 @@ func (s *Store) Save(ctx context.Context, c *Connection) error {
 	var existing Connection
 	err := s.DB.WithContext(ctx).Where("workspace_id = ?", c.WorkspaceID).Take(&existing).Error
 	now := time.Now().UTC()
+	if c.Protocol == "" {
+		c.Protocol = ProtocolOIDC
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.ID, c.CreatedAt, c.UpdatedAt = uuid.NewString(), now, now
 		return s.DB.WithContext(ctx).Create(c).Error
@@ -134,6 +148,41 @@ func (s *Store) Save(ctx context.Context, c *Connection) error {
 // Delete removes a workspace's connection (and with it any enforcement).
 func (s *Store) Delete(ctx context.Context, workspaceID string) error {
 	return s.DB.WithContext(ctx).Where("workspace_id = ?", workspaceID).Delete(&Connection{}).Error
+}
+
+// ReplayCache records the SAML assertions a connection accepts, so that each
+// is accepted once (crewjam/saml's AssertionReplayCache). It is in Postgres,
+// so every server behind the ACS shares it.
+func (s *Store) ReplayCache(connectionID string) saml.AssertionReplayCache {
+	return &samlReplay{s: s, conn: connectionID}
+}
+
+type samlReplay struct {
+	s    *Store
+	conn string
+}
+
+func (r *samlReplay) Consume(assertionID string, expiresAt time.Time) error {
+	now := time.Now().UTC()
+	if r.s.Now != nil {
+		now = r.s.Now().UTC()
+	}
+	db := r.s.DB
+	// Records past their expiry can go: the assertion is refused by its
+	// times by then. Keep a margin for clock skew.
+	db.Exec(`DELETE FROM "IdentitySsoSamlAssertions" WHERE "expires_at" < ?`, now.Add(-time.Hour))
+	if expiresAt.Before(now.Add(SAMLSkew)) {
+		expiresAt = now.Add(SAMLSkew)
+	}
+	res := db.Exec(`INSERT INTO "IdentitySsoSamlAssertions" ("connection_id", "assertion_id", "expires_at", "created_at") VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+		r.conn, assertionID, expiresAt.UTC(), now)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return saml.ErrAssertionReplayed
+	}
+	return nil
 }
 
 // EmailDomain returns the lower-cased domain of an address, or "".

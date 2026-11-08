@@ -74,6 +74,8 @@ var Migrations = []sql.Migration{
 	&migrations.WorkspaceHandleRegion{},
 	// PLT-03: invitations by email and link (pkg/invitation).
 	&migrations.CreateIdentityInvitations{},
+	// U-S21: SAML 2.0 connections and their replay record (pkg/sso/saml.go).
+	&migrations.SsoSaml{},
 }
 
 type AppModule struct{}

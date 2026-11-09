@@ -23,6 +23,7 @@ import (
 	identitytoken "github.com/thescaffold/gox-apps/libs/identity/app/token"
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
 	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
+	identitypushtoken "github.com/thescaffold/gox-apps/libs/identity/app/pushtoken"
 	identityuserkey "github.com/thescaffold/gox-apps/libs/identity/app/userkey"
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	"github.com/thescaffold/gox-apps/libs/identity/migrations"
@@ -76,6 +77,8 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityInvitations{},
 	// U-S21: SAML 2.0 connections and their replay record (pkg/sso/saml.go).
 	&migrations.SsoSaml{},
+	// U5: an app install's push token (pkg/pushtoken).
+	&migrations.CreateIdentityPushTokens{},
 }
 
 type AppModule struct{}
@@ -94,6 +97,7 @@ func (m *AppModule) Imports() []types.Module {
 		&identityworkspace.WorkspaceModule{},
 		&identityapikey.ApiKeyModule{},
 		&identityuserkey.UserKeyModule{},
+		&identitypushtoken.PushTokenModule{},
 		&identityinvitation.InvitationModule{},
 		&identityorg.OrgModule{},
 		&identityucw.UserClientWorkspaceModule{},

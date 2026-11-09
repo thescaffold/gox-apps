@@ -111,6 +111,9 @@ type LogoutDto struct {
 	// RefreshToken ends that one session and nothing else: a native app has no
 	// device cookie, and signing out of one phone must not sign out the others.
 	RefreshToken string `json:"refreshToken"`
+	// PushToken, with RefreshToken, also deregisters this install's push token
+	// (U5), so the signed-out phone gets no more pushes.
+	PushToken string `json:"pushToken"`
 }
 
 // UserClientsDto carries GET /user-clients: the signed-in user's apps.

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/pushtoken"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	"os"
 	"sort"
@@ -267,8 +268,12 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	// One session: retire this refresh token. Holding the token is the proof,
 	// so no bearer is needed (the access token may be the thing that expired).
 	if dto.RefreshToken != "" {
+		claims, _ := c.auth.ValidateToken(dto.RefreshToken)
 		if err := c.auth.RevokeRefreshToken(dto.RefreshToken); err != nil {
 			return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.logout.error.unauthorized", nil, pref))
+		}
+		if sub, _ := claims["sub"].(string); sub != "" && dto.PushToken != "" && c.db != nil && c.db.DB != nil {
+			_, _ = pushtoken.New(c.db.DB).Deregister(context.Background(), sub, dto.PushToken)
 		}
 		return response.Success(map[string]any{"deviceId": ""}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
 	}
@@ -297,6 +302,17 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	if c.deviceSessionEntity != nil {
 		if _, err := c.deviceSessionEntity.Delete(where, args...); err != nil {
 			return response.InternalServerError(title, err.Error())
+		}
+	}
+	// A signed-out device stops getting pushes (U5): its tokens go with it, and
+	// signing out everywhere takes every token of the person.
+	if c.db != nil && c.db.DB != nil {
+		push := pushtoken.New(c.db.DB)
+		switch {
+		case device != "":
+			_, _ = push.DeregisterDevice(context.Background(), dto.UserId, device)
+		case dto.Ctx.UserID != "" && (dto.UserId == "" || dto.UserId == dto.Ctx.UserID):
+			_, _ = push.DeregisterUser(context.Background(), dto.Ctx.UserID)
 		}
 	}
 	// "Sign out everywhere" also ends the access tokens already handed out

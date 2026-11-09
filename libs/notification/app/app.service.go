@@ -248,8 +248,27 @@ func (s *AppService) persist(p map[string]any) (*log.Log, error) {
 			l.Channels = b
 		}
 	}
-	if v, ok := p["data"]; ok && v != nil {
-		if b, err := json.Marshal(v); err == nil {
+	data := p["data"]
+	// A top-level link (where the in-app message opens) travels in data.link,
+	// which templates and the web channel read.
+	if link, ok := p["link"].(string); ok && link != "" {
+		d := map[string]any{}
+		if m, ok := data.(map[string]any); ok {
+			for k, v := range m {
+				d[k] = v
+			}
+		} else if data != nil {
+			if b, err := json.Marshal(data); err == nil {
+				_ = json.Unmarshal(b, &d)
+			}
+		}
+		if _, has := d["link"]; !has {
+			d["link"] = link
+		}
+		data = d
+	}
+	if data != nil {
+		if b, err := json.Marshal(data); err == nil {
 			l.Data = b
 		}
 	}

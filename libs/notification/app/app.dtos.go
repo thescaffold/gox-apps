@@ -64,3 +64,22 @@ type CaptureDto struct {
 	To    string `query:"to"`
 	Limit string `query:"limit"`
 }
+
+// InboxDto carries the query params for GET /inbox.
+type InboxDto struct {
+	Cursor string            `query:"cursor"`
+	Limit  int               `query:"limit"`
+	Unread bool              `query:"unread"`
+	Ctx    ntxctx.NTXContext `context:"ntx"`
+}
+
+// InboxCountDto carries the caller for GET /inbox/unread-count and POST /inbox/read.
+type InboxCountDto struct {
+	Ctx ntxctx.NTXContext `context:"ntx"`
+}
+
+// InboxReadDto carries the message id for POST /inbox/:id/read.
+type InboxReadDto struct {
+	ID  string            `path:"id"`
+	Ctx ntxctx.NTXContext `context:"ntx"`
+}

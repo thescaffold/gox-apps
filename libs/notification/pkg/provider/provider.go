@@ -147,7 +147,7 @@ func (s *ProviderService) Send(log *notificationlog.Log) {
 				Text:    rendered,
 			})
 		case "web":
-			ok = s.saveWebMessage(log, to)
+			ok = s.saveWebMessage(log, to, rendered)
 		case "mobile":
 			ok = false
 		}
@@ -241,7 +241,9 @@ func (s *ProviderService) smsOne(name string, msg SMSMessage) bool {
 	}
 }
 
-func (s *ProviderService) saveWebMessage(log *notificationlog.Log, to string) bool {
+// saveWebMessage leaves the in-app message: the rendered web template as its
+// body (message, a JSON string) and data.link as its link.
+func (s *ProviderService) saveWebMessage(log *notificationlog.Log, to, rendered string) bool {
 	// A retry of the same notification must not show the person a second copy.
 	if prior, err := s.messageEntity.First(`"reference" = ? AND "user_id" = ?`, log.Reference, derefStr(log.UserId)); err == nil && prior != nil {
 		return true
@@ -268,6 +270,19 @@ func (s *ProviderService) saveWebMessage(log *notificationlog.Log, to string) bo
 	// minted to-key-timestamp) and data = log.data.
 	m.Reference = &log.Reference
 	m.Data = log.Data
+	if rendered != "" {
+		if b, err := json.Marshal(rendered); err == nil {
+			m.Message = b
+		}
+	}
+	if len(log.Data) > 0 {
+		var d map[string]any
+		if json.Unmarshal(log.Data, &d) == nil {
+			if l, ok := d["link"].(string); ok && l != "" {
+				m.Link = &l
+			}
+		}
+	}
 	return s.messageEntity.Insert(m) == nil
 }
 

@@ -28,6 +28,9 @@ type Message struct {
 	Scope       *string         `gorm:"column:scope;type:varchar(255)"        json:"scope,omitempty"`
 	Position    *string         `gorm:"column:position;type:varchar(255)"     json:"position,omitempty"`
 	Status      *string         `gorm:"column:status;type:varchar(255)"       json:"status,omitempty"`
+	// Link is where the message takes the person (a deep link or URL): the
+	// payload's link, else data.link. Added by AddLinkToNotificationMessages.
+	Link *string `gorm:"column:link;type:varchar(2048)"         json:"link,omitempty"`
 }
 
 func (Message) TableName() string { return "NotificationMessages" }
@@ -37,5 +40,5 @@ type MessageEntity struct {
 }
 
 func (e *MessageEntity) OnRegister() {
-	e.Hydrate("NotificationMessages", []string{"reference", "user_id", "client_id", "workspace_id", "key", "subject", "channel"}, nil, nil, nil, nil, nil, "created_at desc")
+	e.Hydrate("NotificationMessages", []string{"reference", "user_id", "client_id", "workspace_id", "key", "subject", "channel"}, nil, nil, nil, nil, nil, `"created_at" desc, "id" desc`)
 }

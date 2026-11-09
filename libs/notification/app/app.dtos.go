@@ -80,6 +80,6 @@ type InboxCountDto struct {
 
 // InboxReadDto carries the message id for POST /inbox/:id/read.
 type InboxReadDto struct {
-	ID  string            `path:"id"`
+	ID  string            `param:"id"`
 	Ctx ntxctx.NTXContext `context:"ntx"`
 }

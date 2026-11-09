@@ -9,21 +9,21 @@ type HelloDto struct {
 
 // FilterByKeyDto mirrors @Get('filter/:key').
 type FilterByKeyDto struct {
-	Key      string            `path:"key"`
+	Key      string            `param:"key"`
 	ParentId *string           `query:"parentId"`
 	Ctx      ntxctx.NTXContext `context:"ntx"`
 }
 
 // FindByCodeDto mirrors @Get('code/:code').
 type FindByCodeDto struct {
-	Code     string            `path:"code"`
+	Code     string            `param:"code"`
 	ParentId *string           `query:"parentId"`
 	Ctx      ntxctx.NTXContext `context:"ntx"`
 }
 
 // FindByValueDto mirrors @Get('value/:value').
 type FindByValueDto struct {
-	Value    string            `path:"value"`
+	Value    string            `param:"value"`
 	ParentId *string           `query:"parentId"`
 	Ctx      ntxctx.NTXContext `context:"ntx"`
 }

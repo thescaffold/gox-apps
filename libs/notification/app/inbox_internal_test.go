@@ -3,6 +3,8 @@ package app
 import (
 	"testing"
 
+	"github.com/awesome-goose/goose/io/input"
+	goosetest "github.com/awesome-goose/goose/testing"
 	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 )
 
@@ -17,5 +19,17 @@ func TestInboxGuardIsSessionThenClaims(t *testing.T) {
 	}
 	if _, ok := g[1].(*coreauth.FromClaims); !ok {
 		t.Fatalf("second middleware is %T, want FromClaims", g[1])
+	}
+}
+
+func TestInboxReadDtoBindsThePathID(t *testing.T) {
+	ctx := goosetest.NewMockContext()
+	ctx.MockRequest().WithParams(map[string]string{"id": "m1"})
+	var dto InboxReadDto
+	if err := input.NewInput(ctx).Populate(&dto); err != nil {
+		t.Fatal(err)
+	}
+	if dto.ID != "m1" {
+		t.Fatalf("id = %q", dto.ID)
 	}
 }

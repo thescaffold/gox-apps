@@ -331,13 +331,10 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 		return response.Unauthorized(title, err.Error())
 	}
 
-	// the new account is signed in on this browser: open its device session too
-	deviceId := ""
-	if ws != nil {
-		var sessionId string
-		deviceId, sessionId = c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
-		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
-	}
+	// the new account is signed in on this browser: open its device session too,
+	// with or without a workspace (one created later is handed out from it)
+	deviceId, sessionId := c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
+	c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 	return withDeviceCookie(response.Success(c.sessionPayload(newUser, entry.ClientId, map[string]any{
 		"user":         maskUser(newUser),
 		"accessToken":  access,
@@ -397,12 +394,11 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
 	}
 
-	deviceId := ""
-	if len(workspaces) > 0 {
-		var sessionId string
-		deviceId, sessionId = c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
-		c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
-	}
+	// A device session for everyone signed in, with or without a workspace: it is
+	// what the browser re-mints its token from (GET sessions), and it hands out the
+	// workspace's token once the person creates or joins one.
+	deviceId, sessionId := c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 
 	return withDeviceCookie(response.Success(c.sessionPayload(u, dto.ClientId, map[string]any{
 		"user":         maskUser(u),

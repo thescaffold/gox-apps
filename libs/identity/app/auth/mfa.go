@@ -176,12 +176,11 @@ func (c *AuthController) MfaVerify(dto *MfaVerifyDto) types.Output {
 	if done.Method == mfa.MethodRecovery {
 		mfa.Emit(context.Background(), mfa.Event{Action: "mfa.recovery.use", UserID: u.Id, WorkspaceID: workspaceID})
 	}
-	deviceID := ""
-	if len(workspaces) > 0 {
-		var sessionID string
-		deviceID, sessionID = c.bootstrapDevice(u.Id, done.ClientID, done.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
-		c.logDeviceLogin(deviceID, sessionID, dto.Ctx)
-	}
+	// A device session for everyone signed in, with or without a workspace: it is
+	// what the browser re-mints its token from (GET sessions), and it hands out the
+	// workspace's token once the person creates or joins one.
+	deviceID, sessionID := c.bootstrapDevice(u.Id, done.ClientID, done.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	c.logDeviceLogin(deviceID, sessionID, dto.Ctx)
 	return withDeviceCookie(response.Success(c.sessionPayload(u, done.ClientID, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,

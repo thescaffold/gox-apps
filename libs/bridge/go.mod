@@ -6,7 +6,7 @@ require github.com/awesome-goose/goose v0.0.33
 
 require github.com/thescaffold/gox-apps/libs/statics v0.0.1
 
-require github.com/thescaffold/gox-apps/libs/capital v0.0.1
+require github.com/thescaffold/gox-apps/libs/capital v0.0.9
 
 require github.com/thescaffold/gox-packages/libs/core v0.0.25
 

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"github.com/awesome-goose/goose/types"
 	"github.com/thescaffold/gox-apps/libs/polylog/pkg/pipeline"
 	"github.com/thescaffold/gox-packages/libs/core/i18n"
@@ -74,9 +75,9 @@ func (c *AppController) IngestBatch(dto *IngestBatchDto) types.Output {
 func (c *AppController) IngestSourceAlt(dto *IngestSourceParamDto) types.Output {
 	pref := dto.NTX.Preference
 	title := c.lang.Translate("apps.polylog.app.title", nil, pref)
-	ev, err := c.appService.IngestSourceAlt(dto.Payload, dto.ID, dto.Properties, dto.NTX)
+	ev, err := c.appService.IngestSourceAltFrom(dto.Payload, dto.Headers, dto.ID, dto.Properties, dto.NTX)
 	if err != nil {
-		return response.InternalServerError(title, err.Error())
+		return ingestFailure(title, err)
 	}
 	return response.Success(ev,
 		title,
@@ -88,9 +89,9 @@ func (c *AppController) IngestSourceAlt(dto *IngestSourceParamDto) types.Output 
 func (c *AppController) IngestSource(dto *IngestSourceParamDto) types.Output {
 	pref := dto.NTX.Preference
 	title := c.lang.Translate("apps.polylog.app.title", nil, pref)
-	ev, err := c.appService.IngestSource(dto.Payload, dto.ID, dto.Properties, dto.NTX)
+	ev, err := c.appService.IngestSourceFrom(dto.Payload, dto.Headers, dto.ID, dto.Properties, dto.NTX)
 	if err != nil {
-		return response.InternalServerError(title, err.Error())
+		return ingestFailure(title, err)
 	}
 	return response.Success(ev,
 		title,
@@ -102,9 +103,9 @@ func (c *AppController) IngestSource(dto *IngestSourceParamDto) types.Output {
 func (c *AppController) IngestChannel(dto *IngestSourceParamDto) types.Output {
 	pref := dto.NTX.Preference
 	title := c.lang.Translate("apps.polylog.app.title", nil, pref)
-	ev, err := c.appService.IngestChannel(dto.Payload, dto.ID, dto.Properties, dto.NTX)
+	ev, err := c.appService.IngestChannelFrom(dto.Payload, dto.Headers, dto.ID, dto.Properties, dto.NTX)
 	if err != nil {
-		return response.InternalServerError(title, err.Error())
+		return ingestFailure(title, err)
 	}
 	return response.Success(ev,
 		title,
@@ -183,4 +184,13 @@ func (c *AppController) UpsertRootSink(dto *UpsertRootSinkDto) types.Output {
 		c.lang.Translate("apps.polylog.app.title", nil, pref),
 		c.lang.Translate("apps.polylog.app.post.root-sink.success", nil, pref),
 		nil)
+}
+
+// ingestFailure answers a refused or failed ingest: 401 signature_invalid for
+// a webhook whose signature does not verify (nothing is stored).
+func ingestFailure(title string, err error) types.Output {
+	if errors.Is(err, ErrSignature) {
+		return response.ErrorCode(title, "The webhook signature did not verify.", 401, "signature_invalid")
+	}
+	return response.InternalServerError(title, err.Error())
 }

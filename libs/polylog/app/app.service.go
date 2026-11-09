@@ -77,40 +77,36 @@ func (s *AppService) Ingest(item pipeline.Item, ctx ntxctx.NTXContext) (any, err
 	return s.pipelineService.Ingest(item, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
 }
 
-// IngestSourceAlt is `POST /ingest/:id` — the :id is the source id; body+queries are merged.
+// IngestSourceAlt is `POST /ingest/:id` — the :id is the source id; the raw
+// body is the payload and ?type= / ?category= describe it.
 func (s *AppService) IngestSourceAlt(body json.RawMessage, sourceID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
-	item := pipeline.Item{Source: sourceID, Payload: body}
-	if t, ok := properties["type"]; ok {
-		item.Type = t
-	}
-	if c, ok := properties["category"]; ok {
-		item.Category = c
-	}
-	return s.pipelineService.Ingest(item, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
+	return s.IngestSourceAltFrom(body, nil, sourceID, properties, ctx)
+}
+
+// IngestSourceAltFrom is IngestSourceAlt with the request's headers, so a
+// source's signature rule can be checked.
+func (s *AppService) IngestSourceAltFrom(body json.RawMessage, headers map[string]string, sourceID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
+	return s.ingestWebhook(pipeline.Item{Source: sourceID}, body, headers, properties, ctx)
 }
 
 // IngestSource is `POST /ingest/source/:id`. TS body sets entityName="source".
 func (s *AppService) IngestSource(body json.RawMessage, sourceID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
-	item := pipeline.Item{Source: sourceID, EntityName: "source", Payload: body}
-	if t, ok := properties["type"]; ok {
-		item.Type = t
-	}
-	if c, ok := properties["category"]; ok {
-		item.Category = c
-	}
-	return s.pipelineService.Ingest(item, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
+	return s.IngestSourceFrom(body, nil, sourceID, properties, ctx)
+}
+
+// IngestSourceFrom is IngestSource with the request's headers.
+func (s *AppService) IngestSourceFrom(body json.RawMessage, headers map[string]string, sourceID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
+	return s.ingestWebhook(pipeline.Item{Source: sourceID, EntityName: "source"}, body, headers, properties, ctx)
 }
 
 // IngestChannel is `POST /ingest/channel/:id`. TS body sets entityName="channel".
 func (s *AppService) IngestChannel(body json.RawMessage, channelID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
-	item := pipeline.Item{Source: channelID, EntityName: "channel", Payload: body}
-	if t, ok := properties["type"]; ok {
-		item.Type = t
-	}
-	if c, ok := properties["category"]; ok {
-		item.Category = c
-	}
-	return s.pipelineService.Ingest(item, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
+	return s.IngestChannelFrom(body, nil, channelID, properties, ctx)
+}
+
+// IngestChannelFrom is IngestChannel with the request's headers.
+func (s *AppService) IngestChannelFrom(body json.RawMessage, headers map[string]string, channelID string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
+	return s.ingestWebhook(pipeline.Item{Source: channelID, EntityName: "channel"}, body, headers, properties, ctx)
 }
 
 // SetConfig mirrors TS AppService.setConfig — a 3-way upsert across

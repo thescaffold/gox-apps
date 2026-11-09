@@ -32,12 +32,17 @@ type IngestBatchDto struct {
 }
 
 // IngestSourceParamDto carries the :id path param + arbitrary query map for
-// /ingest/:id, /ingest/source/:id and /ingest/channel/:id.
+// /ingest/:id, /ingest/source/:id and /ingest/channel/:id, with the body
+// exactly as sent and every header (PLAN U6: a provider's webhook is
+// verified over its raw bytes and signature header). Until goose had
+// raw:"body" and headers:"all", none of these were bound and every event was
+// stored empty, untyped and never dispatched.
 type IngestSourceParamDto struct {
 	NTX        ntxctx.NTXContext `context:"ntx"`
 	ID         string            `param:"id"`
-	Properties map[string]string `query:"-"`
-	Payload    json.RawMessage   `json:"-"`
+	Properties map[string]string `queries:"all"`
+	Payload    json.RawMessage   `json:"-" raw:"body"`
+	Headers    map[string]string `headers:"all"`
 }
 
 // SourceTypeRef mirrors TS SourceTypeDto — nested {key} reference.

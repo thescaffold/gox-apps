@@ -94,3 +94,9 @@ func (s *AppService) RegisterSimpleJob(queueName, jobName string, fn func(job *g
 func (s *AppService) RegisterContextJob(queueName, jobName string, fn func(ctx context.Context, job *goqueues.QueueJob) (any, error)) {
 	s.RegisterJob(goqueues.NewHandler(queueName, jobName, fn))
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level queueAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { queueAppSvc = s }

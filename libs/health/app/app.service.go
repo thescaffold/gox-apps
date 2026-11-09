@@ -66,3 +66,9 @@ func (s *AppService) Housekeep() error {
 	}
 	return nil
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level healthSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { healthSvc = s }

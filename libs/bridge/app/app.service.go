@@ -384,3 +384,9 @@ func (s *AppService) OnLicenseJob(job *goqueues.QueueJob) (any, error) {
 	}
 	return map[string]any{"jobId": job.Id, "status": "dispatched", "name": name}, nil
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level bridgeAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { bridgeAppSvc = s }

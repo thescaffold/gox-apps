@@ -139,3 +139,9 @@ func (s *AppService) upsertRoutePair(group, service, name, upstream string, desc
 	}
 	return nil
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level controllerAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { controllerAppSvc = s }

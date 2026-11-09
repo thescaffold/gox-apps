@@ -34,7 +34,10 @@ func (m *AppModule) Imports() []types.Module {
 func (m *AppModule) Exports() []any { return []any{&AppService{}} }
 
 func (m *AppModule) Declarations() []any {
+	// The package's bus handlers use the instance the container injected,
+	// taken in AppService.OnRegister: svc itself may never be injected (the
+	// container can fill this slot with the AppService it already made for
+	// AppController's field).
 	svc := &AppService{}
-	controllerAppSvc = svc
 	return []any{&AppController{}, svc}
 }

@@ -273,3 +273,9 @@ func contains(list []string, s string) bool {
 	}
 	return false
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level fussAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { fussAppSvc = s }

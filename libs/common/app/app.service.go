@@ -167,3 +167,9 @@ func fetchUSDRates() (map[string]int, error) {
 	}
 	return out, nil
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level commonAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { commonAppSvc = s }

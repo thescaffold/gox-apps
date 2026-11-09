@@ -43,3 +43,9 @@ func (s *AppService) Housekeep(cutoff time.Time) {
 	}
 	_, _ = s.logs.Delete(`"status" = ? AND "created_at" < ?`, gocron.LogStatusSuccess, cutoff)
 }
+
+// OnRegister runs once the container has injected this instance; the
+// package-level cronAppSvc (used by the bus Subscriptions handlers) must be this
+// one, not the uninjected &AppService{} built in Declarations, or the first
+// event dereferences a nil service (PLAN U18).
+func (s *AppService) OnRegister() { cronAppSvc = s }

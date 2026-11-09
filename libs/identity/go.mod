@@ -2,9 +2,9 @@ module github.com/thescaffold/gox-apps/libs/identity
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.26
+require github.com/awesome-goose/goose v0.0.33
 
-require github.com/thescaffold/gox-packages/libs/core v0.0.22
+require github.com/thescaffold/gox-packages/libs/core v0.0.25
 
 require github.com/thescaffold/gox-apps/libs/assets v0.0.8
 

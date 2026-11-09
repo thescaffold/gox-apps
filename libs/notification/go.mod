@@ -2,14 +2,14 @@ module github.com/thescaffold/gox-apps/libs/notification
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.26
+require github.com/awesome-goose/goose v0.0.33
 
 require github.com/thescaffold/gox-apps/libs/queue v0.0.8
 
 require (
 	github.com/cbroglie/mustache v1.4.0
 	github.com/google/uuid v1.6.0
-	github.com/thescaffold/gox-packages/libs/core v0.0.22
+	github.com/thescaffold/gox-packages/libs/core v0.0.25
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )

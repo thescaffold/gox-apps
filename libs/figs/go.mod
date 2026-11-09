@@ -2,13 +2,13 @@ module github.com/thescaffold/gox-apps/libs/figs
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.26
+require github.com/awesome-goose/goose v0.0.33
 
 require (
 	github.com/cbroglie/mustache v1.4.0
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/thescaffold/gox-packages/libs/blobs v0.0.9
-	github.com/thescaffold/gox-packages/libs/core v0.0.18
+	github.com/thescaffold/gox-packages/libs/core v0.0.25
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xuri/excelize/v2 v2.10.1
 	gopkg.in/yaml.v3 v3.0.1

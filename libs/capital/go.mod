@@ -2,9 +2,9 @@ module github.com/thescaffold/gox-apps/libs/capital
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.28
+require github.com/awesome-goose/goose v0.0.33
 
-require github.com/thescaffold/gox-packages/libs/core v0.0.18
+require github.com/thescaffold/gox-packages/libs/core v0.0.25
 
 require github.com/thescaffold/gox-apps/libs/queue v0.0.8
 

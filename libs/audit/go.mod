@@ -2,11 +2,11 @@ module github.com/thescaffold/gox-apps/libs/audit
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.26
+require github.com/awesome-goose/goose v0.0.33
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/thescaffold/gox-packages/libs/core v0.0.18
+	github.com/thescaffold/gox-packages/libs/core v0.0.25
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )

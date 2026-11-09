@@ -1,5 +1,5 @@
-github.com/awesome-goose/goose v0.0.26 h1:W4Dq/d3vrxzH9+g/woYuxUEiymVM7CxSWG6dJXYEUKE=
-github.com/awesome-goose/goose v0.0.26/go.mod h1:wQOj1ZnCiuFaG0JQOdn8PnXKdohC8XU6IHwQHCJVlyo=
+github.com/awesome-goose/goose v0.0.33 h1:dV2xgOo24l/xwBz4sDBXd6LfQM/fZ0oQr3k2vgsygwM=
+github.com/awesome-goose/goose v0.0.33/go.mod h1:wQOj1ZnCiuFaG0JQOdn8PnXKdohC8XU6IHwQHCJVlyo=
 github.com/cbroglie/mustache v1.4.0 h1:Azg0dVhxTml5me+7PsZ7WPrQq1Gkf3WApcHMjMprYoU=
 github.com/cbroglie/mustache v1.4.0/go.mod h1:SS1FTIghy0sjse4DUVGV1k/40B1qE1XkD9DtDsHo9iM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -60,8 +60,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/thescaffold/gox-packages/libs/blobs v0.0.9 h1:de1AFn6NdDCfdFKQERGt3edCnhtWju/oNnuZUb1Je20=
 github.com/thescaffold/gox-packages/libs/blobs v0.0.9/go.mod h1:ZmZ9C2Im04lMLJY8HK8NB0FLS/sat/IjJ7cpQIwjVf8=
-github.com/thescaffold/gox-packages/libs/core v0.0.18 h1:Y50U3Ca/RN2tpScI9fMyfIimwGbVX+PigcUg7NvcqEw=
-github.com/thescaffold/gox-packages/libs/core v0.0.18/go.mod h1:uHwJcodcI/oglBT98F1tCSqAqC+ZdWjDZZXYjKPvXaw=
+github.com/thescaffold/gox-packages/libs/core v0.0.25 h1:32ASTiSJhZyuGoSCwia/LAJztykWpOl8jE2x48Ie6lQ=
+github.com/thescaffold/gox-packages/libs/core v0.0.25/go.mod h1:GZR9Fa8LXWJtTg1CZm411H4T9m+gwCYhBatrzH7CCgk=
 github.com/tiendc/go-deepcopy v1.7.2 h1:Ut2yYR7W9tWjTQitganoIue4UGxZwCcJy3orjrrIj44=
 github.com/tiendc/go-deepcopy v1.7.2/go.mod h1:4bKjNC2r7boYOkD2IOuZpYjmlDdzjbpTRyCx+goBCJQ=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f h1:J9EGpcZtP0E/raorCMxlFGSTBrsSlaDGf3jU/qvAE2c=

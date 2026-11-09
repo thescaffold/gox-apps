@@ -327,7 +327,22 @@ func TestLogoutOfAUserSignsThemOutOfEveryDeviceButOnlyThem(t *testing.T) {
 	d1 := deviceFrom(t, r.login(lin, ""))
 	d2 := deviceFrom(t, r.login(lin, ""))
 	r.login(ada, cookieFor(d1))
-	decode(t, r.ctl.Logout(&auth.LogoutDto{Device: "no", UserId: lin.Id, ClientId: r.client}))
+	// naming lin is not enough: an anonymous caller, or ada, can't sign her out
+	for name, ctx := range map[string]ntxctx.NTXContext{"anonymous": {}, "ada": {UserID: ada.Id}} {
+		rep := decode(t, r.ctl.Logout(&auth.LogoutDto{Ctx: ctx, Device: "no", UserId: lin.Id, ClientId: r.client}))
+		if rep.code != 401 {
+			t.Fatalf("%s signing lin out everywhere: %d, want 401", name, rep.code)
+		}
+		rep = decode(t, r.ctl.Logout(&auth.LogoutDto{Ctx: ctx, Device: d2, UserId: lin.Id, ClientId: r.client}))
+		if rep.code != 401 {
+			t.Fatalf("%s signing lin out of a device named by id: %d, want 401", name, rep.code)
+		}
+		if got := r.sessions(cookieFor(d2)); len(got) != 1 {
+			t.Fatalf("%s's request signed lin out: %v", name, got)
+		}
+	}
+	// lin, verified, signs herself out of every device
+	decode(t, r.ctl.Logout(&auth.LogoutDto{Ctx: ntxctx.NTXContext{UserID: lin.Id}, Device: "no", UserId: lin.Id, ClientId: r.client}))
 	if got := r.sessions(cookieFor(d2)); len(got) != 0 {
 		t.Fatalf("lin is still signed in on another device: %v", got)
 	}

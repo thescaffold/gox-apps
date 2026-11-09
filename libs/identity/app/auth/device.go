@@ -279,17 +279,36 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	}
 
 	device := ""
+	fromCookie := false
 	switch {
 	case dto.Device == "yes":
 		device = cookieValue(dto.Cookie, DeviceCookie)
+		fromCookie = device != ""
 	case len(dto.Device) > 3:
 		device = dto.Device
 	}
+	unauthorized := func() types.Output {
+		return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.logout.error.unauthorized", nil, pref))
+	}
+	// A userId or a device id named in the body proves nothing (this route takes anonymous callers): only the
+	// browser's own device cookie, or the verified session, says whose sessions may end.
+	who := dto.UserId // whose push tokens a device sign-out takes ("" = every account on the device)
 	var where string
 	var args []any
 	switch {
 	case device == "" && dto.UserId != "":
-		where, args = `"user_id" = ?`, []any{dto.UserId}
+		// that account on every device: only the verified account itself
+		if dto.Ctx.UserID == "" || dto.UserId != dto.Ctx.UserID {
+			return unauthorized()
+		}
+		where, args = `"user_id" = ?`, []any{dto.Ctx.UserID}
+	case device != "" && !fromCookie:
+		// a device named by id (another of my devices): only the verified caller's own session on it
+		if dto.Ctx.UserID == "" || (dto.UserId != "" && dto.UserId != dto.Ctx.UserID) {
+			return unauthorized()
+		}
+		who = dto.Ctx.UserID
+		where, args = `"device_id" = ? AND "user_id" = ?`, []any{device, dto.Ctx.UserID}
 	case device != "" && dto.UserId == "":
 		where, args = `"device_id" = ?`, []any{device}
 	case device != "" && dto.UserId != "":
@@ -310,7 +329,7 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 		push := pushtoken.New(c.db.DB)
 		switch {
 		case device != "":
-			_, _ = push.DeregisterDevice(context.Background(), dto.UserId, device)
+			_, _ = push.DeregisterDevice(context.Background(), who, device)
 		case dto.Ctx.UserID != "" && (dto.UserId == "" || dto.UserId == dto.Ctx.UserID):
 			_, _ = push.DeregisterUser(context.Background(), dto.Ctx.UserID)
 		}
@@ -326,7 +345,7 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 		}
 	}
 	out := response.Success(map[string]any{"deviceId": device}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
-	if device != "" && dto.UserId == "" {
+	if fromCookie && dto.UserId == "" {
 		out.Headers()["Set-Cookie"] = deviceCookie("", 0)
 	}
 	return out

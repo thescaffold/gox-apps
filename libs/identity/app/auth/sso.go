@@ -412,9 +412,10 @@ func (c *AuthController) ssoAdmit(ctx context.Context, conn *sso.Connection, st 
 		if err := c.userEntity.Insert(u); err != nil {
 			return ssoFail(st.ReturnTo, "error")
 		}
-		c.bootstrapWorkspace(u, st.ClientID)
+		ws := c.bootstrapWorkspace(u, st.ClientID)
 		c.upsertAttributes(u.Id, "user", map[string]string{t: claims.Email})
 		c.seedDefaultRoles()
+		identityuser.Created(c.tracker, u, st.ClientID, wsID(ws), "sso")
 	} else {
 		if closed, _ := c.attributeEntity.First(`"user_id" = ? AND "key" = ?`, u.Id, "closed_at"); closed != nil {
 			return ssoFail(st.ReturnTo, "denied")

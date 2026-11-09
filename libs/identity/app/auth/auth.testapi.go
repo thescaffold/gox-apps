@@ -16,6 +16,7 @@ import (
 	identityucw "github.com/thescaffold/gox-apps/libs/identity/app/userclientworkspace"
 	identityworkspace "github.com/thescaffold/gox-apps/libs/identity/app/workspace"
 	identitypkg "github.com/thescaffold/gox-apps/libs/identity/pkg"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 	"github.com/thescaffold/gox-packages/libs/core/services"
 	"github.com/thescaffold/gox-packages/libs/core/services/otp"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
@@ -91,3 +92,7 @@ func (c *AuthController) MfaForTest() *mfa.Service { return c.mfa }
 // SsoStoreForTest exposes the connection store so a test can set its DNS
 // resolver and clock.
 func (c *AuthController) SsoStoreForTest() *sso.Store { return c.ssoStore }
+
+// SetTrackerForTest gives the controller a tracker (the test controller has
+// none, so it publishes nothing).
+func (c *AuthController) SetTrackerForTest(t *events.TrackerService) { c.tracker = t }

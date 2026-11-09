@@ -352,6 +352,7 @@ func (s *AuthService) RegisterUser(name, email, password string) (*user.User, er
 	if err := s.userEntity.Insert(u); err != nil {
 		return nil, err
 	}
+	user.Created(s.tracker, u, "", "", "register")
 	return u, nil
 }
 

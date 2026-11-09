@@ -178,6 +178,7 @@ func (c *AuthorizeController) Authorize(dto *AuthorizeProviderDto) types.Output 
 		return response.BadRequest(title,
 			c.lang.Translate("apps.identity.provider.post.authorize.error.different-provider", nil, pref))
 	}
+	created := existing == nil
 	if existing == nil {
 		ref := profile.Email
 		userType := dto.Provider
@@ -205,6 +206,9 @@ func (c *AuthorizeController) Authorize(dto *AuthorizeProviderDto) types.Output 
 
 	// 7. Attribute upsert from profile fields (email, name, avatar, username).
 	c.upsertProfileAttributes(existing.Id, profile)
+	if created {
+		identityuser.Created(c.tracker, existing, dto.ClientId, workspaces[0].Id, "provider:"+dto.Provider)
+	}
 
 	// 8. Referral-code redemption (best-effort — no error on miss).
 	if dto.ReferralCode != "" {

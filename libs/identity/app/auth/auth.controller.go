@@ -322,6 +322,7 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 	})
 	c.seedDefaultRoles()
 	c.cache.Del(verifyKey)
+	identityuser.Created(c.tracker, newUser, entry.ClientId, wsID(ws), "password")
 
 	// The new account has exactly one workspace at this point (just
 	// bootstrapped above) — no need to re-verify the password we just set,

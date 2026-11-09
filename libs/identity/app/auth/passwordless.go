@@ -123,6 +123,7 @@ func (c *AuthController) OtpVerify(dto *OtpVerifyDto) types.Output {
 			"country": dto.Country, "currency": dto.Currency, "timezone": dto.Timezone, "language": dto.Language,
 		})
 		c.seedDefaultRoles()
+		identityuser.Created(c.tracker, u, dto.ClientId, wsID(ws), "passwordless")
 	} else {
 		if closed, _ := c.attributeEntity.First(`"user_id" = ? AND "key" = ?`, u.Id, "closed_at"); closed != nil {
 			return response.Unauthorized(title, "the code is invalid or has expired")

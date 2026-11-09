@@ -17,6 +17,7 @@ var Migrations = []sql.Migration{
 	&migrations.CreateNotificationRules{},
 	&migrations.CreateNotificationMessages{},
 	&migrations.CreateNotificationLogs{},
+	&migrations.AddLinkToNotificationMessages{},
 }
 
 type AppModule struct{}
@@ -41,10 +42,14 @@ func (m *AppModule) Imports() []types.Module {
 func (m *AppModule) Exports() []any { return []any{&AppService{}} }
 
 func (m *AppModule) Declarations() []any {
-	// The package's bus handlers use the instance the container injected,
-	// taken in AppService.OnRegister: svc itself may never be injected (the
-	// container can fill this slot with the AppService it already made for
-	// AppController's field).
+	// Until the container has run, notificationAppSvc is this svc; AppService.OnRegister
+	// then replaces it with the instance the container injected (svc itself
+	// may never be: the container can fill this slot with the AppService it
+	// already made for AppController's field — PLAN U18). A later call must
+	// not put an uninjected one back.
 	svc := &AppService{}
+	if notificationAppSvc == nil {
+		notificationAppSvc = svc
+	}
 	return []any{&AppController{}, svc}
 }

@@ -209,7 +209,7 @@ func (s *AppModuleSuite) TestMigrations_Count() {
 	// (PLAN M1-03: HashRefreshTokens, EncryptProviderTokens,
 	// ScrubProviderLogTokens) = 21, + 1 (PLAN M1-40: DeviceSessionClient) = 22,
 	// + 1 (CreateIdentityApiKeys: hashed machine credentials) = 23, + 1 (CreateIdentityOtps: durable one-time codes) = 24, + 1 (CreateIdentitySsoConnections) = 25, + 1 (CreateIdentitySsoRecoveries) = 26, + 1 (CreateIdentityUserRevocations) = 27, + 1 (CreateIdentityTeamsRoles: teams, memberships, custom roles) = 28, + 1 (CreateIdentityOrgEvents: audit trail) = 29, + 1 (CreateIdentityMfa: two-factor sign-in) = 30, + 1 (CreateIdentityUserKeys: SSH and signing keys) = 31, + 1 (WorkspaceHandleRegion) = 32, + 1 (CreateIdentityInvitations) = 33, + 1 (SsoSaml: SAML connections and their replay record) = 34.
-	s.T.Expect(len(app.Migrations)).ToEqual(34)
+	s.T.Expect(len(app.Migrations)).ToEqual(35)
 }
 func (s *AppModuleSuite) TestName() {
 	s.T.Expect(app.Name).ToEqual("identity")

@@ -21,6 +21,8 @@ func (c *FormController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Form, CreateFormDto, UpdateFormDto]{
 		// Mirrors TS form.controller.ts:19 name = 'form'.
 		Name: "form",
+		// A form is its workspace's (U26).
+		WorkspaceScoped: true,
 		// Mirrors TS form.controller.ts:20 searchable = ['name','desc'].
 		Searchable: []string{"name", "desc"},
 		// Mirrors TS form.controller.ts:22-25:
@@ -54,6 +56,17 @@ func (c *FormController) OnRegister() {
 					if id, ok := ctx.Workspace["id"].(string); ok {
 						p.WorkspaceId = id
 					}
+				}
+				// The verified session wins over the body, so the unique check runs in the
+				// caller's workspace (U26).
+				if ctx.UserID != "" {
+					p.UserId = ctx.UserID
+				}
+				if ctx.ClientID != "" {
+					p.ClientId = ctx.ClientID
+				}
+				if ctx.WorkspaceID != "" {
+					p.WorkspaceId = ctx.WorkspaceID
 				}
 				return p, nil
 			},

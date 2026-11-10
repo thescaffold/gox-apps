@@ -6,5 +6,5 @@ import (
 )
 
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("forms", FormController{}).All()),
+	coreauth.SecureCaller(router.Resource("forms", FormController{}).All()),
 )

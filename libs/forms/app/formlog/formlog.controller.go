@@ -15,6 +15,9 @@ type FormLogController struct {
 func (c *FormLogController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[FormLog, CreateFormLogDto, UpdateFormLogDto]{
 		// Mirrors TS form-log.controller.ts:18 name = 'form log'.
+		// A submission is readable only by the form's workspace and written by SaveForm
+		// (POST /one/:id), so the resource's writes are a platform admin's (U26).
+		WorkspaceScopeClause: `form_id IN (SELECT id FROM "FormForms" WHERE workspace_id = ?)`,
 		Name: "form log",
 		// Mirrors TS form-log.controller.ts:19 searchable = ['key'].
 		Searchable: []string{"key"},

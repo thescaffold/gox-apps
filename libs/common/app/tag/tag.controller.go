@@ -18,6 +18,9 @@ func (c *TagController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Tag, CreateTagDto, UpdateTagDto]{
 		// Mirrors TS tag.controller.ts:19 name = 'tag'.
 		Name: "tag",
+		// Only the caller's workspace: list, read, write; a new row takes the caller's
+		// workspace whatever the body says (PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS tag.controller.ts:20 searchable = [] (empty list).
 		Searchable: []string{},
 		// Mirrors TS tag.controller.ts:22-28 unique = ({workspaceId,groupName,

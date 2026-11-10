@@ -29,6 +29,9 @@ func (c *TagTypeController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[TagType, CreateTagTypeDto, UpdateTagTypeDto]{
 		// Mirrors TS tag-type.controller.ts:29 name = 'tag group'.
 		Name: "tag group",
+		// Only the caller's workspace: list, read, write; a new row takes the caller's
+		// workspace whatever the body says (PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS tag-type.controller.ts:30 searchable = ['name','desc'].
 		Searchable: []string{"name", "desc"},
 		// Mirrors TS tag-type.controller.ts:32-34 unique = ({workspaceId,name}) => [{...}].
@@ -78,12 +81,15 @@ var uuidPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 // tag-type.controller.ts:122-175 syncTag().
 func (c *TagTypeController) Sync(dto *TagActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	title := c.lang.Translate("apps.common.title", nil, pref)
 
 	resolvedNames := make([]string, 0, len(dto.Names))
 	for _, name := range dto.Names {
 		if uuidPattern.MatchString(name) {
-			if tt, _ := c.service.FindOne(map[string]any{"id": name}); tt != nil && tt.Name != "" {
+			if tt, _ := c.service.FindOne(c.ownedBy(dto.Ctx, map[string]any{"id": name})); tt != nil && tt.Name != "" {
 				resolvedNames = append(resolvedNames, tt.Name)
 				continue
 			}
@@ -109,6 +115,9 @@ func (c *TagTypeController) Sync(dto *TagActionDto) types.Output {
 // and link it to the entity. Mirrors TS attachTag().
 func (c *TagTypeController) Attach(dto *TagActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	c.attachNames(dto, dto.Names)
 	return response.Success(nil,
 		c.lang.Translate("apps.common.title", nil, pref),
@@ -121,6 +130,9 @@ func (c *TagTypeController) Attach(dto *TagActionDto) types.Output {
 // Mirrors TS detachTag().
 func (c *TagTypeController) Detach(dto *TagActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	if out := c.detachNames(dto, dto.Names); out != nil {
 		return out
 	}
@@ -141,9 +153,10 @@ func (c *TagTypeController) namesLinkedToEntity(dto *TagActionDto) []string {
 	if c.tagService == nil {
 		return nil
 	}
+	userID, clientID, workspaceID := ownerFromCtx(dto.Ctx)
 	rows, err := c.tagService.Entity().Some(
-		`"group_name" = ? AND "service_name" = ? AND "entity_name" = ? AND "entity_id" = ?`,
-		dto.GroupName, dto.ServiceName, dto.EntityName, dto.EntityId,
+		`"group_name" = ? AND "service_name" = ? AND "entity_name" = ? AND "entity_id" = ? AND "user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`,
+		dto.GroupName, dto.ServiceName, dto.EntityName, dto.EntityId, userID, clientID, workspaceID,
 	)
 	if err != nil || len(rows) == 0 {
 		return nil
@@ -283,5 +296,37 @@ func ownerFromCtx(ctx ntxctx.NTXContext) (string, string, string) {
 	if ctx.Workspace != nil {
 		w, _ = ctx.Workspace["id"].(string)
 	}
+	// The verified session (coreauth.Caller → FromClaims) fills the ids; the maps come only
+	// from a host that sets them itself.
+	if u == "" {
+		u = ctx.UserID
+	}
+	if c == "" {
+		c = ctx.ClientID
+	}
+	if w == "" {
+		w = ctx.WorkspaceID
+	}
 	return u, c, w
+}
+
+// needsOwner refuses a link change from a caller with no user or workspace: every link is
+// found, made and removed inside the caller's own (user, client, workspace), so without one
+// there is nothing the caller may touch (PLAN U26).
+func (c *TagTypeController) needsOwner(ctx ntxctx.NTXContext) types.Output {
+	if u, _, w := ownerFromCtx(ctx); u != "" && w != "" {
+		return nil
+	}
+	title := "common"
+	if c.lang != nil {
+		title = c.lang.Translate("apps.common.title", nil, ctx.Preference)
+	}
+	return response.Forbidden(title, "a workspace session is required")
+}
+
+// ownedBy narrows a lookup to rows of the caller's own (user, client, workspace).
+func (c *TagTypeController) ownedBy(ctx ntxctx.NTXContext, match map[string]any) map[string]any {
+	u, cl, w := ownerFromCtx(ctx)
+	match["user_id"], match["client_id"], match["workspace_id"] = u, cl, w
+	return match
 }

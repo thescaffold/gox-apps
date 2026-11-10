@@ -33,6 +33,9 @@ func (c *ProjectTypeController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[ProjectType, CreateProjectTypeDto, UpdateProjectTypeDto]{
 		// Mirrors TS project-type.controller.ts:30 name = 'project group'.
 		Name: "project group",
+		// Only the caller's workspace: list, read, write; a new row takes the caller's
+		// workspace whatever the body says (PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS project-type.controller.ts:31 searchable = ['name','desc'].
 		Searchable: []string{"name", "desc"},
 		// Mirrors TS project-type.controller.ts:33-35 unique = ({workspaceId,name}) => [{...}].
@@ -89,12 +92,15 @@ var uuidPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 // project-type.controller.ts:172-231 syncProject().
 func (c *ProjectTypeController) Sync(dto *ProjectActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	title := c.lang.Translate("apps.common.title", nil, pref)
 
 	resolvedNames := make([]string, 0, len(dto.Names))
 	for _, name := range dto.Names {
 		if uuidPattern.MatchString(name) {
-			if pt, _ := c.service.FindOne(map[string]any{"id": name}); pt != nil && pt.Name != "" {
+			if pt, _ := c.service.FindOne(c.ownedBy(dto.Ctx, map[string]any{"id": name})); pt != nil && pt.Name != "" {
 				resolvedNames = append(resolvedNames, pt.Name)
 				continue
 			}
@@ -119,6 +125,9 @@ func (c *ProjectTypeController) Sync(dto *ProjectActionDto) types.Output {
 // Attach handles POST /project-type/attach.
 func (c *ProjectTypeController) Attach(dto *ProjectActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	c.attachNames(dto, dto.Names)
 	return response.Success(nil,
 		c.lang.Translate("apps.common.title", nil, pref),
@@ -129,6 +138,9 @@ func (c *ProjectTypeController) Attach(dto *ProjectActionDto) types.Output {
 // Detach handles POST /project-type/detach.
 func (c *ProjectTypeController) Detach(dto *ProjectActionDto) types.Output {
 	pref := dto.Ctx.Preference
+	if out := c.needsOwner(dto.Ctx); out != nil {
+		return out
+	}
 	if out := c.detachNames(dto, dto.Names); out != nil {
 		return out
 	}
@@ -145,9 +157,10 @@ func (c *ProjectTypeController) namesLinkedToEntity(dto *ProjectActionDto) []str
 	if c.projectService == nil {
 		return nil
 	}
+	userID, clientID, workspaceID := ownerFromCtx(dto.Ctx)
 	rows, err := c.projectService.Entity().Some(
-		`"group_name" = ? AND "service_name" = ? AND "entity_name" = ? AND "entity_id" = ?`,
-		dto.GroupName, dto.ServiceName, dto.EntityName, dto.EntityId,
+		`"group_name" = ? AND "service_name" = ? AND "entity_name" = ? AND "entity_id" = ? AND "user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`,
+		dto.GroupName, dto.ServiceName, dto.EntityName, dto.EntityId, userID, clientID, workspaceID,
 	)
 	if err != nil || len(rows) == 0 {
 		return nil
@@ -308,5 +321,37 @@ func ownerFromCtx(ctx ntxctx.NTXContext) (string, string, string) {
 	if ctx.Workspace != nil {
 		w, _ = ctx.Workspace["id"].(string)
 	}
+	// The verified session (coreauth.Caller → FromClaims) fills the ids; the maps come only
+	// from a host that sets them itself.
+	if u == "" {
+		u = ctx.UserID
+	}
+	if c == "" {
+		c = ctx.ClientID
+	}
+	if w == "" {
+		w = ctx.WorkspaceID
+	}
 	return u, c, w
+}
+
+// needsOwner refuses a link change from a caller with no user or workspace: every link is
+// found, made and removed inside the caller's own (user, client, workspace), so without one
+// there is nothing the caller may touch (PLAN U26).
+func (c *ProjectTypeController) needsOwner(ctx ntxctx.NTXContext) types.Output {
+	if u, _, w := ownerFromCtx(ctx); u != "" && w != "" {
+		return nil
+	}
+	title := "common"
+	if c.lang != nil {
+		title = c.lang.Translate("apps.common.title", nil, ctx.Preference)
+	}
+	return response.Forbidden(title, "a workspace session is required")
+}
+
+// ownedBy narrows a lookup to rows of the caller's own (user, client, workspace).
+func (c *ProjectTypeController) ownedBy(ctx ntxctx.NTXContext, match map[string]any) map[string]any {
+	u, cl, w := ownerFromCtx(ctx)
+	match["user_id"], match["client_id"], match["workspace_id"] = u, cl, w
+	return match
 }

@@ -18,6 +18,9 @@ func (c *ProjectController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Project, CreateProjectDto, UpdateProjectDto]{
 		// Mirrors TS project.controller.ts:19 name = 'project'.
 		Name: "project",
+		// Only the caller's workspace: list, read, write; a new row takes the caller's
+		// workspace whatever the body says (PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS project.controller.ts:20 searchable = [] (empty).
 		Searchable: []string{},
 		// Mirrors TS project.controller.ts:22-30 unique = ({workspaceId,

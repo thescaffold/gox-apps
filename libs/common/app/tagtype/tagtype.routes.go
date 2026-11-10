@@ -8,8 +8,8 @@ import (
 // ROUTES mirrors TS @Controller('tag-type') — singular kebab-case path segment.
 // POST /sync /attach /detach mirror the TS bulk-link endpoints (Phase 7.1).
 var ROUTES = router.ForRoutes(
-	router.Post("/tag-type/sync", []any{TagTypeController{}, "Sync"}),
-	router.Post("/tag-type/attach", []any{TagTypeController{}, "Attach"}),
-	router.Post("/tag-type/detach", []any{TagTypeController{}, "Detach"}),
-	coreauth.Secure(router.Resource("tag-type", TagTypeController{}).All()),
+	router.Post("/tag-type/sync", []any{TagTypeController{}, "Sync"}, coreauth.Caller()...),
+	router.Post("/tag-type/attach", []any{TagTypeController{}, "Attach"}, coreauth.Caller()...),
+	router.Post("/tag-type/detach", []any{TagTypeController{}, "Detach"}, coreauth.Caller()...),
+	coreauth.SecureCaller(router.Resource("tag-type", TagTypeController{}).All()),
 )

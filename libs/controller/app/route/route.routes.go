@@ -6,5 +6,5 @@ import (
 )
 
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("routes", RouteController{}).All()),
+	coreauth.SecureAdmin(router.Resource("routes", RouteController{}).All()),
 )

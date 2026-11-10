@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## capital v0.0.10 — every route says who may call it
+
+Security fix (PLAN U26). **Breaking** for anyone who relied on the open routes; needs core with `coreauth.Caller/Admin/Internal/AdminWrites`.
+
+- The app routes that act on a plan, payment or card (`debt`, `accrual`, `status`, `user-plan`, `init`, `default-provider`, `pay`, `verify/:type`, `:type/reference/:reference`, `:type/charge/:providerId`, `user-plan/compute-upgrade`), the wallet (`wallet/*`) and `voucher/list` / `voucher/verify/:token` need a session and act on the verified caller only. Before, all answered anonymous callers. `GET /` and `GET /providers` stay public.
+- `usage/start|update|stop` and `plan/change|subscribe` name the user in the body, so they now need a call signed by `core/http.Client.Internal` (`HMAC_KEY`) or a platform admin.
+- `account`, `payment`, `plan`, `usage`, `voucher` (the caller's workspace) and `transaction` (the caller's own) are readable by a signed-in caller and writable only by a platform admin; `rate` and `plan-type` likewise, unscoped. `payment-log` and `voucher-type` (it holds redeem tokens) are platform-admin only. Before, any signed-in caller could read and write every tenant's rows.
+- Saved cards (`provider`) are scoped to accounts in the caller's workspace; the owner may change only `primary`, and only an admin creates one by hand.
+- `verify/:type` completes only a payment of the caller's own plan: by reference alone it linked another person's card to the caller's account. `pay` / `charge` with a `providerId` use only a card on the plan owner's own account.
+- The flags app is imported for its services only: its `flag` CRUD was served, unguarded, as `/apps/capital/flag`. That path is gone.
+
+## common v0.0.10 — tag and project links stay in the caller's workspace
+
+Security fix (PLAN U26). **Breaking** for anyone who relied on the open routes.
+
+- `tag-type` and `project-type` `sync`, `attach` and `detach` need a session (before, anonymous callers could link and unlink tags and projects on any entity) and work only inside the caller's own user, client and workspace: new links take them from the session, sync reads only the caller's links, an id resolves only to the caller's own type, and a caller with no workspace gets 403.
+- `project`, `project-type`, `tag` and `tag-type` are scoped to the caller's workspace (list, read, write). `rate` is readable by a signed-in caller and writable by a platform admin; `ip` and `rate-log` are platform-admin only. `currency/:currency` and `location` stay public.
+
 ## identity v0.0.17 — sign out one session with its refresh token
 
 Additive. `POST apps/identity/logout` accepts `{"refreshToken": "..."}` and ends that one session by deleting its record, so a native app can sign out of one phone without signing out the others or leaving the token usable. The token must verify; signing out twice is a 200. Without `refreshToken` the route behaves as before.

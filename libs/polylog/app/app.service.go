@@ -61,6 +61,9 @@ func (s *AppService) ProcessEvent(ev *event.Event) error {
 // IngestBatch processes a batch of items.
 // Mirrors TS AppService.ingestBatch().
 func (s *AppService) IngestBatch(items []pipeline.Item, ctx ntxctx.NTXContext) ([]any, error) {
+	if err := s.checkIntake(items...); err != nil {
+		return nil, err
+	}
 	out := make([]any, 0, len(items))
 	for _, it := range items {
 		ev, err := s.pipelineService.Ingest(it, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
@@ -74,6 +77,9 @@ func (s *AppService) IngestBatch(items []pipeline.Item, ctx ntxctx.NTXContext) (
 
 // Ingest processes a single item. Mirrors TS AppService.ingest().
 func (s *AppService) Ingest(item pipeline.Item, ctx ntxctx.NTXContext) (any, error) {
+	if err := s.checkIntake(item); err != nil {
+		return nil, err
+	}
 	return s.pipelineService.Ingest(item, ctx.UserID, ctx.ClientID, ctx.WorkspaceID)
 }
 

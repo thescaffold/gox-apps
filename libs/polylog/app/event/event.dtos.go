@@ -2,6 +2,7 @@ package event
 
 import (
 	"encoding/json"
+	"github.com/awesome-goose/goose/openapi"
 
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
@@ -10,6 +11,17 @@ import (
 type DashboardDto struct {
 	NTX  ntxctx.NTXContext `context:"ntx"`
 	Type string            `query:"type"`
+}
+
+// Dashboard is what GET /event/dashboard answers: platform-wide counts, for a platform admin.
+type Dashboard struct {
+	Total      int64 `json:"total" binding:"required"`
+	Completed  int64 `json:"completed" binding:"required"`
+	InProgress int64 `json:"inProgress" binding:"required"`
+}
+
+func (DashboardDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Counts of completed and in-progress events (platform admin)", Response: Dashboard{}}
 }
 
 // CreateEventDto mirrors ntx-apps/libs/polylog/src/api/event/dto/create-event.dto.ts.

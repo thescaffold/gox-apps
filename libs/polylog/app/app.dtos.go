@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/json"
+	"github.com/awesome-goose/goose/openapi"
+	polylogevent "github.com/thescaffold/gox-apps/libs/polylog/app/event"
 
 	"github.com/thescaffold/gox-apps/libs/polylog/pkg/pipeline"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
@@ -138,4 +140,16 @@ type UpsertRootSinkDto struct {
 	Type     string            `json:"type"      binding:"required"`
 	SinkType SinkTypeRef       `json:"sinkType"`
 	Sink     SinkRef           `json:"sink"`
+}
+
+func (IngestDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Ingest one event (open intake; refused, 401 signature_invalid, for a source that requires a signature)", Response: polylogevent.Event{}}
+}
+
+func (IngestBatchDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Ingest a batch of events (open intake for browser SDKs; refused, 401 signature_invalid, if any item names a source that requires a signature)", Response: []polylogevent.Event{}}
+}
+
+func (IngestSourceParamDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "A provider's webhook for a source or channel; the body is stored as sent and checked against the source's signature rule", Response: polylogevent.Event{}}
 }

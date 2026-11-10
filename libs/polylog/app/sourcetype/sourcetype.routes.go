@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('source-type') — singular kebab-case segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("source-type", SourceTypeController{}).All()),
+	coreauth.SecureAdmin(router.Resource("source-type", SourceTypeController{}).All()),
 )

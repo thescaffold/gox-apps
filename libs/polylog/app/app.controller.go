@@ -49,7 +49,7 @@ func (c *AppController) Ingest(dto *IngestDto) types.Output {
 	}
 	ev, err := c.appService.Ingest(item, dto.NTX)
 	if err != nil {
-		return response.InternalServerError(title, err.Error())
+		return ingestFailure(title, err)
 	}
 	return response.Success(ev,
 		title,
@@ -63,7 +63,7 @@ func (c *AppController) IngestBatch(dto *IngestBatchDto) types.Output {
 	title := c.lang.Translate("apps.polylog.app.title", nil, pref)
 	out, err := c.appService.IngestBatch(dto.Items, dto.NTX)
 	if err != nil {
-		return response.InternalServerError(title, err.Error())
+		return ingestFailure(title, err)
 	}
 	return response.Success(out,
 		title,

@@ -48,11 +48,7 @@ func (c *EventLogController) Dashboard(dto *DashboardDto) types.Output {
 		`"status" = ? AND "event_id" IN (SELECT "id" FROM "PolylogEvents" WHERE "type" = ?)`,
 		StatusInProgress, dto.Type,
 	)
-	return response.Success(map[string]any{
-		"total":      completed + inProgress,
-		"completed":  completed,
-		"inProgress": inProgress,
-	},
+	return response.Success(Dashboard{Total: completed + inProgress, Completed: completed, InProgress: inProgress},
 		title,
 		c.lang.Translate("apps.polylog.event-log.get.dashboard.success", nil, pref),
 		nil)

@@ -18,6 +18,14 @@ import (
 //	PATCH  /config/:id         → UpdateConfig
 //	POST   /root-source        → UpsertRootSource
 //	POST   /root-sink          → UpsertRootSink
+//
+// Guards (PLAN U26): the ingest routes are public. The three webhook routes
+// check the source's signature rule; /ingest and /ingest/batch are the intake
+// browser SDKs post to (jsx-polylog batches every few seconds, for guests too,
+// with a credential shipped in the page), so they stay open but refuse any item
+// for a source that has a signature rule (AppService.checkIntake). config, root-source
+// (creates root-owned sources and reads any by id) and root-sink (rewrites
+// where events are delivered) are platform-admin only.
 var ROUTES = router.ForRoutes(
 	router.Get("/", []any{AppController{}, "GetHello"}),
 	router.Post("/ingest/batch", []any{AppController{}, "IngestBatch"}),
@@ -25,9 +33,9 @@ var ROUTES = router.ForRoutes(
 	router.Post("/ingest/:id", []any{AppController{}, "IngestSourceAlt"}),
 	router.Post("/ingest/source/:id", []any{AppController{}, "IngestSource"}),
 	router.Post("/ingest/channel/:id", []any{AppController{}, "IngestChannel"}),
-	router.Post("/config", []any{AppController{}, "SetConfig"}, coreauth.Session()...),
-	router.Get("/config", []any{AppController{}, "GetConfig"}, coreauth.Session()...),
-	router.Patch("/config/:id", []any{AppController{}, "UpdateConfig"}, coreauth.Session()...),
-	router.Post("/root-source", []any{AppController{}, "UpsertRootSource"}, coreauth.Session()...),
-	router.Post("/root-sink", []any{AppController{}, "UpsertRootSink"}, coreauth.Session()...),
+	router.Post("/config", []any{AppController{}, "SetConfig"}, coreauth.Admin()...),
+	router.Get("/config", []any{AppController{}, "GetConfig"}, coreauth.Admin()...),
+	router.Patch("/config/:id", []any{AppController{}, "UpdateConfig"}, coreauth.Admin()...),
+	router.Post("/root-source", []any{AppController{}, "UpsertRootSource"}, coreauth.Admin()...),
+	router.Post("/root-sink", []any{AppController{}, "UpsertRootSink"}, coreauth.Admin()...),
 )

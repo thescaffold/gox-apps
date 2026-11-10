@@ -52,6 +52,33 @@ func (s *AppService) verifySource(sourceID string, body []byte, headers map[stri
 	return true, nil
 }
 
+// checkIntake guards POST /ingest and /ingest/batch, which carry no signature (PLAN U26): an
+// item that names a source with a signature rule (by id or key, as item.Source or
+// item.EntityId) is refused, so the open intake browser SDKs post to cannot stand in for a
+// provider webhook the source only accepts signed. With RequireSignatureVar set, every item
+// is refused there: such a deployment takes signed webhooks only.
+func (s *AppService) checkIntake(items ...pipeline.Item) error {
+	if strings.EqualFold(os.Getenv(RequireSignatureVar), "true") {
+		return ErrSignature
+	}
+	if s.sourceEntity == nil {
+		return nil
+	}
+	for _, it := range items {
+		for _, id := range []string{it.Source, it.EntityId} {
+			if id == "" {
+				continue
+			}
+			if src, _ := s.sourceEntity.First(`"id" = ? OR "key" = ?`, id, id); src != nil {
+				if _, signed := signature.FromMeta(src.Meta); signed {
+					return ErrSignature
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // asPayload is the body as the event's JSON payload: as sent when it is
 // JSON, else {"raw": "<text>"}.
 func asPayload(body []byte) json.RawMessage {

@@ -77,11 +77,7 @@ func (c *EventController) Dashboard(dto *DashboardDto) types.Output {
 		completed, _ = c.entity.Count(`"type" = ? AND "status" = ?`, dto.Type, StatusCompleted)
 		inProgress, _ = c.entity.Count(`"type" = ? AND "status" = ?`, dto.Type, StatusInProgress)
 	}
-	return response.Success(map[string]any{
-		"total":      completed + inProgress,
-		"completed":  completed,
-		"inProgress": inProgress,
-	},
+	return response.Success(Dashboard{Total: completed + inProgress, Completed: completed, InProgress: inProgress},
 		title,
 		c.lang.Translate("apps.polylog.event.get.dashboard.success", nil, pref),
 		nil)

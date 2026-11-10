@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('environment-type') — kebab-case singular path.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("environment-type", EnvironmentTypeController{}).All()),
+	coreauth.SecureAdmin(router.Resource("environment-type", EnvironmentTypeController{}).All()),
 )

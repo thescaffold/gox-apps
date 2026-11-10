@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('flag-log') — kebab-case singular path.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("flag-log", FlagLogController{}).All()),
+	coreauth.SecureAdmin(router.Resource("flag-log", FlagLogController{}).All()),
 )

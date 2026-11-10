@@ -3,6 +3,8 @@ package message
 import (
 	"testing"
 
+	goosetest "github.com/awesome-goose/goose/testing"
+
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/crud"
 )
@@ -49,5 +51,31 @@ func TestScopeToOwner(t *testing.T) {
 	}
 	if _, err := create(t, cfg, &CreateMessageDto{}, ntxctx.NTXContext{}); err == nil {
 		t.Fatal("a scoped create without a caller succeeded")
+	}
+}
+
+// Unscoped, the resource is every person's messages: a platform admin's only (U26).
+func TestUnscopedMessagesNeedAPlatformAdmin(t *testing.T) {
+	t.Setenv("ROOT_USER_ID", "root-1")
+	defer ownerScoped.Store(false)
+	g := &scopedOrAdmin{}
+
+	ownerScoped.Store(false)
+	ctx := goosetest.NewMockContext()
+	ntxctx.Set(ctx, ntxctx.NTXContext{UserID: "u-1", WorkspaceID: "w-1", Roles: []any{"owner", "admin"}})
+	if g.Handle(ctx) == nil {
+		t.Fatal("a workspace owner reached every message")
+	}
+	ctx = goosetest.NewMockContext()
+	ntxctx.Set(ctx, ntxctx.NTXContext{UserID: "root-1"})
+	if g.Handle(ctx) != nil {
+		t.Fatal("a platform admin was refused")
+	}
+
+	ownerScoped.Store(true)
+	ctx = goosetest.NewMockContext()
+	ntxctx.Set(ctx, ntxctx.NTXContext{UserID: "u-1", WorkspaceID: "w-1"})
+	if g.Handle(ctx) != nil {
+		t.Fatal("scoped to its owner, the caller must reach their own messages")
 	}
 }

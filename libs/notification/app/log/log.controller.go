@@ -19,15 +19,19 @@ import (
 type LogController struct {
 	crud.CrudResource[Log, CreateLogDto, UpdateLogDto]
 
-	entity *LogEntity         `inject:""`
+	entity *LogEntity           `inject:""`
 	queue  *queueapp.AppService `inject:""`
-	lang   *i18n.Service      `inject:""`
+	lang   *i18n.Service        `inject:""`
 }
 
 func (c *LogController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Log, CreateLogDto, UpdateLogDto]{
 		// Mirrors TS log.controller.ts:27 name = 'log'.
 		Name: "log",
+		// A delivery log is the recipient's: readable by them, in their workspace; written
+		// by the delivery pipeline (and a platform admin) only (U26).
+		WorkspaceScoped: true,
+		OwnerScoped:     true,
 		// Mirrors TS log.controller.ts:28 searchable = ['subject','message'].
 		Searchable: []string{"subject", "message"},
 		// Mirrors TS log.controller.ts:30 unique = ({reference}) => [{reference}].

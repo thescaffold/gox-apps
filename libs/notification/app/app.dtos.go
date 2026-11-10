@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 
+	"github.com/awesome-goose/goose/openapi"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
 
@@ -76,6 +77,38 @@ type InboxDto struct {
 // InboxCountDto carries the caller for GET /inbox/unread-count and POST /inbox/read.
 type InboxCountDto struct {
 	Ctx ntxctx.NTXContext `context:"ntx"`
+}
+
+// InboxMarkAllDto carries the request context for POST /inbox/read.
+type InboxMarkAllDto struct {
+	Ctx ntxctx.NTXContext `context:"ntx"`
+}
+
+// InboxCount is GET /inbox/unread-count's body.
+type InboxCount struct {
+	Count int64 `json:"count" binding:"required"`
+}
+
+// InboxUpdated is POST /inbox/read's body: how many messages it marked read.
+type InboxUpdated struct {
+	Updated int64 `json:"updated" binding:"required"`
+}
+
+// OpenAPI documents the inbox (PLAN U25): a page is the shared {items, next} shape.
+func (InboxDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "The signed-in person's in-app notifications, newest first", Response: openapi.Page[InboxItem]{}}
+}
+
+func (InboxCountDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "How many of the signed-in person's notifications are unread", Response: InboxCount{}}
+}
+
+func (InboxMarkAllDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Mark every notification read", Response: InboxUpdated{}}
+}
+
+func (InboxReadDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Mark one notification read", Response: InboxItem{}}
 }
 
 // InboxReadDto carries the message id for POST /inbox/:id/read.

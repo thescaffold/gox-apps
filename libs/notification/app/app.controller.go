@@ -14,6 +14,7 @@ import (
 	"github.com/thescaffold/gox-apps/libs/notification/app/message"
 	notificationprovider "github.com/thescaffold/gox-apps/libs/notification/pkg/provider"
 	queueapp "github.com/thescaffold/gox-apps/libs/queue/app"
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/i18n"
 	"github.com/thescaffold/gox-packages/libs/core/response"
@@ -174,6 +175,9 @@ func (c *AppController) GetSubscription(dto *GetSubscriptionDto) types.Output {
 			c.lang.Translate("apps.notification.subscription.get.error.ref-missing", nil, pref),
 			nil)
 	}
+	if !c.ownsAddress(dto.Ctx, dto.Ref) {
+		return response.Forbidden(title, "you may only see your own subscription")
+	}
 	r, _ := c.appService.GetSubscription(dto.Ref)
 	return response.Success(r,
 		title,
@@ -191,6 +195,9 @@ func (c *AppController) UpdateSubscription(dto *UpdateSubscriptionDto) types.Out
 			c.lang.Translate("apps.notification.subscription.update.error.ref-missing", nil, pref),
 		)
 	}
+	if !c.ownsAddress(dto.Ctx, dto.Ref) {
+		return response.Forbidden(title, "you may only change your own subscription")
+	}
 	r, err := c.appService.UpdateSubscription(dto.Ref, dto.Rules)
 	if err != nil {
 		return response.InternalServerError(title, err.Error())
@@ -199,6 +206,28 @@ func (c *AppController) UpdateSubscription(dto *UpdateSubscriptionDto) types.Out
 		title,
 		c.lang.Translate("apps.notification.subscription.update.success", nil, pref),
 		nil)
+}
+
+// ownsAddress reports whether a verified caller may read or change the subscription keyed by
+// ref: a platform admin may, and so may the person whose ref, email or phone it is, as the
+// provider's IdentityFetcher resolves them. With no IdentityFetcher wired only an admin may.
+func (c *AppController) ownsAddress(ntx ntxctx.NTXContext, ref string) bool {
+	if coreauth.PlatformAdmin(ntx) {
+		return true
+	}
+	if ntx.UserID == "" || c.provider == nil || c.provider.Identity == nil {
+		return false
+	}
+	uc, err := c.provider.Identity.FetchByUserId(ntx.UserID)
+	if err != nil || uc == nil {
+		return false
+	}
+	for _, k := range []string{"ref", "email", "phone"} {
+		if v, ok := uc.User[k].(string); ok && v != "" && v == ref {
+			return true
+		}
+	}
+	return false
 }
 
 // identityFromContext extracts user/client/workspace ids from NTXContext.

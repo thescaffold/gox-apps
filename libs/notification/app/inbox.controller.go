@@ -57,7 +57,7 @@ func (c *AppController) InboxUnreadCount(dto *InboxCountDto) types.Output {
 	if err != nil {
 		return c.inboxError(title, err)
 	}
-	return response.Success(map[string]any{"count": n}, title, "", nil)
+	return response.Success(InboxCount{Count: n}, title, "", nil)
 }
 
 // InboxMarkRead is POST /inbox/:id/read: marks one message read (again is
@@ -74,12 +74,12 @@ func (c *AppController) InboxMarkRead(dto *InboxReadDto) types.Output {
 
 // InboxMarkAllRead is POST /inbox/read: marks every unread message read.
 // data: {updated}.
-func (c *AppController) InboxMarkAllRead(dto *InboxCountDto) types.Output {
+func (c *AppController) InboxMarkAllRead(dto *InboxMarkAllDto) types.Output {
 	title := c.inboxTitle(dto.Ctx)
 	userID, workspaceID := inboxCaller(dto.Ctx)
 	n, err := c.appService.MarkAllRead(userID, workspaceID)
 	if err != nil {
 		return c.inboxError(title, err)
 	}
-	return response.Success(map[string]any{"updated": n}, title, "", nil)
+	return response.Success(InboxUpdated{Updated: n}, title, "", nil)
 }

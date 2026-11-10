@@ -24,10 +24,14 @@ import (
 //	POST   /inbox/:id/read     → InboxMarkRead InboxItem
 var ROUTES = router.ForRoutes(
 	router.Get("/", []any{AppController{}, "GetHello"}),
-	router.Get("/scope", []any{AppController{}, "FindByScope"}),
-	router.Get("/priority", []any{AppController{}, "FindByPriority"}),
-	router.Get("/subscription", []any{AppController{}, "GetSubscription"}, coreauth.Session()...),
-	router.Patch("/subscription", []any{AppController{}, "UpdateSubscription"}, coreauth.Session()...),
+	// The caller's own unread messages (U26: they answered anonymous callers).
+	router.Get("/scope", []any{AppController{}, "FindByScope"}, coreauth.Caller()...),
+	router.Get("/priority", []any{AppController{}, "FindByPriority"}, coreauth.Caller()...),
+	// A subscription is keyed by an address: only its owner (or a platform admin) may read or
+	// change it (U26: any session could read or switch off anyone's channels).
+	router.Get("/subscription", []any{AppController{}, "GetSubscription"}, coreauth.Caller()...),
+	router.Patch("/subscription", []any{AppController{}, "UpdateSubscription"}, coreauth.Caller()...),
+	// Its own credential: NOTIFICATION_CAPTURE_TOKEN, and 404 unless capture is on.
 	router.Get("/capture", []any{AppController{}, "Capture"}),
 	router.Get("/inbox", []any{AppController{}, "Inbox"}, inboxGuard()...),
 	router.Get("/inbox/unread-count", []any{AppController{}, "InboxUnreadCount"}, inboxGuard()...),

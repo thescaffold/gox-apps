@@ -18,6 +18,8 @@ func (c *TransactionController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Transaction, CreateTransactionDto, UpdateTransactionDto]{
 		// Mirrors TS transaction.controller.ts name = 'transaction'.
 		Name: "transaction",
+		// Reads see only the caller's own rows (user_id; the table has no workspace column); writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		OwnerScoped: true,
 		// Mirrors TS transaction.controller.ts searchable = ['narration','desc'].
 		Searchable: []string{"narration", "desc"},
 		// Mirrors TS transaction.controller.ts unique = ({reference}) =>

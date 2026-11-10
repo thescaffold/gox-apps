@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('transaction') — singular path segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("transaction", TransactionController{}).All()),
+	coreauth.AdminWrites(router.Resource("transaction", TransactionController{}).All()),
 )

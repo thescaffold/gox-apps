@@ -18,6 +18,8 @@ func (c *UsageController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Usage, CreateUsageDto, UpdateUsageDto]{
 		// Mirrors TS usage.controller.ts name = 'usage'.
 		Name: "usage",
+		// Reads see only the caller's workspace; writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS usage.controller.ts searchable = [] (empty).
 		Searchable: []string{},
 		// TS unique = () => [] — no uniqueness constraints; left unset.

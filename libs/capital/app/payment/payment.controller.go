@@ -18,6 +18,8 @@ func (c *PaymentController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Payment, CreatePaymentDto, UpdatePaymentDto]{
 		// Mirrors TS payment.controller.ts name = 'payment'.
 		Name: "payment",
+		// Reads see only the caller's workspace; writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS payment.controller.ts searchable = ['reference'].
 		Searchable: []string{"reference"},
 		// Mirrors TS payment.controller.ts unique = ({reference}) => [{reference}].

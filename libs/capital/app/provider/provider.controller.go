@@ -3,6 +3,7 @@ package provider
 import (
 	"errors"
 
+	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 	"github.com/thescaffold/gox-packages/libs/core/crud"
 	"github.com/thescaffold/gox-packages/libs/core/events"
@@ -31,7 +32,19 @@ func (c *ProviderController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Provider, CreateProviderDto, UpdateProviderDto]{
 		Name:       "provider",
 		Searchable: []string{"name", "email"},
+		// Only cards on accounts in the caller's workspace (PLAN U26): before, any signed-in
+		// caller could list, change or delete every saved card on the platform.
+		WorkspaceScopeClause: `"account_id" IN (SELECT "id" FROM "CapitalAccounts" WHERE "workspace_id" = ?)`,
 		Morphs: map[string]crud.MorphFn{
+			// beforeUpdate — a card's owner may only choose which card is primary; its account,
+			// token and signature come from the provider's verification, never from a client.
+			crud.BeforeUpdate: func(payload any, ctx ntxctx.NTXContext) (any, error) {
+				p, ok := payload.(*UpdateProviderDto)
+				if !ok || p == nil || coreauth.PlatformAdmin(ctx) {
+					return nil, nil
+				}
+				return &UpdateProviderDto{Primary: p.Primary}, nil
+			},
 			// afterGet — strip secrets from a single row.
 			crud.AfterGet: func(payload any, ctx ntxctx.NTXContext) (any, error) {
 				if p, ok := payload.(*Provider); ok && p != nil {

@@ -68,13 +68,13 @@ const (
 // `type` values bypass debt aggregation and aren't deduplicated by
 // (plan, period, currency, type).
 var PaymentMetaNonRecurrentTypes = map[string]bool{
-	"apps.capital.license.pay":             true,
-	"apps.capital.instance.pay":            true,
-	"apps.capital.card.link":               true,
-	"apps.capital.gate.link":               true,
-	"apps.capital.payment.link":            true,
-	"apps.capital.dashboard.upgrade-plan":  true,
-	"apps.capital.dashboard.pay-debt":      true,
+	"apps.capital.license.pay":            true,
+	"apps.capital.instance.pay":           true,
+	"apps.capital.card.link":              true,
+	"apps.capital.gate.link":              true,
+	"apps.capital.payment.link":           true,
+	"apps.capital.dashboard.upgrade-plan": true,
+	"apps.capital.dashboard.pay-debt":     true,
 }
 
 // ProviderResponse is the rich return value providers emit. TS returns a
@@ -126,14 +126,14 @@ type LegacyProvider interface {
 // via RegisterProvider — host code wires real Stripe/Paystack/Flutterwave
 // implementations after reading env credentials.
 type PaymentService struct {
-	entity            *PaymentEntity                       `inject:""`
-	paymentLogEntity  *capitalpaymentlog.PaymentLogEntity  `inject:""`
-	planTypeEntity    *capitalplantype.PlanTypeEntity      `inject:""`
-	providerEntity    *capitalprovider.ProviderEntity      `inject:""`
-	usageEntity       *capitalusage.UsageEntity            `inject:""`
-	rateEntity        *capitalrate.RateEntity              `inject:""`
-	walletService     *capitalwallet.WalletService         `inject:""`
-	tracker           *events.TrackerService               `inject:""`
+	entity           *PaymentEntity                      `inject:""`
+	paymentLogEntity *capitalpaymentlog.PaymentLogEntity `inject:""`
+	planTypeEntity   *capitalplantype.PlanTypeEntity     `inject:""`
+	providerEntity   *capitalprovider.ProviderEntity     `inject:""`
+	usageEntity      *capitalusage.UsageEntity           `inject:""`
+	rateEntity       *capitalrate.RateEntity             `inject:""`
+	walletService    *capitalwallet.WalletService        `inject:""`
+	tracker          *events.TrackerService              `inject:""`
 
 	mu        sync.RWMutex
 	providers map[string]Provider
@@ -339,7 +339,12 @@ func (s *PaymentService) Complete(plan *capitalplan.Plan, providerName, referenc
 	if reference == "" {
 		return false, errors.New("app.capital.service.payment.invalid-reference")
 	}
-	pay, _ := s.entity.First(`"reference" = ?`, reference)
+	if plan == nil {
+		return false, errors.New("app.capital.service.payment.invalid-reference")
+	}
+	// Only a payment of this plan (PLAN U26): by reference alone, a caller could verify someone
+	// else's payment against their own plan and have that person's card linked to their account.
+	pay, _ := s.entity.First(`"reference" = ? AND "plan_id" = ?`, reference, plan.Id)
 	if pay == nil {
 		return false, errors.New("app.capital.service.payment.invalid-reference")
 	}
@@ -951,7 +956,12 @@ func (s *PaymentService) providersForCharge(plan *capitalplan.Plan, providerId s
 		return nil, nil
 	}
 	if providerId != "" {
-		row, _ := s.providerEntity.First(`"id" = ?`, providerId)
+		// Only a card on the plan owner's own account (PLAN U26): by id alone, a caller could pay
+		// their plan with another person's saved card.
+		row, _ := s.providerEntity.First(
+			`"id" = ? AND "account_id" IN (SELECT "id" FROM "CapitalAccounts" WHERE "user_id" = ?)`,
+			providerId, plan.UserId,
+		)
 		if row == nil {
 			return nil, nil
 		}

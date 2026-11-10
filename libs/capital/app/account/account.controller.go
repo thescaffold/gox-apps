@@ -18,6 +18,8 @@ func (c *AccountController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Account, CreateAccountDto, UpdateAccountDto]{
 		// Mirrors TS account.controller.ts:21 name = 'account'.
 		Name: "account",
+		// Reads see only the caller's workspace; writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		WorkspaceScoped: true,
 		// Mirrors TS account.controller.ts:22 searchable = ['desc','label'].
 		Searchable: []string{"desc", "label"},
 		// Mirrors TS account.controller.ts:24-27 unique = ({reference,number}) =>

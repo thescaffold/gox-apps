@@ -21,15 +21,17 @@ import (
 type VoucherController struct {
 	crud.CrudResource[Voucher, CreateVoucherDto, UpdateVoucherDto]
 
-	entity            *VoucherEntity                            `inject:""`
-	voucherTypeEntity *capitalvouchertype.VoucherTypeEntity     `inject:""`
-	lang              *i18n.Service                             `inject:""`
+	entity            *VoucherEntity                        `inject:""`
+	voucherTypeEntity *capitalvouchertype.VoucherTypeEntity `inject:""`
+	lang              *i18n.Service                         `inject:""`
 }
 
 func (c *VoucherController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Voucher, CreateVoucherDto, UpdateVoucherDto]{
-		Name:       "voucher",
-		Searchable: []string{},
+		Name: "voucher",
+		// Reads see only the caller's workspace; writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		WorkspaceScoped: true,
+		Searchable:      []string{},
 		Unique: func(d *CreateVoucherDto) []utils.KeyValue {
 			return []utils.KeyValue{{
 				"workspace_id":    d.WorkspaceId,

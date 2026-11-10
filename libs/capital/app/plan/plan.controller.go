@@ -25,17 +25,19 @@ import (
 type PlanController struct {
 	crud.CrudResource[Plan, CreatePlanDto, UpdatePlanDto]
 
-	entity         *PlanEntity                       `inject:""`
-	planTypeEntity *capitalplantype.PlanTypeEntity   `inject:""`
-	markerService  *marker.Service                   `inject:""`
-	flagService    *flagsapp.FlagService             `inject:""`
-	lang           *i18n.Service                     `inject:""`
+	entity         *PlanEntity                     `inject:""`
+	planTypeEntity *capitalplantype.PlanTypeEntity `inject:""`
+	markerService  *marker.Service                 `inject:""`
+	flagService    *flagsapp.FlagService           `inject:""`
+	lang           *i18n.Service                   `inject:""`
 }
 
 func (c *PlanController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Plan, CreatePlanDto, UpdatePlanDto]{
-		Name:       "plan",
-		Searchable: []string{},
+		Name: "plan",
+		// Reads see only the caller's workspace; writes need a platform admin (routes: coreauth.AdminWrites, PLAN U26).
+		WorkspaceScoped: true,
+		Searchable:      []string{},
 		Unique: func(d *CreatePlanDto) []utils.KeyValue {
 			return []utils.KeyValue{{
 				"workspace_id": d.WorkspaceId,

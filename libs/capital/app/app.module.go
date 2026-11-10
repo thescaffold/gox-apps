@@ -61,7 +61,9 @@ func (m *AppModule) Imports() []types.Module {
 		// Services only: importing the module whole would also serve the queue's
 		// API (GET / -> Pop, queue/job/log CRUD) under this app's prefix.
 		router.Silent(&queueapp.AppModule{}),
-		&flagsapp.FlagModule{},
+		// Services only (FlagService): importing it whole served the flags app's flag CRUD under this
+		// app's prefix as /apps/capital/flag (PLAN U26).
+		router.Silent(&flagsapp.FlagModule{}),
 		ROUTES,
 	}
 }

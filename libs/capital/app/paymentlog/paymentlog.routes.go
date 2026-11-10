@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('payment-log') — singular kebab-case segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("payment-log", PaymentLogController{}).All()),
+	coreauth.SecureAdmin(router.Resource("payment-log", PaymentLogController{}).All()),
 )

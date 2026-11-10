@@ -90,7 +90,11 @@ func (c *AppController) Batch(dto *BatchDto) types.Output {
 		}
 		inputs = append(inputs, BatchInput{FileId: *p.FileId, Index: *p.Index, Raw: raw})
 	}
-	pages, err := c.appService.Batch(inputs)
+	_, _, workspaceID := identityFromContext(dto.Ctx)
+	pages, err := c.appService.Batch(workspaceID, inputs)
+	if err == ErrFileNotFound {
+		return response.NotFound(c.lang.Translate("apps.blobs.app.title", nil, pref), "file not found")
+	}
 	if err != nil {
 		return response.InternalServerError(
 			c.lang.Translate("apps.blobs.app.title", nil, pref),
@@ -173,9 +177,11 @@ func (c *AppController) Upload(dto *FileUploadDto) types.Output {
 // Download handles GET /download/:id — returns the assembled file bytes.
 // Mirrors TS app.controller.ts download(): octet-stream + attachment header.
 func (c *AppController) Download(dto *DownloadDto) types.Output {
-	data, resolvedID, err := c.appService.Download(dto.Id)
+	_, _, workspaceID := identityFromContext(dto.Ctx)
+	data, resolvedID, err := c.appService.Download(workspaceID, dto.Id)
 	if err != nil {
-		return response.NotFound("blobs", err.Error())
+		// never the storage error itself: it named server paths
+		return response.NotFound("blobs", "file not found")
 	}
 	return output.DownloadFromContent(data, resolvedID+".bin",
 		output.WithFileContentType("application/octet-stream"))

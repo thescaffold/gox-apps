@@ -81,9 +81,29 @@ type BatchInput struct {
 	Raw    []byte
 }
 
-// Batch find-or-creates each (fileId, index) page with the supplied raw bytes.
+// ErrFileNotFound is what Batch and Download answer for a file that does not exist in the
+// caller's workspace, so another workspace's file looks exactly like a missing one.
+var ErrFileNotFound = fmt.Errorf("blobs: file not found")
+
+// Batch find-or-creates each (fileId, index) page with the supplied raw bytes, for files in
+// workspaceID only: a page for any other file is refused before anything is written (U26).
 // Mirrors TS AppService.batch().
-func (s *AppService) Batch(items []BatchInput) ([]page.Page, error) {
+func (s *AppService) Batch(workspaceID string, items []BatchInput) ([]page.Page, error) {
+	owned := map[string]bool{}
+	for _, it := range items {
+		if owned[it.FileId] {
+			continue
+		}
+		f, _ := s.fileEntity.First(`id = ? AND workspace_id = ?`, it.FileId, workspaceID)
+		if workspaceID == "" || f == nil {
+			return nil, ErrFileNotFound
+		}
+		owned[it.FileId] = true
+	}
+	return s.batch(items)
+}
+
+func (s *AppService) batch(items []BatchInput) ([]page.Page, error) {
 	out := make([]page.Page, 0, len(items))
 	for _, it := range items {
 		existing, _ := s.pageEntity.First(`file_id = ? AND "index" = ?`, it.FileId, it.Index)
@@ -160,7 +180,7 @@ func (s *AppService) Upload(in InitInput, rawPages []string) (*UploadOutput, err
 			FileId: initOut.File.Id, Index: i, Raw: decoded,
 		})
 	}
-	pages, err := s.Batch(batchInputs)
+	pages, err := s.batch(batchInputs) // the file was just found or created in the caller's workspace
 	if err != nil {
 		return nil, err
 	}
@@ -170,22 +190,30 @@ func (s *AppService) Upload(in InitInput, rawPages []string) (*UploadOutput, err
 // Download returns the assembled raw bytes of a file (concatenated pages in order).
 // Mirrors TS AppService.download() but returns []byte instead of streaming to
 // a FastifyReply — callers (controller) wrap the bytes in an HTTP response.
-func (s *AppService) Download(fileIDOrName string) ([]byte, string, error) {
-	id := fileIDOrName
-	if !looksLikeUUID(id) {
-		f, _ := s.fileEntity.First(`name = ?`, fileIDOrName)
-		if f == nil {
-			return nil, "", fmt.Errorf("blobs: file not found")
-		}
-		id = f.Id
+//
+// Only a file of workspaceID is found (U26): files have no public flag, so a download needs the
+// caller's session and another workspace's file, or a missing one, is ErrFileNotFound.
+func (s *AppService) Download(workspaceID, fileIDOrName string) ([]byte, string, error) {
+	if workspaceID == "" || fileIDOrName == "" {
+		return nil, "", ErrFileNotFound
 	}
+	var f *file.File
+	if looksLikeUUID(fileIDOrName) {
+		f, _ = s.fileEntity.First(`id = ? AND workspace_id = ?`, fileIDOrName, workspaceID)
+	} else {
+		f, _ = s.fileEntity.First(`name = ? AND workspace_id = ?`, fileIDOrName, workspaceID)
+	}
+	if f == nil {
+		return nil, "", ErrFileNotFound
+	}
+	id := f.Id
 	pages, err := s.pageEntity.Find(0, 0, `file_id = ?`, id)
 	if err != nil {
 		return nil, "", err
 	}
 	// pages may arrive ordered by created_at desc per Hydrate default — re-sort by index.
 	sortPagesByIndex(pages)
-	var out []byte
+	out := []byte{} // never nil: Goose's DownloadFromContent reads a file path for nil content
 	for _, p := range pages {
 		out = append(out, p.Raw...)
 	}

@@ -3,6 +3,9 @@ package app
 import (
 	"encoding/json"
 
+	"github.com/awesome-goose/goose/openapi"
+	"github.com/thescaffold/gox-apps/libs/blobs/app/page"
+
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
 )
 
@@ -65,4 +68,25 @@ type FileUploadDto struct {
 type DownloadDto struct {
 	Id  string            `param:"id" binding:"required"`
 	Ctx ntxctx.NTXContext `context:"ntx"`
+}
+
+// OpenAPI documents what each upload route answers (PLAN U25).
+func (InitDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Find or create a file in the caller's workspace", Response: InitOutput{}}
+}
+
+func (BatchDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Upload base64 pages of the caller's files", Response: []page.Page{}}
+}
+
+func (VerifyDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "A file of the caller's workspace and how many pages it has", Response: VerifyOutput{}}
+}
+
+func (FileUploadDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "Create a file and its pages in one call", Response: UploadOutput{}}
+}
+
+func (DownloadDto) OpenAPI() openapi.Operation {
+	return openapi.Operation{Summary: "The bytes of a file of the caller's workspace (application/octet-stream)"}
 }

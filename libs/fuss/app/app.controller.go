@@ -81,7 +81,7 @@ func (c *AppController) Search(dto *SearchDto) types.Output {
 // — a 200 success with the meta payload (or null when no token row matches).
 func (c *AppController) Lookup(dto *LookupDto) types.Output {
 	pref := dto.NTX.Preference
-	meta, err := c.appService.Lookup(dto.Group, dto.Service, dto.EntityName, dto.EntityId)
+	meta, err := c.appService.Lookup(dto.NTX.WorkspaceID, dto.Group, dto.Service, dto.EntityName, dto.EntityId)
 	if err != nil {
 		return response.InternalServerError(
 			c.lang.Translate("apps.fuss.app.title", nil, pref),

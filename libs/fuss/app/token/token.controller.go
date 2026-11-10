@@ -18,6 +18,8 @@ func (c *TokenController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[Token, CreateTokenDto, UpdateTokenDto]{
 		// Mirrors TS token.controller.ts:19 name = 'token'.
 		Name: "token",
+		// The search index of the caller's workspace only (U26).
+		WorkspaceScoped: true,
 		// Mirrors TS token.controller.ts:20 searchable = ['service'].
 		Searchable: []string{"service"},
 		// TS unique = (entity: Token) => [] — never blocks creation.

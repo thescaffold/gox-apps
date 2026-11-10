@@ -18,6 +18,9 @@ func (c *HistoryController) OnRegister() {
 	c.Hydrate(c.entity, crud.Config[History, CreateHistoryDto, UpdateHistoryDto]{
 		// Mirrors TS history.controller.ts:19 name = 'history'.
 		Name: "history",
+		// Search history is personal: the caller's own, in their workspace (U26).
+		WorkspaceScoped: true,
+		OwnerScoped:     true,
 		// Mirrors TS history.controller.ts:20 searchable = ['service'] verbatim.
 		// The History entity has no `service` column — TS keeps this placeholder
 		// and gox preserves it so the surface stays identical.

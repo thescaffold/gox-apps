@@ -143,7 +143,13 @@ func (s *AppService) Search(query, histType, userId, clientId, workspaceId strin
 	// TS applies skip+take at the DB once (find({skip, take})); the page is then
 	// uniqued and its length becomes `total`. Apply perPage as the limit here so
 	// pagination is NOT applied a second time via a post-unique re-slice.
-	logs, err := s.tokenLogEntity.Find(offset, perPage, `"value" LIKE ?`, "%"+query+"%")
+	// Only the caller's workspace's index is searched (U26): it was every tenant's.
+	if workspaceId == "" {
+		return []map[string]any{}, 0, nil
+	}
+	logs, err := s.tokenLogEntity.Find(offset, perPage,
+		`"value" LIKE ? AND "token_id" IN (SELECT "id" FROM "FussTokens" WHERE "workspace_id" = ?)`,
+		"%"+query+"%", workspaceId)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,7 +158,7 @@ func (s *AppService) Search(query, histType, userId, clientId, workspaceId strin
 	seen := map[string]struct{}{}
 	var results []map[string]any
 	for _, l := range logs {
-		tok, err := s.tokenEntity.First(`"id" = ?`, l.TokenId)
+		tok, err := s.tokenEntity.First(`"id" = ? AND "workspace_id" = ?`, l.TokenId, workspaceId)
 		if err != nil || tok == nil {
 			continue
 		}
@@ -190,10 +196,14 @@ func (s *AppService) Search(query, histType, userId, clientId, workspaceId strin
 	return results, int64(len(results)), nil
 }
 
-func (s *AppService) Lookup(group, svc, entityName, entityId string) (map[string]any, error) {
+// Lookup finds an entity's indexed meta in workspaceId only (U26); none without a workspace.
+func (s *AppService) Lookup(workspaceId, group, svc, entityName, entityId string) (map[string]any, error) {
+	if workspaceId == "" {
+		return nil, nil
+	}
 	tok, err := s.tokenEntity.First(
-		`"group" = ? AND "service" = ? AND "entity_name" = ? AND "entity_id" = ?`,
-		group, svc, entityName, entityId,
+		`"workspace_id" = ? AND "group" = ? AND "service" = ? AND "entity_name" = ? AND "entity_id" = ?`,
+		workspaceId, group, svc, entityName, entityId,
 	)
 	if err != nil || tok == nil {
 		return nil, nil

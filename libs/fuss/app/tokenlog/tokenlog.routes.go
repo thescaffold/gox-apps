@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('token-log') — singular path segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("token-log", TokenLogController{}).All()),
+	coreauth.SecureAdmin(router.Resource("token-log", TokenLogController{}).All()),
 )

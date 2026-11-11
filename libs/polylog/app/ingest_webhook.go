@@ -29,6 +29,11 @@ const RequireSignatureVar = "POLYLOG_INGEST_REQUIRE_SIGNATURE"
 // ErrSignature is returned for a webhook whose signature does not verify.
 var ErrSignature = errors.New("polylog: the webhook signature did not verify")
 
+// ErrUnknownSource is returned by the webhook routes for a source or channel that is not
+// registered (PLAN U26): they answered 200 and stored, and announced on the bus, anything an
+// anonymous caller posted under any id. Senders with no registered source use POST /ingest.
+var ErrUnknownSource = errors.New("polylog: no such source or channel")
+
 // verifySource checks the request against the source's signature rule. A
 // source with no rule (or no such source) passes unverified, as before,
 // unless RequireSignatureVar is set.
@@ -111,7 +116,11 @@ func forwardedHeaders(h map[string]string) map[string]string {
 // ingestWebhook is the shared path of /ingest/:id, /ingest/source/:id and
 // /ingest/channel/:id: verify, store, dispatch, announce.
 func (s *AppService) ingestWebhook(item pipeline.Item, body []byte, headers map[string]string, properties map[string]string, ctx ntxctx.NTXContext) (any, error) {
-	verified, err := s.verifySource(item.Source, body, headers)
+	sourceID, err := s.webhookSource(item)
+	if err != nil {
+		return nil, err
+	}
+	verified, err := s.verifySource(sourceID, body, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -136,4 +145,32 @@ func (s *AppService) ingestWebhook(item pipeline.Item, body []byte, headers map[
 		"headers":  forwardedHeaders(headers),
 	})
 	return ev, nil
+}
+
+// webhookSource is the registered source a webhook delivery belongs to: the source named by id or
+// key, or, for POST /ingest/channel/:id, the channel's own source (so a channel's deliveries are
+// held to its source's signature rule, which they never were). Unknown is ErrUnknownSource. A
+// service built without entities (some tests) checks nothing, as before.
+func (s *AppService) webhookSource(item pipeline.Item) (string, error) {
+	if item.EntityName == "channel" {
+		if s.channelEntity == nil {
+			return item.Source, nil
+		}
+		ch, _ := s.channelEntity.First(`"id" = ?`, item.Source)
+		if ch == nil {
+			return "", ErrUnknownSource
+		}
+		return ch.SourceId, nil
+	}
+	if s.sourceEntity == nil {
+		return item.Source, nil
+	}
+	if item.Source == "" {
+		return "", ErrUnknownSource
+	}
+	src, _ := s.sourceEntity.First(`"id" = ? OR "key" = ?`, item.Source, item.Source)
+	if src == nil {
+		return "", ErrUnknownSource
+	}
+	return src.Id, nil
 }

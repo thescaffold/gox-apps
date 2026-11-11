@@ -192,5 +192,8 @@ func ingestFailure(title string, err error) types.Output {
 	if errors.Is(err, ErrSignature) {
 		return response.ErrorCode(title, "The webhook signature did not verify.", 401, "signature_invalid")
 	}
+	if errors.Is(err, ErrUnknownSource) {
+		return response.ErrorCode(title, "No such source or channel.", 404, "not_found")
+	}
 	return response.InternalServerError(title, err.Error())
 }

@@ -129,11 +129,23 @@ func TestSignedSourceIngest(t *testing.T) {
 	}
 }
 
+func unsignedSource(t *testing.T, db *gorm.DB) *source.Source {
+	t.Helper()
+	key := "plain-" + uuid.NewString()[:8]
+	src := &source.Source{UserId: "u", ClientId: "c", WorkspaceId: "w", Category: "webhook", Key: &key, TypeId: uuid.NewString(), Name: key}
+	src.Id = uuid.NewString()
+	if err := db.Create(src).Error; err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
 func TestUnsignedSourcesStillIngestUnlessRequired(t *testing.T) {
 	db := polylogDB(t)
 	svc := app.NewAppServiceForTest(db)
+	plain := unsignedSource(t, db)
 	body := []byte("not json")
-	out, err := svc.IngestSourceFrom(body, nil, "no-such-source", map[string]string{"type": "x.y"}, ntxctx.NTXContext{})
+	out, err := svc.IngestSourceFrom(body, nil, *plain.Key, map[string]string{"type": "x.y"}, ntxctx.NTXContext{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +155,30 @@ func TestUnsignedSourcesStillIngestUnlessRequired(t *testing.T) {
 		t.Fatalf("payload %s", stored.Payload)
 	}
 	t.Setenv(app.RequireSignatureVar, "true")
-	if _, err := svc.IngestSourceFrom(body, nil, "no-such-source", nil, ntxctx.NTXContext{}); !errors.Is(err, app.ErrSignature) {
+	if _, err := svc.IngestSourceFrom(body, nil, plain.Id, nil, ntxctx.NTXContext{}); !errors.Is(err, app.ErrSignature) {
 		t.Fatalf("required signature: %v", err)
+	}
+}
+
+// The webhook routes answered 200 and stored (and announced) anything posted under any id, so
+// anyone could write events for a source that does not exist (PLAN U26). Unknown is refused and
+// nothing is stored; a channel's delivery is held to its own source's rule.
+func TestWebhooksForUnknownSourcesAreRefused(t *testing.T) {
+	db := polylogDB(t)
+	svc := app.NewAppServiceForTest(db)
+	var before, after int64
+	db.Model(&event.Event{}).Count(&before)
+	if _, err := svc.IngestSourceFrom([]byte(`{}`), nil, "no-such-source-"+uuid.NewString()[:6], nil, ntxctx.NTXContext{}); !errors.Is(err, app.ErrUnknownSource) {
+		t.Fatalf("unknown source: %v", err)
+	}
+	if _, err := svc.IngestSourceAltFrom([]byte(`{}`), nil, uuid.NewString(), nil, ntxctx.NTXContext{}); !errors.Is(err, app.ErrUnknownSource) {
+		t.Fatalf("unknown source (alt route): %v", err)
+	}
+	if _, err := svc.IngestChannelFrom([]byte(`{}`), nil, uuid.NewString(), nil, ntxctx.NTXContext{}); !errors.Is(err, app.ErrUnknownSource) {
+		t.Fatalf("unknown channel: %v", err)
+	}
+	db.Model(&event.Event{}).Count(&after)
+	if after != before {
+		t.Fatalf("refused deliveries stored %d events", after-before)
 	}
 }

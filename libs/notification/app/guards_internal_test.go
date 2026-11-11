@@ -16,7 +16,9 @@ func (f fakeIdentity) FetchByUserId(id string) (*notificationprovider.UserContex
 	}
 	return nil, nil
 }
-func (f fakeIdentity) FetchByOwner(string) (*notificationprovider.UserContext, error) { return nil, nil }
+func (f fakeIdentity) FetchByOwner(string) (*notificationprovider.UserContext, error) {
+	return nil, nil
+}
 
 // A subscription is keyed by an address; only its owner or a platform admin reaches it (U26).
 func TestSubscriptionIsTheAddressOwnersOnly(t *testing.T) {

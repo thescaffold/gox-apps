@@ -63,6 +63,12 @@ func deliverFixture(t *testing.T) (*app.AppService, *gorm.DB, *mailServer) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// one small pool per test, closed after it, so the suite never runs a shared Postgres out of clients
+	if sqlDB, err := db.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(4)
+		sqlDB.SetMaxIdleConns(1)
+		t.Cleanup(func() { _ = sqlDB.Close() })
+	}
 	q := (&sql.Query{}).With(&sql.Db{DB: db})
 	for _, m := range app.Migrations {
 		if err := m.Run(q); err != nil {

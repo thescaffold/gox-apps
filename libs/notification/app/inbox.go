@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/thescaffold/gox-apps/libs/notification/app/message"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 )
 
 // The in-app inbox: the signed-in person's own `web` messages (what the
@@ -77,6 +78,10 @@ func inboxScope(userID, workspaceID string, now time.Time) (string, []any) {
 	if workspaceID != "" {
 		parts = append(parts, `("workspace_id" = ? OR "workspace_id" IS NULL OR "workspace_id" = '')`)
 		args = append(args, workspaceID)
+	} else {
+		// a caller with no workspace sees only the messages that belong to none: without this an
+		// empty workspace listed and counted the person's messages from every workspace
+		parts = append(parts, `("workspace_id" IS NULL OR "workspace_id" = '')`)
 	}
 	return strings.Join(parts, " AND "), args
 }
@@ -181,7 +186,23 @@ func (s *AppService) MarkRead(userID, workspaceID, id string) (*InboxItem, error
 		return nil, ErrInboxNotFound
 	}
 	item := toInboxItem(m)
+	publishInboxRead(userID, workspaceID, []string{item.ID}, 1)
 	return &item, nil
+}
+
+// EventInboxRead is published after the caller's inbox changed by a read (one message or all),
+// so a host can push the new unread count to the person's other devices. Payload: userId,
+// workspaceId, ids (the one message read; empty for "read all") and updated (how many rows the
+// read touched).
+const EventInboxRead = "apps.notification.inbox.read"
+
+func publishInboxRead(userID, workspaceID string, ids []string, updated int64) {
+	if ids == nil {
+		ids = []string{}
+	}
+	events.Default().Publish(EventInboxRead, map[string]any{
+		"userId": userID, "workspaceId": workspaceID, "ids": ids, "updated": updated,
+	})
 }
 
 // MarkAllRead marks every unread message in the caller's inbox read and says
@@ -195,7 +216,11 @@ func (s *AppService) MarkAllRead(userID, workspaceID string) (int64, error) {
 	}
 	now := time.Now().UTC()
 	where, args := inboxScope(userID, workspaceID, now)
-	return s.messageEntity.Update(&message.Message{ReadAt: &now}, where+` AND "read_at" IS NULL`, args...)
+	n, err := s.messageEntity.Update(&message.Message{ReadAt: &now}, where+` AND "read_at" IS NULL`, args...)
+	if err == nil {
+		publishInboxRead(userID, workspaceID, nil, n)
+	}
+	return n, err
 }
 
 func toInboxItem(m *message.Message) InboxItem {

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/thescaffold/gox-apps/libs/notification/app"
 	notificationmessage "github.com/thescaffold/gox-apps/libs/notification/app/message"
+	"github.com/thescaffold/gox-packages/libs/core/events"
 	"gorm.io/gorm"
 )
 
@@ -167,8 +168,56 @@ func TestInbox_DeliveredMessageHasBodyAndLink(t *testing.T) {
 	if err := svc.Deliver(p2); err != nil {
 		t.Fatal(err)
 	}
-	page, _ = svc.Inbox(app.InboxQuery{UserID: p2["userId"].(string)})
+	page, _ = svc.Inbox(app.InboxQuery{UserID: p2["userId"].(string), WorkspaceID: "ws-1"})
 	if len(page.Items) != 1 || page.Items[0].Link != "yan://notifications/9" {
 		t.Fatalf("top-level link: %+v", page.Items)
+	}
+}
+
+// A caller with no workspace sees and counts only the messages that belong to none (an empty
+// workspace counted every workspace's), and a read is announced as apps.notification.inbox.read.
+func TestInbox_NoWorkspaceAndTheReadEvent(t *testing.T) {
+	svc, db, _ := deliverFixture(t)
+	me := "u-" + uuid.NewString()[:8]
+	base := time.Now().UTC().Add(-time.Hour)
+	none := inboxMessage(t, db, me, "", base, nil)
+	inboxMessage(t, db, me, "ws-a-"+uuid.NewString()[:6], base, nil)
+	inboxMessage(t, db, me, "ws-b-"+uuid.NewString()[:6], base, nil)
+
+	if n, err := svc.UnreadCount(me, ""); err != nil || n != 1 {
+		t.Fatalf("unread with no workspace = %d %v, want 1 (only the workspace-less message)", n, err)
+	}
+	page, _ := svc.Inbox(app.InboxQuery{UserID: me})
+	if len(page.Items) != 1 || page.Items[0].ID != none.Id {
+		t.Fatalf("inbox with no workspace listed %d items", len(page.Items))
+	}
+
+	got := make(chan map[string]any, 4)
+	events.Default().Subscribe(app.EventInboxRead, func(_ string, p any) {
+		if m, ok := p.(map[string]any); ok && m["userId"] == me {
+			got <- m
+		}
+	})
+	if _, err := svc.MarkRead(me, "", none.Id); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-got:
+		if ids, _ := m["ids"].([]string); len(ids) != 1 || ids[0] != none.Id {
+			t.Fatalf("read event = %v", m)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no apps.notification.inbox.read after MarkRead")
+	}
+	if _, err := svc.MarkAllRead(me, ""); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-got:
+		if m["updated"] != int64(0) {
+			t.Fatalf("read-all event = %v (nothing was left unread)", m)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no apps.notification.inbox.read after MarkAllRead")
 	}
 }

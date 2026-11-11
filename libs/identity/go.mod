@@ -2,9 +2,9 @@ module github.com/thescaffold/gox-apps/libs/identity
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.33
+require github.com/awesome-goose/goose v0.0.34
 
-require github.com/thescaffold/gox-packages/libs/core v0.0.25
+require github.com/thescaffold/gox-packages/libs/core v0.0.26
 
 require github.com/thescaffold/gox-apps/libs/assets v0.0.8
 
@@ -39,9 +39,9 @@ require (
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.5.5 // indirect
-	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.7.1 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect

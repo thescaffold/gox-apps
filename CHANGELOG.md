@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## identity v0.0.26 — other people's accounts are a platform admin's
+
+Security fix (PLAN U26, the same hole Yan's fork closed). **Breaking** for any console that let workspace owners use the generic resources.
+
+- The generic resources over many people's rows — `user`, `token`, `device`, `device-log`, `device-session`, `attribute`, `client`, `client-log`, `invite`, `provider` (its list too), `provider-log`, `user-client-workspace`, `workspace` — and `POST /token/user` need a platform admin (`ROOT_USER_ID`, or a `root` / `global-admin` role). Before, any signed-in person could read, edit or delete another account by id (`PATCH /user/:id` changed its `ref`, `status` or stored a raw `secret`), make themselves owner of anyone's workspace (`POST /user-client-workspace`) and mint tokens for anyone; anyone could list provider rows. A person's own records stay on the account routes.
+- Tests: Postgres pools are capped and idle connections expire, so the suite no longer runs a shared Postgres out of clients.
+
+**Check your data:** `IdentityUserClientWorkspaces` rows that make someone an owner of a workspace they did not create, and users whose `ref` or `status` changed unexpectedly.
+
+## Scaffold apps mounted with no middleware decide who may call them (PLAN U26)
+
+Security fix. **Breaking** for anyone who relied on the open routes. Needs core with `coreauth.Caller`, `Admin`, `Internal`, `SecureCaller`, `SecureAdmin` and `AdminWrites`. Every product mounts these apps with `router.Mount("apps/<name>", ...)` and no middleware, so each route now carries its own guard: **public**, **Caller** (a session, acting only on the caller's own data), **Admin** (`ROOT_USER_ID` or a `root` / `global-admin` role; a workspace owner is not one), or **Internal** (a call signed by `core/http.Client.Internal` with `HMAC_KEY`, or an admin's session). Services that call the Internal hooks over HTTP must sign with `Client.Internal`.
+
+- **polylog v0.0.10:** every resource, `config`, `root-source`, `root-sink` and both dashboards (platform-wide counts, open to anyone) need an admin. The webhook routes (`ingest/:id`, `ingest/source/:id`, `ingest/channel/:id`) stay public; `POST /ingest` and `/ingest/batch` stay open for browser SDKs but refuse any item for a source with a signature rule. Dashboards and ingest are documented with typed responses. Hosts whose web client registers `root-source` on every signed-in load (scaffold ngx-common before 2673ed2) now get 403 there.
+- **cron v0.0.11, queue v0.0.10, controller v0.0.10, health v0.0.10:** register, pop, push, log, ping and the routes other services call are Internal (anyone could register cron jobs, read other apps' queue payloads, or make the health app poll a URL of their choosing); their resources are admin only. `GET /` and `controller/now` stay public.
+- **cache v0.0.9:** every route is admin only (it holds codes and session data).
+- **flags v0.0.10:** `register`, `log`, `status`, `limit` are Internal; `environment`, `environment-type`, `flag`, `flag-log` admin only.
+- **figs v0.0.11, statics v0.0.10, assets v0.0.9:** writes need an admin; statics lists stay readable by anyone, assets files by a signed-in caller.
+- **audit v0.0.14:** `log` is readable within the caller's own workspace and written by an admin; `activities` takes the workspace from the session (mounted bare it always saw none).
+- **blobs v0.0.9:** uploads and downloads need a session and stay in the caller's workspace; a missing file is a 404, never the storage error. `file` is workspace-scoped; `page` readable through the caller's files only.
+- **fuss v0.0.10:** search, recent and lookup need a session and see only the caller's workspace (search matched every tenant's index); `history` is the caller's own, `token` the workspace's, `token-log` admin only.
+- **forms v0.0.9:** forms, fields and submissions belong to their workspace; `one/:id` stays public on purpose (render a shared form, store a submission).
+- **notification v0.0.14:** `scope` and `priority` need a session; a subscription is readable and changeable only by the address's owner; `rule` and `template` are admin only; `log` the recipient's own; `message` takes the caller's context so `ScopeToOwner` works, and is an admin's only while a host has not called it. A caller with no workspace sees only the inbox messages that belong to none (it saw every workspace's). A read publishes `apps.notification.inbox.read`. Inbox responses are typed (`Page[InboxItem]`).
+
 ## capital v0.0.10 — every route says who may call it
 
 Security fix (PLAN U26). **Breaking** for anyone who relied on the open routes; needs core with `coreauth.Caller/Admin/Internal/AdminWrites`.
@@ -15,6 +39,7 @@ Security fix (PLAN U26). **Breaking** for anyone who relied on the open routes; 
 - Saved cards (`provider`) are scoped to accounts in the caller's workspace; the owner may change only `primary`, and only an admin creates one by hand.
 - `verify/:type` completes only a payment of the caller's own plan: by reference alone it linked another person's card to the caller's account. `pay` / `charge` with a `providerId` use only a card on the plan owner's own account.
 - The flags app is imported for its services only: its `flag` CRUD was served, unguarded, as `/apps/capital/flag`. That path is gone.
+- The bus handlers (off unless a host registers `Subscriptions`) are fixed: `apps.capital.payment.debt` saved the owed total as one more unpaid row, so every debt run doubled the debt (it records nothing now); `payment.pay` no longer records again a payment PaymentService has saved; usage events from `UsageService` were ignored (no `rateId`) and are recorded; heartbeat accruals happen once per period; sign-up's two wallet events make one account.
 
 ## common v0.0.10 — tag and project links stay in the caller's workspace
 

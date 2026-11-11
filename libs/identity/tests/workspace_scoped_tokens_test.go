@@ -3,14 +3,15 @@ package tests
 import (
 	"os"
 	"testing"
+	"time"
 
+	"github.com/awesome-goose/goose/modules/sql"
+	"github.com/google/uuid"
 	"github.com/thescaffold/gox-apps/libs/identity/app"
 	identitypermission "github.com/thescaffold/gox-apps/libs/identity/app/permission"
 	identityrole "github.com/thescaffold/gox-apps/libs/identity/app/role"
 	"github.com/thescaffold/gox-apps/libs/identity/app/user"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg"
-	"github.com/awesome-goose/goose/modules/sql"
-	"github.com/google/uuid"
 	"github.com/thescaffold/gox-packages/libs/core/security"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,6 +31,17 @@ func identityTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
+	// Every test opens its own pool: keep it small and let idle connections go after a few seconds, or a long
+	// suite (beside other suites on a shared Postgres) runs the server out of clients ("too many clients").
+	// The pool is not closed: package-level state built in one test can still hold it in a later one, and a
+	// closed pool made a later sign-in fail closed. Eight covers the most concurrent test.
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("db pool: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(8)
+	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetConnMaxIdleTime(3 * time.Second)
 	q := (&sql.Query{}).With(&sql.Db{DB: db})
 	for _, m := range app.AllMigrations {
 		if err := m.Run(q); err != nil {

@@ -13,5 +13,5 @@ var ROUTES = router.ForRoutes(
 	router.Get("/provider/providers", []any{ProviderController{}, "Providers"}),
 	router.Get("/provider/:provider/provider", []any{ProviderController{}, "Provider"}),
 	router.Post("/provider/:provider/authorize", []any{AuthorizeController{}, "Authorize"}),
-	coreauth.Secure(router.Resource("provider", ProviderController{}).All(), "List"),
+	coreauth.SecureAdmin(router.Resource("provider", ProviderController{}).All()),
 )

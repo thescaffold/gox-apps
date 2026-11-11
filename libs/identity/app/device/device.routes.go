@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('device') — singular path segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("device", DeviceController{}).All()),
+	coreauth.SecureAdmin(router.Resource("device", DeviceController{}).All()),
 )

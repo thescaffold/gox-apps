@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('device-session') — singular kebab-case segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("device-session", DeviceSessionController{}).All()),
+	coreauth.SecureAdmin(router.Resource("device-session", DeviceSessionController{}).All()),
 )

@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('user-client-workspace') — singular kebab-case segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("user-client-workspace", UserClientWorkspaceController{}).All()),
+	coreauth.SecureAdmin(router.Resource("user-client-workspace", UserClientWorkspaceController{}).All()),
 )

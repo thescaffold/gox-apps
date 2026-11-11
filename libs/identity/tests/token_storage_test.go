@@ -119,7 +119,12 @@ func TestProviderToken_SealOpenRoundTripAndTamper(t *testing.T) {
 	if got, err := tokenstore.OpenProviderToken(sealed, storageKey); err != nil || got != "gho_secretsecretsecret" {
 		t.Fatalf("round trip: %q %v", got, err)
 	}
-	tampered := sealed[:len(sealed)-2] + "00"
+	// change the last two characters for certain: a fixed "00" left the value unchanged whenever it already ended in "00"
+	tail := "00"
+	if strings.HasSuffix(sealed, tail) {
+		tail = "11"
+	}
+	tampered := sealed[:len(sealed)-2] + tail
 	if _, err := tokenstore.OpenProviderToken(tampered, storageKey); err == nil {
 		t.Fatal("a tampered ciphertext was accepted")
 	}

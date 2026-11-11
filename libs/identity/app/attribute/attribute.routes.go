@@ -7,5 +7,5 @@ import (
 
 // ROUTES mirrors TS @Controller('attribute') — singular path segment.
 var ROUTES = router.ForRoutes(
-	coreauth.Secure(router.Resource("attribute", AttributeController{}).All()),
+	coreauth.SecureAdmin(router.Resource("attribute", AttributeController{}).All()),
 )

@@ -82,8 +82,19 @@ func decodeUsage(p map[string]any) UsageStartPayload {
 	u.WorkspaceID, _ = p["workspaceId"].(string)
 	u.Service, _ = p["service"].(string)
 	u.Entity, _ = p["entity"].(string)
+	if u.Entity == "" {
+		// UsageService.StartUsage/UpdateUsage/StopUsage send entityName, not entity
+		u.Entity, _ = p["entityName"].(string)
+	}
 	u.EntityID, _ = p["entityId"].(string)
 	u.Reference, _ = p["reference"].(string)
+	u.RateID, _ = p["rateId"].(string)
+	switch q := p["quantity"].(type) {
+	case float64:
+		u.Quantity = int(q)
+	case int:
+		u.Quantity = q
+	}
 	return u
 }
 
@@ -99,6 +110,8 @@ func decodePayment(p map[string]any) PaymentPayload {
 	pp.Provider, _ = p["provider"].(string)
 	pp.Reference, _ = p["reference"].(string)
 	pp.Plan, _ = p["plan"].(string)
+	// PaymentService's own announcement carries the row it has already saved
+	_, pp.Persisted = p["payment"]
 	return pp
 }
 

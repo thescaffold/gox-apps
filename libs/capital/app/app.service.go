@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	goqueues "github.com/awesome-goose/goose/modules/queues"
@@ -299,8 +300,15 @@ type UsageStartPayload struct {
 // OnUsageStart opens a usage record. Inserts a fresh row keyed by
 // (userId, rateId, entityId).
 func (s *AppService) OnUsageStart(p UsageStartPayload) error {
-	if s.usageEntity == nil || p.UserID == "" || p.RateID == "" {
+	if s.usageEntity == nil || p.UserID == "" || p.EntityID == "" {
 		return nil
+	}
+	if p.RateID == "" && s.rateEntity != nil && p.Entity != "" {
+		// UsageService sends the entity, not a rate: the rate is the one for that entity type, as
+		// POST /usage/start resolves it
+		if r, _ := s.rateEntity.First(`"type" = ?`, p.Entity); r != nil {
+			p.RateID = r.Id
+		}
 	}
 	now := time.Now().UTC()
 	q := p.Quantity
@@ -480,21 +488,33 @@ type PaymentPayload struct {
 	Provider    string  `json:"provider,omitempty"`
 	Reference   string  `json:"reference,omitempty"`
 	Plan        string  `json:"plan,omitempty"`
+	// Persisted: the event is PaymentService's announcement of a payment it has already saved.
+	Persisted bool `json:"-"`
 }
 
-// OnPaymentPay records a successful payment. Inserts a Payment row marked paid.
+// OnPaymentPay records a successful payment another service reports (a Payment row marked
+// paid), once per reference. PaymentService's own announcement of a payment it has just saved
+// ({status, type, plan, payment}) is not recorded again.
 func (s *AppService) OnPaymentPay(p PaymentPayload) error {
+	if p.Persisted {
+		return nil
+	}
 	return s.recordPayment(p, "wallet", true)
 }
 
-// OnPaymentDebt records a failed/owed payment as type "debt".
-func (s *AppService) OnPaymentDebt(p PaymentPayload) error {
-	return s.recordPayment(p, "debt", false)
+// OnPaymentDebt is told what a plan owes (OnDebtJob announces it for dunning). It records
+// nothing: the debt is the sum of the unpaid rows already there, so saving the total as one
+// more unpaid row made every debt run double it.
+func (s *AppService) OnPaymentDebt(_ PaymentPayload) error {
+	return nil
 }
 
 func (s *AppService) recordPayment(p PaymentPayload, typ string, paid bool) error {
-	if s.paymentEntity == nil || p.UserID == "" {
+	if s.paymentEntity == nil || p.UserID == "" || p.Reference == "" {
 		return nil
+	}
+	if existing, _ := s.paymentEntity.First(`"reference" = ? AND "user_id" = ?`, p.Reference, p.UserID); existing != nil {
+		return nil // the same report twice
 	}
 	amount := int(p.Amount)
 	pay := &capitalpayment.Payment{
@@ -677,6 +697,12 @@ func (s *AppService) runHeartbeatBatch(period string) error {
 		if period == "yearly" && pt.Yearly != nil {
 			amount = *pt.Yearly
 		}
+		// one accrual per plan per period: the reference names the period (day, ISO week, month or
+		// year), and a period already accrued is skipped, so a re-run heartbeat cannot bill twice
+		ref := plan.Id + "-" + period + "-" + periodKey(period, time.Now().UTC())
+		if existing, _ := s.paymentEntity.First(`"reference" = ?`, ref); existing != nil {
+			continue
+		}
 		paid := false
 		_ = s.paymentEntity.Insert(&capitalpayment.Payment{
 			UserId:      plan.UserId,
@@ -686,7 +712,7 @@ func (s *AppService) runHeartbeatBatch(period string) error {
 			Amount:      &amount,
 			Currency:    &pt.Currency,
 			Type:        "accrual",
-			Reference:   plan.Id + "-" + period + "-" + time.Now().UTC().Format("2006-01"),
+			Reference:   ref,
 			Paid:        &paid,
 			PeriodType:  &period,
 		})
@@ -699,3 +725,17 @@ func (s *AppService) runHeartbeatBatch(period string) error {
 // one, not the uninjected &AppService{} built in Declarations, or the first
 // event dereferences a nil service (PLAN U18).
 func (s *AppService) OnRegister() { capitalAppSvc = s }
+
+// periodKey names the billing period a moment falls in.
+func periodKey(period string, at time.Time) string {
+	switch period {
+	case "daily":
+		return at.Format("2006-01-02")
+	case "weekly":
+		y, w := at.ISOWeek()
+		return fmt.Sprintf("%d-W%02d", y, w)
+	case "yearly":
+		return at.Format("2006")
+	}
+	return at.Format("2006-01")
+}

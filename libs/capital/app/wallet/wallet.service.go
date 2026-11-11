@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	gooErrors "github.com/awesome-goose/goose/errors"
@@ -77,7 +78,20 @@ func (s *WalletService) newTx(acc *capitalaccount.Account, ref string, amt, book
 	return tx
 }
 
+// NewWalletServiceForTest builds a WalletService over an account entity, outside the container.
+func NewWalletServiceForTest(accounts *capitalaccount.AccountEntity) *WalletService {
+	return &WalletService{accountEntity: accounts}
+}
+
+// walletInitMu serialises Init's find-or-create in this process.
+var walletInitMu sync.Mutex
+
 func (s *WalletService) Init(userId, clientId, workspaceId, currency, typ, label string) (*capitalaccount.Account, error) {
+	// A sign-up asks twice at once (apps.capital.wallet.init from identity, and the
+	// user-client-workspace row's apps.db event on its own goroutine): find-or-create under one
+	// lock, or both miss and the person gets two accounts.
+	walletInitMu.Lock()
+	defer walletInitMu.Unlock()
 	existing, err := s.accountEntity.First(
 		`"user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`,
 		userId, clientId, workspaceId,

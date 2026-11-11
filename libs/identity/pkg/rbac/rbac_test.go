@@ -59,20 +59,24 @@ func TestPrivileged(t *testing.T) {
 	}
 }
 
-func TestStrictIsOptIn(t *testing.T) {
+func TestStrictIsTheDefault(t *testing.T) {
 	t.Setenv("ROOT_USER_ID", "root-user")
 	owner := caller("u", "w", "owner")
-	t.Setenv("IDENTITY_RBAC_STRICT", "")
-	if !Allowed(owner) {
-		t.Fatal("by default a workspace owner keeps access to the RBAC screens")
-	}
-	for _, on := range []string{"true", "TRUE", "1"} {
+	admin := caller("u", "w", "admin")
+	for _, on := range []string{"", "true", "TRUE", "1", "yes", "anything"} {
 		t.Setenv("IDENTITY_RBAC_STRICT", on)
-		if Allowed(owner) {
-			t.Fatalf("strict=%q must refuse a workspace owner", on)
+		if Allowed(owner) || Allowed(admin) {
+			t.Fatalf("strict=%q must refuse a workspace owner or admin: role and permission tables are global", on)
 		}
 		if !Allowed(caller("root-user", "")) {
 			t.Fatalf("strict=%q must keep the platform admin", on)
+		}
+	}
+	// A console that still edits RBAC as a workspace admin opts out explicitly.
+	for _, off := range []string{"false", "FALSE", "0"} {
+		t.Setenv("IDENTITY_RBAC_STRICT", off)
+		if !Allowed(owner) {
+			t.Fatalf("strict=%q is the opt-out: a workspace owner keeps the RBAC screens", off)
 		}
 	}
 }
@@ -116,8 +120,17 @@ func TestGuard(t *testing.T) {
 	if err, _ := handle("GET", caller("u", "w", "member")); err != nil {
 		t.Fatal("reads pass")
 	}
+	t.Setenv("ROOT_USER_ID", "root-user")
+	t.Setenv("IDENTITY_RBAC_STRICT", "")
+	if err, status := handle("POST", caller("u", "w", "owner")); err == nil || status != 403 {
+		t.Fatalf("by default a workspace owner may not write global RBAC: %v %d", err, status)
+	}
+	if err, _ := handle("POST", caller("root-user", "")); err != nil {
+		t.Fatal("the platform admin may write")
+	}
+	t.Setenv("IDENTITY_RBAC_STRICT", "false")
 	if err, _ := handle("POST", caller("u", "w", "owner")); err != nil {
-		t.Fatal("an owner may write")
+		t.Fatal("with strict off, an owner may write")
 	}
 	err, status := handle("POST", caller("u", "w", "member"))
 	if err == nil || status != 403 {

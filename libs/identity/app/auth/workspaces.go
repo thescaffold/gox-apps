@@ -124,6 +124,10 @@ func (c *AuthController) MyWorkspaces(dto *MyWorkspacesDto) types.Output {
 // CreateMyWorkspace makes a new workspace owned by the caller.
 func (c *AuthController) CreateMyWorkspace(dto *CreateMyWorkspaceDto) types.Output {
 	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if dto.Ctx.ClientID == "" {
+		// a workspace made here would be recorded under no app, and nobody could switch into it
+		return response.ErrorCode(title, "this session names no app; sign in again before creating a workspace", 400, "invalid")
+	}
 	name := strings.TrimSpace(dto.Name)
 	if name == "" || len([]rune(name)) > 80 {
 		return response.BadRequest(title, "a workspace name is 1-80 characters")
@@ -170,7 +174,7 @@ func (c *AuthController) UpdateMyWorkspace(dto *UpdateMyWorkspaceDto) types.Outp
 		}
 	}
 	if dto.Name == nil && dto.Handle == nil {
-		if ok, err := svc.IsAdmin(ctx, dto.Id, dto.Ctx.UserID); err != nil || !ok {
+		if ok, err := svc.Allowed(ctx, dto.Id, dto.Ctx.UserID, org.ManageSettings); err != nil || !ok {
 			return orgError(title, org.ErrNotAllowed)
 		}
 	}

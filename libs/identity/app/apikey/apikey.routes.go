@@ -7,9 +7,9 @@ import (
 
 // Every route needs a verified user token: the tenant comes from its claims, never from headers.
 // POST   /keys              issue a key (the secret is returned once)
-// GET    /keys              list the workspace's keys (never their values)
-// DELETE /keys/:id          revoke
-// POST   /keys/:id/rotate   issue a replacement and retire the old key
+// GET    /keys              list the caller's keys; owners and admins see the workspace's (never values)
+// DELETE /keys/:id          revoke one's own key; owners and admins revoke anyone's
+// POST   /keys/:id/rotate   issue a replacement for one's own key and retire the old one
 var ROUTES = router.ForRoutes(
 	router.Post("/keys", []any{ApiKeyController{}, "Issue"}, auth.RequireUser()...),
 	router.Get("/keys", []any{ApiKeyController{}, "List"}, auth.RequireUser()...),

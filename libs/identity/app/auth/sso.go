@@ -13,6 +13,7 @@ import (
 	"github.com/awesome-goose/goose/io/output"
 	"github.com/awesome-goose/goose/types"
 	identityuser "github.com/thescaffold/gox-apps/libs/identity/app/user"
+	"github.com/thescaffold/gox-apps/libs/identity/pkg/org"
 	identityotp "github.com/thescaffold/gox-apps/libs/identity/pkg/otp"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/sso"
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/tokenstore"
@@ -481,16 +482,17 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 }
 
 // ssoAdmin authorizes the caller to manage the token's workspace's SSO: they
-// must be an owner or admin of it.
+// must be an owner or admin of it, unless the host's authorizer decides
+// (org.ManageSecurity).
 func (c *AuthController) ssoAdmin(ntx ntxctx.NTXContext) bool {
 	if ntx.UserID == "" || ntx.WorkspaceID == "" {
 		return false
 	}
-	link, _ := c.ucwEntity.First(`"user_id" = ? AND "workspace_id" = ?`, ntx.UserID, ntx.WorkspaceID)
-	if link == nil || link.Status == nil {
-		return false
-	}
-	return *link.Status == "owner" || *link.Status == "admin"
+	ok, err := org.Authorize(context.Background(), ntx.WorkspaceID, ntx.UserID, org.ManageSecurity, func() (bool, error) {
+		link, _ := c.ucwEntity.First(`"user_id" = ? AND "workspace_id" = ?`, ntx.UserID, ntx.WorkspaceID)
+		return link != nil && link.Status != nil && (*link.Status == "owner" || *link.Status == "admin"), nil
+	})
+	return err == nil && ok
 }
 
 // spView is what the console shows an admin to register with an IdP: the

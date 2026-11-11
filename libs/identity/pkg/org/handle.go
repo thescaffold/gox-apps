@@ -163,7 +163,7 @@ func (s *Service) SetHandle(ctx context.Context, ws, actorID, handle string) err
 	if err := ValidHandle(handle); err != nil {
 		return err
 	}
-	if ok, err := s.IsAdmin(ctx, ws, actorID); err != nil {
+	if ok, err := s.Allowed(ctx, ws, actorID, ManageSettings); err != nil {
 		return err
 	} else if !ok {
 		return ErrNotAllowed
@@ -191,7 +191,7 @@ func (s *Service) Rename(ctx context.Context, ws, actorID, name string) error {
 	if name == "" || len([]rune(name)) > 80 {
 		return fmt.Errorf("%w: a name is 1 to 80 characters", ErrInvalid)
 	}
-	if ok, err := s.IsAdmin(ctx, ws, actorID); err != nil {
+	if ok, err := s.Allowed(ctx, ws, actorID, ManageSettings); err != nil {
 		return err
 	} else if !ok {
 		return ErrNotAllowed

@@ -323,3 +323,61 @@ func (s *Service) inWorkspace(ctx context.Context, clientID, workspaceID, id str
 	}
 	return nil
 }
+
+// branded limits a query to this service's own keys: those whose prefix carries its brand. Keys a
+// host issues under another brand (machine credentials it manages itself) are not this service's.
+func (s *Service) branded() (string, []any) {
+	b := s.brand() + "_"
+	return ` AND left(prefix, ?) = ?`, []any{len(b), b}
+}
+
+// ListIn returns the keys of this brand in one workspace (never their values): only userID's
+// unless all is set.
+func (s *Service) ListIn(ctx context.Context, clientID, workspaceID, userID string, all bool) ([]Key, error) {
+	if clientID == "" || workspaceID == "" || userID == "" {
+		return nil, ErrScopeRequired
+	}
+	q := `SELECT id, user_id, name, kind, environment, prefix, scopes, created_at, expires_at, revoked_at, last_used_at FROM "IdentityApiKeys" WHERE client_id = ? AND workspace_id = ?`
+	args := []any{clientID, workspaceID}
+	bq, ba := s.branded()
+	q += bq
+	args = append(args, ba...)
+	if !all {
+		q += " AND user_id = ?"
+		args = append(args, userID)
+	}
+	q += " ORDER BY created_at DESC"
+	var rows []struct {
+		ID, UserID, Name, Kind, Environment, Prefix string
+		Scopes                                      []byte
+		CreatedAt                                   time.Time
+		ExpiresAt, RevokedAt, LastUsedAt            *time.Time
+	}
+	if err := s.DB.WithContext(ctx).Raw(q, args...).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]Key, len(rows))
+	for i, r := range rows {
+		var sc []string
+		_ = json.Unmarshal(r.Scopes, &sc)
+		out[i] = Key{ID: r.ID, UserID: r.UserID, Name: r.Name, Kind: r.Kind, Environment: r.Environment, Prefix: r.Prefix, Scopes: sc, CreatedAt: r.CreatedAt, ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt, LastUsedAt: r.LastUsedAt}
+	}
+	return out, nil
+}
+
+// HolderIn returns who holds key id, a key of this brand in the workspace (ErrNotFound otherwise).
+func (s *Service) HolderIn(ctx context.Context, clientID, workspaceID, id string) (string, error) {
+	if clientID == "" || workspaceID == "" {
+		return "", ErrScopeRequired
+	}
+	bq, ba := s.branded()
+	var holder []string
+	if err := s.DB.WithContext(ctx).Raw(`SELECT user_id FROM "IdentityApiKeys" WHERE id = ? AND client_id = ? AND workspace_id = ?`+bq,
+		append([]any{id, clientID, workspaceID}, ba...)...).Scan(&holder).Error; err != nil {
+		return "", err
+	}
+	if len(holder) == 0 {
+		return "", ErrNotFound
+	}
+	return holder[0], nil
+}

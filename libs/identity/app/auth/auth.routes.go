@@ -54,6 +54,11 @@ var ROUTES = router.ForRoutes(
 	router.Post("/my/workspaces", []any{AuthController{}, "CreateMyWorkspace"}, requireUser()...),
 	router.Patch("/my/workspaces/:id", []any{AuthController{}, "UpdateMyWorkspace"}, requireUser()...),
 	router.Post("/account/close", []any{AuthController{}, "CloseAccount"}, requireUser()...),
+	// A person renames themself, and changes their sign-in email once a code sent to the new
+	// address is entered (account_email.go).
+	router.Patch("/account", []any{AuthController{}, "UpdateAccount"}, requireUser()...),
+	router.Post("/account/email", []any{AuthController{}, "EmailChangeStart"}, requireUser()...),
+	router.Post("/account/email/verify", []any{AuthController{}, "EmailChangeVerify"}, requireUser()...),
 	router.Post("/switch", []any{AuthController{}, "SwitchWorkspace"}, requireUser()...),
 	router.Post("/reset-secret/initiate", []any{AuthController{}, "ResetSecretInitiate"}),
 	router.Post("/reset-secret/verify", []any{AuthController{}, "ResetSecretVerify"}),

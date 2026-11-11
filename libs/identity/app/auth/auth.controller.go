@@ -192,6 +192,9 @@ func (c *AuthController) Initiate(dto *InitiateDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
+	if out, bad := needClient(title, dto.ClientId); bad {
+		return out
+	}
 	if sso.Enforced(context.Background(), dto.Ref) {
 		return c.ssoEnforcedResponse(pref)
 	}
@@ -356,6 +359,9 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
 
+	if out, bad := needClient(title, dto.ClientId); bad {
+		return out
+	}
 	if sso.Enforced(context.Background(), dto.Ref) {
 		return c.ssoEnforcedResponse(pref)
 	}
@@ -427,6 +433,9 @@ func (c *AuthController) SwitchWorkspace(dto *SwitchWorkspaceDto) types.Output {
 	link, _ := c.ucwEntity.First(`"user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`,
 		dto.Ctx.UserID, dto.Ctx.ClientID, dto.WorkspaceId)
 	if link == nil {
+		link = c.ownerLinkForClient(dto.Ctx.UserID, dto.Ctx.ClientID, dto.WorkspaceId)
+	}
+	if link == nil {
 		return response.Unauthorized(title,
 			c.lang.Translate("apps.identity.app.post.switch.error.forbidden", nil, pref))
 	}
@@ -446,6 +455,41 @@ func (c *AuthController) SwitchWorkspace(dto *SwitchWorkspaceDto) types.Output {
 		"accessToken":  access,
 		"refreshToken": refresh,
 	}, title, c.lang.Translate("apps.identity.app.post.switch.success", nil, pref), nil)
+}
+
+// needClient refuses a request that names no app: memberships, devices and sign-in codes are kept
+// per client, so a session without one would make workspaces nobody can switch into. The DTOs
+// mark clientId required, but binding tags are not enforced on these routes.
+func needClient(title, clientID string) (types.Output, bool) {
+	if strings.TrimSpace(clientID) == "" {
+		return response.ErrorCode(title, "clientId is required: name the app you are signing in from", 400, "invalid"), true
+	}
+	return nil, false
+}
+
+// ownerLinkForClient lets an owner into their workspace from any app: memberships are recorded
+// per client, so an owner who signs in from another app than the one that made the workspace
+// would otherwise be locked out of it. When userID owns ws (a live workspace) under another
+// client, the owner membership is recorded for this client too and returned. Only owners: a
+// member under another client is not let in this way.
+func (c *AuthController) ownerLinkForClient(userID, clientID, ws string) *identityucw.UserClientWorkspace {
+	if userID == "" || clientID == "" || ws == "" {
+		return nil
+	}
+	if w, _ := c.workspaceEntity.First(`"id" = ?`, ws); w == nil {
+		return nil
+	}
+	if o, _ := c.ucwEntity.First(`"user_id" = ? AND "workspace_id" = ? AND lower("status") = 'owner'`, userID, ws); o == nil {
+		return nil
+	}
+	owner := "owner"
+	link := &identityucw.UserClientWorkspace{UserId: userID, ClientId: clientID, WorkspaceId: ws, Status: &owner}
+	if err := c.ucwEntity.Insert(link); err != nil {
+		// a concurrent switch may have recorded it first
+		existing, _ := c.ucwEntity.First(`"user_id" = ? AND "client_id" = ? AND "workspace_id" = ?`, userID, clientID, ws)
+		return existing
+	}
+	return link
 }
 
 // ResetSecretInitiate mirrors TS POST /reset-secret/initiate
@@ -553,8 +597,9 @@ func (c *AuthController) Attributes(dto *AttributesQueryDto) types.Output {
 
 // createOnlyAttributeKeys mirrors TS CreateOnlyUserAttributeType
 // (app.config.ts:17-21) — set-once preference fields a later PATCH can't
-// silently overwrite.
-var createOnlyAttributeKeys = map[string]bool{"timezone": true, "country": true, "currency": true}
+// silently overwrite. The time zone is not one of them: it is a person's
+// choice (their profile) and changes when they move.
+var createOnlyAttributeKeys = map[string]bool{"country": true, "currency": true}
 
 // reservedAttributeKeys are written only by the server (account state, referral
 // links, anything a host stores such as a PIN hash or a verification result).

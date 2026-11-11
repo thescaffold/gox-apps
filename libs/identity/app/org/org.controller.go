@@ -51,14 +51,15 @@ func (c *OrgController) member(ctx ntxctx.NTXContext) (string, types.Output) {
 	return ctx.WorkspaceID, nil
 }
 
-// admin checks the caller is an owner or admin of their token's workspace. The
+// admin checks the caller may take action in their token's workspace: an owner
+// or admin, unless the host's authorizer (orgsvc.SetAuthorizer) decides. The
 // seat is read from the database, not from the token, so a demoted admin loses
 // this at once rather than when their token expires.
-func (c *OrgController) admin(ctx ntxctx.NTXContext) (string, types.Output) {
+func (c *OrgController) admin(ctx ntxctx.NTXContext, action string) (string, types.Output) {
 	if ctx.UserID == "" || ctx.WorkspaceID == "" {
 		return "", response.Unauthorized(title, "sign in to a workspace first")
 	}
-	ok, err := c.svc.Org().IsAdmin(ctxOf(ctx), ctx.WorkspaceID, ctx.UserID)
+	ok, err := c.svc.Org().Allowed(ctxOf(ctx), ctx.WorkspaceID, ctx.UserID, action)
 	if err != nil {
 		return "", fail(err)
 	}
@@ -81,7 +82,7 @@ func (c *OrgController) Members(dto *Ctx) types.Output {
 }
 
 func (c *OrgController) Catalog(dto *Ctx) types.Output {
-	if _, bad := c.admin(dto.Ctx); bad != nil {
+	if _, bad := c.admin(dto.Ctx, orgsvc.ManageRoles); bad != nil {
 		return bad
 	}
 	out, err := c.svc.Org().Catalog(ctxOf(dto.Ctx))
@@ -101,7 +102,7 @@ func (c *OrgController) Seats(dto *Ctx) types.Output {
 
 // SetSeat changes a member's seat. The service enforces who may grant what.
 func (c *OrgController) SetSeat(dto *SeatReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -113,7 +114,7 @@ func (c *OrgController) SetSeat(dto *SeatReq) types.Output {
 
 // RemoveSeat takes a member out of the workspace.
 func (c *OrgController) RemoveSeat(dto *SeatRemoveReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -138,7 +139,7 @@ func (c *OrgController) ListTeams(dto *Ctx) types.Output {
 }
 
 func (c *OrgController) CreateTeam(dto *TeamReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -150,7 +151,7 @@ func (c *OrgController) CreateTeam(dto *TeamReq) types.Output {
 }
 
 func (c *OrgController) UpdateTeam(dto *TeamUpdateReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -162,7 +163,7 @@ func (c *OrgController) UpdateTeam(dto *TeamUpdateReq) types.Output {
 }
 
 func (c *OrgController) DeleteTeam(dto *IDReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -185,7 +186,7 @@ func (c *OrgController) TeamMembers(dto *IDReq) types.Output {
 }
 
 func (c *OrgController) AddTeamMember(dto *MemberReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -196,7 +197,7 @@ func (c *OrgController) AddTeamMember(dto *MemberReq) types.Output {
 }
 
 func (c *OrgController) RemoveTeamMember(dto *MemberRemoveReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageMembers)
 	if bad != nil {
 		return bad
 	}
@@ -209,7 +210,7 @@ func (c *OrgController) RemoveTeamMember(dto *MemberRemoveReq) types.Output {
 // --- roles ---
 
 func (c *OrgController) ListRoles(dto *Ctx) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -221,7 +222,7 @@ func (c *OrgController) ListRoles(dto *Ctx) types.Output {
 }
 
 func (c *OrgController) CreateRole(dto *RoleReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -233,7 +234,7 @@ func (c *OrgController) CreateRole(dto *RoleReq) types.Output {
 }
 
 func (c *OrgController) UpdateRole(dto *RoleUpdateReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -245,7 +246,7 @@ func (c *OrgController) UpdateRole(dto *RoleUpdateReq) types.Output {
 }
 
 func (c *OrgController) DeleteRole(dto *IDReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -256,7 +257,7 @@ func (c *OrgController) DeleteRole(dto *IDReq) types.Output {
 }
 
 func (c *OrgController) Assignments(dto *IDReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -268,7 +269,7 @@ func (c *OrgController) Assignments(dto *IDReq) types.Output {
 }
 
 func (c *OrgController) Assign(dto *AssignReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -279,7 +280,7 @@ func (c *OrgController) Assign(dto *AssignReq) types.Output {
 }
 
 func (c *OrgController) Unassign(dto *UnassignReq) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ManageRoles)
 	if bad != nil {
 		return bad
 	}
@@ -291,7 +292,7 @@ func (c *OrgController) Unassign(dto *UnassignReq) types.Output {
 
 // Activity returns the workspace's recent organisation changes (admins only).
 func (c *OrgController) Activity(dto *Ctx) types.Output {
-	ws, bad := c.admin(dto.Ctx)
+	ws, bad := c.admin(dto.Ctx, orgsvc.ReadAudit)
 	if bad != nil {
 		return bad
 	}

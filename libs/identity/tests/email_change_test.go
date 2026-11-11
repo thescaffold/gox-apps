@@ -43,8 +43,7 @@ func TestEmailChangeIsVerified(t *testing.T) {
 	code := ""
 	waitFor(t, func() bool {
 		for _, m := range heard.all() {
-			if m["key"] == "email-change" && m["to"] == next {
-				d, _ := m["data"].(map[string]any)
+			if d, _ := m["data"].(map[string]any); m["key"] == "email-change" && d["owner"] == next {
 				code, _ = d["code"].(string)
 			}
 		}
@@ -83,7 +82,7 @@ func TestEmailChangeIsVerified(t *testing.T) {
 	}
 	waitFor(t, func() bool {
 		for _, m := range heard.all() {
-			if m["key"] == "email-changed" && m["to"] == old {
+			if d, _ := m["data"].(map[string]any); m["key"] == "email-changed" && d["owner"] == old && d["ref"] == next {
 				return true
 			}
 		}

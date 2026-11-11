@@ -413,7 +413,7 @@ func (c *AuthController) policyAdmin(ctx ntxctx.NTXContext) (types.Output, bool)
 	if ctx.WorkspaceID == "" {
 		return response.Forbidden(title, "choose an organization first"), false
 	}
-	ok, err := org.New(c.mfa.DB).IsAdmin(context.Background(), ctx.WorkspaceID, ctx.UserID)
+	ok, err := org.New(c.mfa.DB).Allowed(context.Background(), ctx.WorkspaceID, ctx.UserID, org.ManageSecurity)
 	if err != nil {
 		return response.InternalServerError(title, "the policy could not be read"), false
 	}

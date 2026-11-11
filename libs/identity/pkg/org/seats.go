@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"gorm.io/gorm"
 )
 
 // ErrNotAllowed: the caller's own seat does not permit the change.
@@ -94,7 +96,11 @@ func (s *Service) checkSeatChange(ctx context.Context, ws, actorID, userID, to s
 	if err != nil {
 		return "", err
 	}
-	if actor != "owner" && actor != "admin" {
+	ok, err := Authorize(ctx, ws, actorID, ManageMembers, func() (bool, error) { return actor == "owner" || actor == "admin", nil })
+	if err != nil {
+		return "", err
+	}
+	if !ok {
 		return "", fmt.Errorf("%w: only an owner or admin can change seats", ErrNotAllowed)
 	}
 	from, err = s.Seat(ctx, ws, userID)
@@ -144,20 +150,33 @@ func (s *Service) SetSeat(ctx context.Context, ws, actorID, userID, role string)
 	return nil
 }
 
-// RemoveSeat takes userID out of the workspace (and its teams), acting as actorID.
+// RemoveSeat takes userID out of the workspace (and its teams), acting as actorID. The host's
+// clean-up (OnSeatRemoved) runs in the same transaction.
 func (s *Service) RemoveSeat(ctx context.Context, ws, actorID, userID string) error {
 	from, err := s.checkSeatChange(ctx, ws, actorID, userID, "")
 	if err != nil {
 		return err
 	}
-	if err := s.DB.WithContext(ctx).Exec(`UPDATE "IdentityUserClientWorkspaces" SET deleted_at = now()
-		WHERE workspace_id = ? AND user_id = ? AND deleted_at IS NULL`, ws, userID).Error; err != nil {
+	var teams int64
+	err = s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE "IdentityUserClientWorkspaces" SET deleted_at = now()
+			WHERE workspace_id = ? AND user_id = ? AND deleted_at IS NULL`, ws, userID).Error; err != nil {
+			return err
+		}
+		res := tx.Exec(`DELETE FROM "IdentityTeamMembers" WHERE workspace_id = ? AND user_id = ?`, ws, userID)
+		if res.Error != nil {
+			return res.Error
+		}
+		teams = res.RowsAffected
+		if fn := SeatRemovedHook(); fn != nil {
+			return fn(ctx, tx, ws, userID, actorID)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
-	if err := s.DB.WithContext(ctx).Exec(`DELETE FROM "IdentityTeamMembers" WHERE workspace_id = ? AND user_id = ?`, ws, userID).Error; err != nil {
-		return err
-	}
-	s.log(ctx, ws, "member.seat.removed", "user", userID, map[string]any{"from": from})
+	s.log(ctx, ws, "member.seat.removed", "user", userID, map[string]any{"from": from, "teams": teams})
 	return nil
 }
 
@@ -173,7 +192,11 @@ func (s *Service) CheckGrant(ctx context.Context, ws, actorID, seat string) erro
 	if err != nil {
 		return err
 	}
-	if actor != "owner" && actor != "admin" {
+	ok, err := Authorize(ctx, ws, actorID, ManageMembers, func() (bool, error) { return actor == "owner" || actor == "admin", nil })
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return fmt.Errorf("%w: only an owner or admin can invite people", ErrNotAllowed)
 	}
 	if seatRank(seat) > seatRank(actor) {

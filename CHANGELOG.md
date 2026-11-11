@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## identity v0.0.27 — keys belong to their holder; strict RBAC; account changes; host hooks
+
+Security fixes (Origine S6 I-2, I-3). **Breaking** for consoles that let every member manage the workspace's keys or let workspace owners edit RBAC.
+
+- **API keys:** `GET /keys` lists the caller's own keys; owners and admins (`org.tokens.manage`) see the workspace's. `DELETE /keys/:id` revokes one's own key, or, for owners and admins, anyone's; `POST /keys/:id/rotate` is the holder's only (403 for an admin, 404 for anyone else). Before, any member, guests included, listed, revoked and rotated every key in the workspace, and a rotation handed the caller a new secret for someone else's key. `/keys` now works only on keys of its own brand (`IDENTITY_KEY_BRAND`): keys a host issues under another brand are not listed or changed there. New `apikey.Service.ListIn` and `HolderIn`.
+- **RBAC strict by default:** role, role-type, permission and permission-type writes need a platform admin unless `IDENTITY_RBAC_STRICT=false`. Before, workspace owners and admins wrote the global tables unless it was set.
+- **clientId:** `/login`, `/initiate`, `/otp` and `/otp/verify` refuse a missing `clientId` (400); `POST /my/workspaces` refuses a session that names no client.
+- **Owner switch:** `POST /switch` lets an owner into their workspace from any client, recording the owner membership for that client. Members still need a membership under their client; deleted workspaces stay closed.
+- **Account:** `PATCH /account {name}`; `POST /account/email` and `/account/email/verify` (a code to the new address, a notice to the old: templates `email-change`, `email-changed`). The time zone is no longer set-once.
+- **Host hooks (`pkg/org`):** `SetAuthorizer` answers the org-level checks (members, teams, invitations, SSO, 2FA policy, workspace name and handle, keys, custom roles, activity); without it behaviour is unchanged. `OnSeatRemoved` runs in the seat removal's transaction; `RemoveSeat` is now one transaction and its audit entry counts the teams left.
+
 ## identity v0.0.26 — other people's accounts are a platform admin's
 
 Security fix (PLAN U26, the same hole Yan's fork closed). **Breaking** for any console that let workspace owners use the generic resources.

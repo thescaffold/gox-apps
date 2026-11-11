@@ -31,7 +31,9 @@ func TestApiKeys_BelongToTheirHolder(t *testing.T) {
 	admin := e.seat(t, ws, "Kay Admin", "admin")
 	member := e.seat(t, ws, "Kay Member", "member")
 	guest := e.seat(t, ws, "Kay Guest", "guest")
-	as := func(u string) ntxctx.NTXContext { return ntxctx.NTXContext{UserID: u, ClientID: "org-client", WorkspaceID: ws} }
+	as := func(u string) ntxctx.NTXContext {
+		return ntxctx.NTXContext{UserID: u, ClientID: "org-client", WorkspaceID: ws}
+	}
 
 	issue := func(u, name string) (id, secret string) {
 		t.Helper()

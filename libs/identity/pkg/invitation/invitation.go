@@ -291,7 +291,7 @@ func (s *Service) Link(ctx context.Context, ws, clientID, actorID, seat string) 
 }
 
 func (s *Service) admin(ctx context.Context, ws, actorID string) error {
-	ok, err := org.New(s.DB).IsAdmin(ctx, ws, actorID)
+	ok, err := org.New(s.DB).Allowed(ctx, ws, actorID, org.ManageMembers)
 	if err != nil {
 		return err
 	}

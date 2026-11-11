@@ -1,17 +1,16 @@
 // Package rbac decides who may change role and permission data. Roles reach
 // signed tokens, so these writes are the way to platform-wide power.
 //
-// Three levels:
+// Levels:
 //   - a platform admin (ROOT_USER_ID, or a token holding a platform admin role)
 //     may do anything;
-//   - a workspace admin (owner or admin of the token's workspace) may manage
-//     roles inside that workspace, never platform roles;
 //   - everyone else may read.
 //
 // Role types, permission types and permission links are global tables, so a
-// workspace admin who edits them affects every tenant. Consoles built on the
-// identity screens still do that, so tightening it is opt-in: set
-// IDENTITY_RBAC_STRICT=true to make every RBAC write platform-admin only.
+// workspace admin who edits them affects every tenant. Every RBAC write is
+// therefore platform-admin only. A console that still edits roles as a
+// workspace admin (owner or admin of the token's workspace, never platform
+// roles) opts out with IDENTITY_RBAC_STRICT=false.
 package rbac
 
 import (
@@ -70,10 +69,11 @@ func WorkspaceAdmin(ntx ntxctx.NTXContext) bool {
 	return holds(ntx, func(r string) bool { return r == "owner" || r == "admin" })
 }
 
-// Strict reports whether every RBAC write is platform-admin only.
+// Strict reports whether every RBAC write is platform-admin only: always,
+// unless IDENTITY_RBAC_STRICT is "false" or "0".
 func Strict() bool {
-	v := strings.ToLower(os.Getenv("IDENTITY_RBAC_STRICT"))
-	return v == "true" || v == "1"
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("IDENTITY_RBAC_STRICT")))
+	return v != "false" && v != "0"
 }
 
 // Allowed decides a write by a verified caller. Reads never reach it.

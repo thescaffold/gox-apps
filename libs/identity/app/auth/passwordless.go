@@ -43,6 +43,9 @@ type OtpVerifyDto struct {
 // account exists, so the endpoint cannot be used to find out who has one.
 func (c *AuthController) OtpRequest(dto *OtpRequestDto) types.Output {
 	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if out, bad := needClient(title, dto.ClientId); bad {
+		return out
+	}
 	ref, typ, err := identityotp.Normalize(dto.Ref)
 	if err != nil {
 		return response.BadRequest(title, err.Error())
@@ -87,6 +90,9 @@ func (c *AuthController) OtpRequest(dto *OtpRequestDto) types.Output {
 func (c *AuthController) OtpVerify(dto *OtpVerifyDto) types.Output {
 	pref := dto.Ctx.Preference
 	title := c.lang.Translate("apps.identity.app.title", nil, pref)
+	if out, bad := needClient(title, dto.ClientId); bad {
+		return out
+	}
 	ref, typ, nerr := identityotp.Normalize(dto.Ref)
 	if nerr != nil {
 		return response.BadRequest(title, nerr.Error())

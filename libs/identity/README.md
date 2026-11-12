@@ -90,6 +90,10 @@ With `IDENTITY_KEY_EXPIRY_REQUIRED=true`, `POST /keys` refuses a key with no `ex
 
 Sign-in, sign-up and passwordless routes refuse a missing `clientId` (400), and a session without one cannot create a workspace. An owner switches into their workspace from any client: the owner membership is recorded for that client.
 
+## Sessions (`/account/sessions`)
+
+A person lists their own device sessions on every device with `GET /account/sessions` (browser and OS from the device's user agent, address, place, last use, `current` for this one) and signs one out with `DELETE /account/sessions/:id`, or every one but this with `POST /account/sessions/revoke-others`. Someone else's session is 404. Every token a sign-in or a device re-mint issues names its session (`sid`), and `revocation.Check` refuses it once the session is signed out, so it ends at once; a refreshed token keeps its `sid`. Sign-in routes record the client's address (`ntxctx.RequestInfo`: set `TRUSTED_PROXIES` behind a proxy); `auth.SetPlaceResolver(func(ip) string)` names its place (without one the list shows the address).
+
 ## Host hooks (`pkg/org`)
 
 - `SetAuthorizer(func(ctx, ws, userID, action) (bool, error))` answers identity's org-level checks: `org.members.manage` (seats, invitations, teams), `org.security.manage` (SSO connection, 2FA policy), `org.settings.manage` (workspace name and handle), `org.tokens.manage` (other people's keys), `org.roles.manage` (custom roles) and `org.audit.read` (activity). Without one, each is "an owner or admin", as before. The seat rules (nobody above their own seat, only an owner grants owner, one owner stays) apply whatever it answers.

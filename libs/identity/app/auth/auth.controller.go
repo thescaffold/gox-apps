@@ -330,16 +330,16 @@ func (c *AuthController) Secret(dto *SecretDto) types.Output {
 	// The new account has exactly one workspace at this point (just
 	// bootstrapped above) — no need to re-verify the password we just set,
 	// IssueTokens goes straight from the User row we already have.
-	access, refresh, err := c.auth.IssueTokens(newUser, entry.ClientId, wsID(ws))
+	deviceId, sessionId := c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
+	access, refresh, err := c.auth.IssueTokens(newUser, entry.ClientId, wsID(ws), sessionId)
 	if err != nil {
 		return response.Unauthorized(title, err.Error())
 	}
 
 	// the new account is signed in on this browser: open its device session too,
 	// with or without a workspace (one created later is handed out from it)
-	deviceId, sessionId := c.bootstrapDevice(newUser.Id, entry.ClientId, "", cookieValue(dto.Cookie, DeviceCookie))
 	c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
-	return withDeviceCookie(response.Success(c.sessionPayload(newUser, entry.ClientId, map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(newUser, entry.ClientId, sessionId, map[string]any{
 		"user":         maskUser(newUser),
 		"accessToken":  access,
 		"refreshToken": refresh,
@@ -395,7 +395,8 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 		workspaceId = workspaces[0].Id
 	}
 
-	access, refresh, err := c.auth.IssueTokens(u, dto.ClientId, workspaceId)
+	deviceId, sessionId := c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	access, refresh, err := c.auth.IssueTokens(u, dto.ClientId, workspaceId, sessionId)
 	if err != nil {
 		return response.Unauthorized(title,
 			c.lang.Translate("apps.identity.app.post.login.error.invalid-request", nil, pref))
@@ -404,10 +405,9 @@ func (c *AuthController) Login(dto *LoginDto) types.Output {
 	// A device session for everyone signed in, with or without a workspace: it is
 	// what the browser re-mints its token from (GET sessions), and it hands out the
 	// workspace's token once the person creates or joins one.
-	deviceId, sessionId := c.bootstrapDevice(u.Id, dto.ClientId, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
 	c.logDeviceLogin(deviceId, sessionId, dto.Ctx)
 
-	return withDeviceCookie(response.Success(c.sessionPayload(u, dto.ClientId, map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(u, dto.ClientId, sessionId, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,
@@ -446,7 +446,7 @@ func (c *AuthController) SwitchWorkspace(dto *SwitchWorkspaceDto) types.Output {
 			c.lang.Translate("apps.identity.app.post.switch.error.unauthorized", nil, pref))
 	}
 
-	access, refresh, err := c.auth.IssueTokens(u, dto.Ctx.ClientID, dto.WorkspaceId)
+	access, refresh, err := c.auth.IssueTokens(u, dto.Ctx.ClientID, dto.WorkspaceId, sessionOf(dto.Ctx))
 	if err != nil {
 		return response.InternalServerError(title, err.Error())
 	}
@@ -858,6 +858,12 @@ func (c *AuthController) logDeviceLogin(deviceId, sessionId string, ntx ntxctx.N
 	_ = c.deviceLogEntity.Insert(&identitydevicelog.DeviceLog{
 		DeviceId: deviceId, SessionId: &sessionId, Event: "login", Country: &country, Meta: meta,
 	})
+	if sessionId != "" && c.deviceSessionEntity != nil {
+		if row, _ := c.deviceSessionEntity.First(`"id" = ?`, sessionId); row != nil {
+			row.LastSeenAt = nil // a sign-in is always a use
+			c.touchSession(row, ntx.IP)
+		}
+	}
 }
 
 // seedDefaultRoles ensures the global Admin/Member RoleType + wildcard

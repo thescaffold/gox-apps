@@ -81,6 +81,8 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityPushTokens{},
 	// V0-14: a workspace's maximum API key life (pkg/apikey expiry.go).
 	&migrations.CreateIdentityKeyPolicies{},
+	// V0-15, V4-03: a device session's address, last use and SAML session.
+	&migrations.DeviceSessionDetails{},
 }
 
 type AppModule struct{}

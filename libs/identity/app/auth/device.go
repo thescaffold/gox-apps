@@ -158,6 +158,8 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 	}
 	var sessions []session
 	for _, row := range rows {
+		// The shell re-mints here every few minutes: that is the session being used.
+		c.touchSession(&row, dto.Ctx.IP)
 		u, _ := c.userEntity.First(`"id" = ?`, row.UserId)
 		if u == nil || !c.usable(u.Id) {
 			continue
@@ -170,7 +172,7 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 			updated: stamp(row.UpdatedAt),
 			out: map[string]any{
 				"id": row.Id, "deviceId": row.DeviceId, "userId": row.UserId, "clientId": clientID,
-				"updatedAt": row.UpdatedAt, "user": c.sessionUser(u, clientID),
+				"updatedAt": row.UpdatedAt, "user": c.sessionUser(u, clientID, row.Id),
 			},
 		})
 	}
@@ -185,7 +187,9 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 // sessionUser is one account as the shell shows it: who they are, their
 // workspaces each with a token for that workspace, their attributes, and their
 // roles and permissions in the first workspace.
-func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[string]any {
+//
+// sid is the device session the tokens belong to ("" for none): signing it out ends them.
+func (c *AuthController) sessionUser(u *identityuser.User, clientID, sid string) map[string]any {
 	user := maskUser(u)
 	var links []any
 	firstWorkspace := ""
@@ -200,7 +204,7 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		ws := map[string]any{}
 		raw, _ := json.Marshal(w)
 		_ = json.Unmarshal(raw, &ws)
-		if t, err := c.auth.IssueAccessToken(u, clientID, w.Id); err == nil {
+		if t, err := c.auth.IssueAccessToken(u, clientID, w.Id, sid); err == nil {
 			ws["token"] = t
 		}
 		link := map[string]any{
@@ -235,7 +239,7 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		}
 	}
 	user["roles"], user["permissions"] = roles, permissions
-	if t, err := c.auth.IssueAccessToken(u, clientID, firstWorkspace); err == nil {
+	if t, err := c.auth.IssueAccessToken(u, clientID, firstWorkspace, sid); err == nil {
 		user["token"] = t
 	}
 	return user
@@ -246,8 +250,8 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 // permissions, and a token for the first workspace). The shell's USER_LOGIN effect takes this
 // response whole and reads `id` and `workspaces[].workspace.token` from it; without them it signs
 // in with no token and the next request is refused.
-func (c *AuthController) sessionPayload(u *identityuser.User, clientID string, base map[string]any) map[string]any {
-	for k, v := range c.sessionUser(u, clientID) {
+func (c *AuthController) sessionPayload(u *identityuser.User, clientID, sid string, base map[string]any) map[string]any {
+	for k, v := range c.sessionUser(u, clientID, sid) {
 		base[k] = v
 	}
 	return base

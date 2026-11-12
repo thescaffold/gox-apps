@@ -2,6 +2,10 @@
 // otherwise outlive. Each person has at most one row: tokens issued before
 // its instant are refused. "Sign out everywhere" and closing an account set it.
 //
+// A token that names its device session ("sid", V0-15) is also refused once
+// that session is signed out (its IdentityDeviceSessions row is gone), so
+// signing one device out ends its tokens at once.
+//
 // Tokens carry their issue time in milliseconds (`iatMs`); a token without one
 // predates this package and is treated as issued at time zero, so a
 // revocation also ends every token minted before the feature existed.
@@ -40,9 +44,24 @@ func (s *Store) RevokeUser(ctx context.Context, userID, reason string) error {
 
 // Revoked reports whether a token issued at iatMs for userID is refused.
 func (s *Store) Revoked(ctx context.Context, userID string, iatMs int64) bool {
-	var after int64
-	err := s.DB.WithContext(ctx).Raw(`SELECT "valid_after_ms" FROM "IdentityUserRevocations" WHERE "user_id" = ?`, userID).Scan(&after).Error
-	return err == nil && after > 0 && iatMs < after
+	return s.RevokedIn(ctx, userID, "", iatMs)
+}
+
+// RevokedIn is Revoked for a token of device session sid ("" for none): it is
+// also refused when that session has been signed out. One query either way.
+func (s *Store) RevokedIn(ctx context.Context, userID, sid string, iatMs int64) bool {
+	var r struct {
+		After int64
+		Ended bool
+	}
+	err := s.DB.WithContext(ctx).Raw(`SELECT
+		COALESCE((SELECT "valid_after_ms" FROM "IdentityUserRevocations" WHERE "user_id" = ?), 0) AS after,
+		(? <> '' AND NOT EXISTS (SELECT 1 FROM "IdentityDeviceSessions" WHERE "id" = ? AND "user_id" = ? AND "deleted_at" IS NULL)) AS ended`,
+		userID, sid, sid, userID).Scan(&r).Error
+	if err != nil {
+		return false
+	}
+	return r.Ended || (r.After > 0 && iatMs < r.After)
 }
 
 // RevokeUser uses the registered store; it reports whether one is configured.
@@ -70,5 +89,6 @@ func Check(claims map[string]any) bool {
 	case int64:
 		iat = v
 	}
-	return store.Revoked(context.Background(), sub, iat)
+	sid, _ := claims["sid"].(string)
+	return store.RevokedIn(context.Background(), sub, sid, iat)
 }

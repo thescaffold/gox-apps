@@ -169,8 +169,11 @@ func (s *AuthService) VerifyCredentials(handle, password string) (*user.User, er
 // ResolveRoles/ResolvePermissions now treat it as "global-scope rows only"
 // instead, but a caller that always passes "" out of convenience would
 // still hand out a token good for nothing tenant-scoped, silently.
-func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string) (accessToken, refreshToken string, err error) {
-	claims := s.buildClaims(u, clientId, workspaceId)
+//
+// sid, when given, is the device session the tokens belong to (V0-15): it goes in their claims, so
+// signing that session out ends them at once (revocation.Check).
+func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string, sid ...string) (accessToken, refreshToken string, err error) {
+	claims := withSession(s.buildClaims(u, clientId, workspaceId), sid)
 	accessToken, err = auth.Sign(claims, s.jwtSecret(), accessExpiry)
 	if err != nil {
 		return "", "", err
@@ -196,8 +199,17 @@ func (s *AuthService) IssueTokens(u *user.User, clientId, workspaceId string) (a
 // else: no refresh token, and no record is written. The browser shell calls it
 // (through the device's sessions) every time it needs a fresh token, and a
 // refresh token per call would fill the table with credentials nobody holds.
-func (s *AuthService) IssueAccessToken(u *user.User, clientId, workspaceId string) (string, error) {
-	return auth.Sign(s.buildClaims(u, clientId, workspaceId), s.jwtSecret(), accessExpiry)
+// sid, when given, is the device session it belongs to (see IssueTokens).
+func (s *AuthService) IssueAccessToken(u *user.User, clientId, workspaceId string, sid ...string) (string, error) {
+	return auth.Sign(withSession(s.buildClaims(u, clientId, workspaceId), sid), s.jwtSecret(), accessExpiry)
+}
+
+// withSession names the device session in claims ("sid") when there is one.
+func withSession(claims map[string]any, sid []string) map[string]any {
+	if len(sid) > 0 && sid[0] != "" {
+		claims["sid"] = sid[0]
+	}
+	return claims
 }
 
 // ErrSecondFactorRequired: the person has two-factor authentication, so a

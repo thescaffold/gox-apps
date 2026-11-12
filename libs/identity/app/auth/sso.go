@@ -464,16 +464,16 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 	if len(workspaces) > 0 {
 		workspaceID = workspaces[0].Id
 	}
-	access, refresh, err := c.auth.IssueTokens(u, res.ClientID, workspaceID)
+	deviceID, sessionID := c.bootstrapDevice(u.Id, res.ClientID, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	access, refresh, err := c.auth.IssueTokens(u, res.ClientID, workspaceID, sessionID)
 	if err != nil {
 		return response.Unauthorized(title, err.Error())
 	}
 	// A device session for everyone signed in, with or without a workspace: it is
 	// what the browser re-mints its token from (GET sessions), and it hands out the
 	// workspace's token once the person creates or joins one.
-	deviceID, sessionID := c.bootstrapDevice(u.Id, res.ClientID, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
 	c.logDeviceLogin(deviceID, sessionID, dto.Ctx)
-	return withDeviceCookie(response.Success(c.sessionPayload(u, res.ClientID, map[string]any{
+	return withDeviceCookie(response.Success(c.sessionPayload(u, res.ClientID, sessionID, map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,

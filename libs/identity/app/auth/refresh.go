@@ -58,7 +58,8 @@ func (c *AuthController) Refresh(dto *RefreshDto) types.Output {
 		}
 	}
 
-	access, err := c.auth.IssueAccessToken(u, clientID, workspaceID)
+	sid, _ := claims["sid"].(string) // the device session it belongs to, kept (V0-15)
+	access, err := c.auth.IssueAccessToken(u, clientID, workspaceID, sid)
 	if err != nil {
 		return response.InternalServerError(title, "could not sign you in")
 	}

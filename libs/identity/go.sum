@@ -1,7 +1,7 @@
 github.com/ProtonMail/go-crypto v1.5.2 h1:cucYnvqcY7UOXVD//mSyjeaPY0SSN3v5cDkYPxumINk=
 github.com/ProtonMail/go-crypto v1.5.2/go.mod h1:/RaSu30DaKO4RY+XdV/ACcCcZkGr7AhUIduq5sjzzCo=
-github.com/awesome-goose/goose v0.0.34 h1:gA3XYothYX7JIHRlBS5Ic8H1/FoGhAhLeqI9LRT1QiM=
-github.com/awesome-goose/goose v0.0.34/go.mod h1:qQE/WGlNBQoKg3UVk4v8FpiHW2z3EZnBfJzTrRPQsHw=
+github.com/awesome-goose/goose v0.0.36 h1:rVDZijjfZ6ZZAKybml68H+jcmWKcoA6PTy2XUVzLLXM=
+github.com/awesome-goose/goose v0.0.36/go.mod h1:qQE/WGlNBQoKg3UVk4v8FpiHW2z3EZnBfJzTrRPQsHw=
 github.com/beevik/etree v1.8.1 h1:MchsAnqPGCGsfQezhwcouHPlAHlcAOqWpyCVZoyWfjU=
 github.com/beevik/etree v1.8.1/go.mod h1:bh4zJxiIr62SOf9pRzN7UUYaEDa9HEKafK25+sLc0Gc=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc h1:biVzkmvwrH8WK8raXaxBx6fRVTlJILwEwQGL1I/ByEI=

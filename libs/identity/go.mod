@@ -2,7 +2,7 @@ module github.com/thescaffold/gox-apps/libs/identity
 
 go 1.25.3
 
-require github.com/awesome-goose/goose v0.0.34
+require github.com/awesome-goose/goose v0.0.36
 
 require github.com/thescaffold/gox-packages/libs/core v0.0.26
 

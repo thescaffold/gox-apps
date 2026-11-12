@@ -83,6 +83,8 @@ var Migrations = []sql.Migration{
 	&migrations.CreateIdentityKeyPolicies{},
 	// V0-15, V4-03: a device session's address, last use and SAML session.
 	&migrations.DeviceSessionDetails{},
+	// V4-03: the SAML service provider's signing key, and signed AuthnRequests per connection.
+	&migrations.SsoSamlSigning{},
 }
 
 type AppModule struct{}

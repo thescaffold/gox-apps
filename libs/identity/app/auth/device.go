@@ -99,6 +99,7 @@ func (c *AuthController) bootstrapDevice(userId, clientId, userAgent, wantDevice
 	if existing, _ := c.deviceSessionEntity.First(`"device_id" = ? AND "user_id" = ?`, dev.Id, userId); existing != nil {
 		// signing in again renews the session (and its updated time, which orders the list)
 		_, _ = c.deviceSessionEntity.Update(&identitydevicesession.DeviceSession{ExpiresAt: &exp, ClientId: cp}, `"id" = ?`, existing.Id)
+		c.linkSSOSession(existing.Id, nil) // a single sign-on sign-in links it again
 		return dev.Id, existing.Id
 	}
 	sess := &identitydevicesession.DeviceSession{DeviceId: dev.Id, UserId: userId, Token: utils.Reference("SES", 32), ExpiresAt: &exp, ClientId: cp}
@@ -322,7 +323,22 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	default:
 		return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.logout.error.unauthorized", nil, pref))
 	}
+	// A browser signing itself out of a session that came through SAML goes on to the IdP, so its
+	// session there ends too (SP-initiated single logout, V4-03).
+	logoutURL := ""
 	if c.deviceSessionEntity != nil {
+		if fromCookie {
+			if rows, err := c.deviceSessionEntity.Find(0, 0, where+` AND "sso_connection_id" <> ''`, args...); err == nil {
+				for _, r := range rows {
+					if dto.Ctx.UserID == "" || r.UserId == dto.Ctx.UserID {
+						if u := c.samlLogoutStart(r.SsoConnectionId, r.SsoNameId, r.SsoSessionIndex); u != "" {
+							logoutURL = u
+							break
+						}
+					}
+				}
+			}
+		}
 		if _, err := c.deviceSessionEntity.Delete(where, args...); err != nil {
 			return response.InternalServerError(title, err.Error())
 		}
@@ -348,7 +364,11 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 			return response.InternalServerError(title, "could not end your sessions")
 		}
 	}
-	out := response.Success(map[string]any{"deviceId": device}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
+	data := map[string]any{"deviceId": device}
+	if logoutURL != "" {
+		data["logoutUrl"] = logoutURL
+	}
+	out := response.Success(data, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
 	if fromCookie && dto.UserId == "" {
 		out.Headers()["Set-Cookie"] = deviceCookie("", 0)
 	}

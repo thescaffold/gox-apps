@@ -38,6 +38,14 @@ import (
 //
 //	POST /sso/saml/:workspace/acs   SAMLResponse&RelayState → 302 as the callback
 //	GET  /sso/saml/:workspace       this service provider's metadata
+//	GET  /sso/saml/:workspace/slo   single logout, either side starting (V4-03)
+//
+// The service provider has its own signing key (made on first use, rotated in
+// two steps at POST /sso/connection/sp-key): it signs AuthnRequests when the
+// connection says so, and every logout message. Signing out of a browser whose
+// session came through SAML ends it here and returns the IdP's logout URL
+// (logoutUrl) for the browser to go on to; a LogoutRequest from the IdP ends
+// the sessions it names. IdP-initiated sign-in stays refused (D-27).
 //
 // Tokens never appear in a URL: the callback hands the app a short-lived,
 // single-use code that /sso/exchange turns into a session.
@@ -65,7 +73,21 @@ type ssoResult struct {
 	UserID   string `json:"u"`
 	ClientID string `json:"c"`
 	IsNew    bool   `json:"n"`
+	// A SAML sign-in: what single logout names the session by.
+	SAML *ssoSession `json:"s,omitempty"`
 }
+
+// ssoSession is a SAML session as the IdP knows it.
+type ssoSession struct {
+	ConnectionID string `json:"c"`
+	NameID       string `json:"n"`
+	SessionIndex string `json:"i"`
+}
+
+const (
+	ssoMfaPrefix = "identity:sso:mfa:" // a SAML session waiting on the second factor
+	ssoSloPrefix = "identity:sso:slo:" // a LogoutRequest this side sent
+)
 
 // SsoDiscoverDto carries POST /sso/discover.
 type SsoDiscoverDto struct {
@@ -115,6 +137,24 @@ type SsoConnectionDto struct {
 	MetadataXML string   `json:"metadataXml"`
 	Domains     []string `json:"domains"`
 	Enforce     bool     `json:"enforce"`
+	// SignRequests (SAML) signs the AuthnRequests with the service provider's key; nil keeps
+	// what was set (a new connection follows the IdP's WantAuthnRequestsSigned).
+	SignRequests *bool `json:"signRequests"`
+}
+
+// SsoSpKeyDto carries POST /sso/connection/sp-key {action}: "rotate" stages a next key
+// (published beside the current one), "activate" makes it the one that signs, "cancel" drops it.
+type SsoSpKeyDto struct {
+	Ctx    ntxctx.NTXContext `context:"ntx"`
+	Action string            `json:"action" binding:"required"`
+}
+
+// SsoSamlSloDto carries GET /sso/saml/:workspace/slo (HTTP-Redirect binding): the query exactly
+// as sent, which the signature covers.
+type SsoSamlSloDto struct {
+	Ctx       ntxctx.NTXContext `context:"ntx"`
+	Workspace string            `param:"workspace"`
+	Query     string            `raw:"query"`
 }
 
 // SsoSamlMetadataDto carries GET /sso/saml/:workspace.
@@ -159,7 +199,65 @@ func ssoSAMLBase() string {
 // company's admin registers them with the IdP first.
 func samlSP(workspaceID string) sso.SAMLServiceProvider {
 	e := ssoSAMLBase() + "/" + url.PathEscape(workspaceID)
-	return sso.SAMLServiceProvider{EntityID: e, ACSURL: e + "/acs"}
+	return sso.SAMLServiceProvider{EntityID: e, ACSURL: e + "/acs", SLOURL: e + "/slo"}
+}
+
+// samlSPFor is the workspace's service provider with its signing key (made now when create and
+// there is none) and conn's signing choice. Without a usable key (no IDENTITY_TOKEN_KEY to seal
+// it), nothing is signed and there is no single logout.
+func (c *AuthController) samlSPFor(ctx context.Context, workspaceID string, conn *sso.Connection, create bool) (sso.SAMLServiceProvider, *sso.SPKeys) {
+	sp := samlSP(workspaceID)
+	if conn != nil {
+		sp.SignRequests = conn.SignRequests
+	}
+	if c.ssoStore == nil {
+		return sp, nil
+	}
+	seal := tokenstore.Key()
+	keys, err := c.ssoStore.SPKeysFor(ctx, workspaceID)
+	if errors.Is(err, sso.ErrNotFound) && create && len(seal) == 32 {
+		kp, kerr := sso.NewSPKeyPair(sp.EntityID)
+		if kerr != nil {
+			return sp, nil
+		}
+		sealed, kerr := tokenstore.SealProviderToken(kp.KeyPEM(), seal)
+		if kerr != nil {
+			return sp, nil
+		}
+		keys, err = c.ssoStore.CreateSPKeys(ctx, &sso.SPKeys{WorkspaceID: workspaceID, KeySealed: sealed, Cert: kp.CertB64()})
+	}
+	if err != nil || keys == nil {
+		return sp, nil
+	}
+	if pemKey, err := tokenstore.OpenProviderToken(keys.KeySealed, seal); err == nil {
+		if kp, err := sso.ParseSPKeyPair(pemKey, keys.Cert); err == nil {
+			sp.Key, sp.Cert = kp.Key, kp.Cert
+		}
+	}
+	if keys.NextCert != "" {
+		if kp, err := sso.ParseSPCert(keys.NextCert); err == nil {
+			sp.NextCert = kp.Cert
+		}
+	}
+	return sp, keys
+}
+
+// spKeyView is what the console shows of the service provider's key: the certificate(s) to give
+// the IdP, their fingerprints, and when it last rotated.
+func spKeyView(sp sso.SAMLServiceProvider, keys *sso.SPKeys) map[string]any {
+	v := map[string]any{"spSloUrl": sp.SLOURL, "spCert": "", "spFingerprint": "", "spNextCert": "", "spNextFingerprint": "", "spRotatedAt": nil}
+	if sp.Cert != nil {
+		kp := &sso.SPKeyPair{Cert: sp.Cert}
+		v["spCert"], v["spFingerprint"], v["spCertExpiresAt"] = kp.CertPEM(), kp.Fingerprint(), sp.Cert.NotAfter
+	}
+	if sp.NextCert != nil {
+		kp := &sso.SPKeyPair{Cert: sp.NextCert}
+		v["spNextCert"], v["spNextFingerprint"] = kp.CertPEM(), kp.Fingerprint()
+	}
+	if keys != nil {
+		v["spRotatedAt"] = keys.RotatedAt
+	}
+	return v
 }
 
 // samlIdP loads a SAML connection's IdP: from its metadata URL (cached for an
@@ -244,7 +342,8 @@ func (c *AuthController) samlStart(ctx context.Context, conn *sso.Connection, dt
 	if err != nil {
 		return response.InternalServerError(title, "could not start sign-in")
 	}
-	redirect, requestID, err := c.ssoClient.SAMLAuthnRequest(samlSP(conn.WorkspaceID), idp, state)
+	sp, _ := c.samlSPFor(ctx, conn.WorkspaceID, conn, false)
+	redirect, requestID, err := c.ssoClient.SAMLAuthnRequest(sp, idp, state)
 	if err != nil {
 		return response.InternalServerError(title, "could not start sign-in")
 	}
@@ -346,7 +445,8 @@ func (c *AuthController) SsoSamlAcs(dto *SsoSamlAcsDto) types.Output {
 }
 
 // SsoSamlMetadata is a workspace's service-provider metadata, for the
-// company's IdP admin (it holds the entity id and ACS; nothing secret).
+// company's IdP admin (it holds the entity id, ACS, single logout service and
+// signing certificate; nothing secret).
 func (c *AuthController) SsoSamlMetadata(dto *SsoSamlMetadataDto) types.Output {
 	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
 	if !c.ssoReady() || dto.Workspace == "" || len(dto.Workspace) > 64 {
@@ -355,7 +455,9 @@ func (c *AuthController) SsoSamlMetadata(dto *SsoSamlMetadataDto) types.Output {
 	if ws, _ := c.workspaceEntity.First(`"id" = ?`, dto.Workspace); ws == nil {
 		return response.NotFound(title, "no such workspace")
 	}
-	md, err := c.ssoClient.SAMLMetadata(samlSP(dto.Workspace))
+	conn, _ := c.ssoStore.ForWorkspace(context.Background(), dto.Workspace)
+	sp, _ := c.samlSPFor(context.Background(), dto.Workspace, conn, false)
+	md, err := c.ssoClient.SAMLMetadata(sp)
 	if err != nil {
 		return response.InternalServerError(title, "could not build the metadata")
 	}
@@ -433,7 +535,11 @@ func (c *AuthController) ssoAdmit(ctx context.Context, conn *sso.Connection, st 
 	if err != nil {
 		return ssoFail(st.ReturnTo, "error")
 	}
-	rb, _ := json.Marshal(ssoResult{UserID: u.Id, ClientID: st.ClientID, IsNew: isNew})
+	res := ssoResult{UserID: u.Id, ClientID: st.ClientID, IsNew: isNew}
+	if conn.SAML() && claims.Subject != "" {
+		res.SAML = &ssoSession{ConnectionID: conn.ID, NameID: claims.Subject, SessionIndex: claims.SessionIndex}
+	}
+	rb, _ := json.Marshal(res)
 	c.cache.Set(ssoResultPrefix+code, string(rb), ssoResultTTL)
 	return output.Redirect(ssoBaseURL() + st.ReturnTo + "?code=" + url.QueryEscape(code))
 }
@@ -456,7 +562,13 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 	if u == nil {
 		return response.Unauthorized(title, "the sign-in link has expired")
 	}
-	if out, stop := c.secondStep(u, res.ClientID, dto.UserAgent, pref); stop {
+	if out, stop := c.secondStep(u, res.ClientID, dto.UserAgent, pref, func(challenge string) {
+		// The device session is made after the second factor: keep the SAML session for it.
+		if res.SAML != nil {
+			b, _ := json.Marshal(res.SAML)
+			c.cache.Set(ssoMfaPrefix+challenge, string(b), 10*time.Minute)
+		}
+	}); stop {
 		return out
 	}
 	workspaces := c.workspacesForUser(u.Id, res.ClientID)
@@ -465,6 +577,7 @@ func (c *AuthController) SsoExchange(dto *SsoExchangeDto) types.Output {
 		workspaceID = workspaces[0].Id
 	}
 	deviceID, sessionID := c.bootstrapDevice(u.Id, res.ClientID, dto.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	c.linkSSOSession(sessionID, res.SAML)
 	access, refresh, err := c.auth.IssueTokens(u, res.ClientID, workspaceID, sessionID)
 	if err != nil {
 		return response.Unauthorized(title, err.Error())
@@ -497,6 +610,19 @@ func (c *AuthController) ssoAdmin(ntx ntxctx.NTXContext) bool {
 
 // spView is what the console shows an admin to register with an IdP: the
 // OpenID redirect URI and the workspace's SAML service provider.
+// linkSSOSession records on a device session the SAML session it came from (or clears it: a
+// password sign-in on the same device is not the IdP's to end).
+func (c *AuthController) linkSSOSession(sessionID string, s *ssoSession) {
+	if sessionID == "" || c.db == nil || c.db.DB == nil {
+		return
+	}
+	if s == nil {
+		s = &ssoSession{}
+	}
+	_ = c.db.DB.Exec(`UPDATE "IdentityDeviceSessions" SET "sso_connection_id" = ?, "sso_name_id" = ?, "sso_session_index" = ? WHERE "id" = ?`,
+		s.ConnectionID, s.NameID, s.SessionIndex, sessionID).Error
+}
+
 func spView(workspaceID string) map[string]any {
 	sp := samlSP(workspaceID)
 	return map[string]any{"redirectUri": ssoRedirectURI(), "spEntityId": sp.EntityID, "acsUrl": sp.ACSURL, "spMetadataUrl": sp.EntityID}
@@ -523,17 +649,88 @@ func (c *AuthController) SsoGetConnection(dto *SsoWorkspaceDto) types.Output {
 	if !c.ssoAdmin(dto.Ctx) {
 		return response.Forbidden(title, "only company admins can manage single sign-on")
 	}
-	conn, err := c.ssoStore.ForWorkspace(context.Background(), dto.Ctx.WorkspaceID)
+	ctx := context.Background()
+	conn, err := c.ssoStore.ForWorkspace(ctx, dto.Ctx.WorkspaceID)
 	if err != nil {
 		// Not configured is a normal state; still tell the console the callback
-		// URL to register with the provider.
+		// URL to register with the provider, and the SAML signing certificate.
 		v := spView(dto.Ctx.WorkspaceID)
+		for k, x := range c.keyView(ctx, dto.Ctx.WorkspaceID, nil) {
+			v[k] = x
+		}
 		v["configured"] = false
 		return response.Success(v, title, "ok", nil)
 	}
 	v := connectionView(conn)
+	for k, x := range c.keyView(ctx, conn.WorkspaceID, conn) {
+		v[k] = x
+	}
 	v["configured"] = true
 	return response.Success(v, title, "ok", nil)
+}
+
+// keyView is the service provider's key (made now if there is none) and, for a SAML connection,
+// whether its IdP offers single logout and wants signed requests.
+func (c *AuthController) keyView(ctx context.Context, workspaceID string, conn *sso.Connection) map[string]any {
+	sp, keys := c.samlSPFor(ctx, workspaceID, conn, true)
+	v := spKeyView(sp, keys)
+	v["signRequests"], v["idpSlo"], v["idpWantsSigned"] = false, false, false
+	if conn != nil && conn.SAML() {
+		v["signRequests"] = conn.SignRequests
+		if idp, err := c.ssoClient.ParseSAMLMetadata([]byte(conn.SAMLMetadata)); err == nil {
+			v["idpSlo"], v["idpWantsSigned"] = idp.SLOURL != "", idp.WantsSignedRequests
+		}
+	}
+	return v
+}
+
+// SsoSpKey is POST /sso/connection/sp-key: rotate the SAML service provider's signing key in two
+// steps, so the IdP can trust the next certificate before it is used. "rotate" stages a next key,
+// published in the metadata beside the current one; "activate" makes it the one that signs (the
+// old one is dropped); "cancel" drops a staged key.
+func (c *AuthController) SsoSpKey(dto *SsoSpKeyDto) types.Output {
+	title := c.lang.Translate("apps.identity.app.title", nil, dto.Ctx.Preference)
+	if !c.ssoReady() {
+		return response.NotFound(title, "single sign-on is not available")
+	}
+	if !c.ssoAdmin(dto.Ctx) {
+		return response.Forbidden(title, "only company admins can manage single sign-on")
+	}
+	ctx := context.Background()
+	ws := dto.Ctx.WorkspaceID
+	seal := tokenstore.Key()
+	if len(seal) != 32 {
+		return response.Error(title, "single sign-on is not configured on this server", 503)
+	}
+	sp, _ := c.samlSPFor(ctx, ws, nil, true)
+	switch dto.Action {
+	case "rotate":
+		kp, err := sso.NewSPKeyPair(sp.EntityID)
+		if err != nil {
+			return response.InternalServerError(title, "could not make a key")
+		}
+		sealed, err := tokenstore.SealProviderToken(kp.KeyPEM(), seal)
+		if err != nil {
+			return response.InternalServerError(title, "could not store the key")
+		}
+		if err := c.ssoStore.StageSPKey(ctx, ws, sealed, kp.CertB64()); err != nil {
+			return response.InternalServerError(title, "could not store the key")
+		}
+	case "activate":
+		if err := c.ssoStore.ActivateSPKey(ctx, ws); errors.Is(err, sso.ErrNotFound) {
+			return response.Conflict(title, "there is no new key to activate; rotate first")
+		} else if err != nil {
+			return response.InternalServerError(title, "could not activate the key")
+		}
+	case "cancel":
+		if err := c.ssoStore.DropNextSPKey(ctx, ws); err != nil {
+			return response.InternalServerError(title, "could not drop the key")
+		}
+	default:
+		return response.BadRequest(title, "action must be rotate, activate or cancel")
+	}
+	conn, _ := c.ssoStore.ForWorkspace(ctx, ws)
+	return response.Success(c.keyView(ctx, ws, conn), title, "saved", nil)
 }
 
 // SsoPutConnection creates or replaces the workspace's SSO settings. Every
@@ -596,6 +793,14 @@ func (c *AuthController) SsoPutConnection(dto *SsoConnectionDto) types.Output {
 			return response.BadRequest(title, "the SAML metadata is not usable: it needs the identity provider's entity ID, a signing certificate and an HTTP-Redirect sign-on URL")
 		}
 		conn.Issuer, conn.SAMLMetadata = idp.EntityID, string(raw)
+		switch {
+		case dto.SignRequests != nil:
+			conn.SignRequests = *dto.SignRequests
+		case prev != nil && prev.SAML():
+			conn.SignRequests = prev.SignRequests
+		default:
+			conn.SignRequests = idp.WantsSignedRequests
+		}
 	default:
 		return response.BadRequest(title, "protocol must be oidc or saml")
 	}
@@ -649,6 +854,9 @@ func (c *AuthController) SsoPutConnection(dto *SsoConnectionDto) types.Output {
 		return response.InternalServerError(title, "could not save")
 	}
 	v := connectionView(conn)
+	for k, x := range c.keyView(ctx, conn.WorkspaceID, conn) {
+		v[k] = x
+	}
 	v["configured"] = true
 	return response.Success(v, title, "saved", nil)
 }

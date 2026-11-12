@@ -7,6 +7,12 @@ package sso
 //	the browser is sent to the IdP with an AuthnRequest (HTTP-Redirect binding);
 //	the IdP posts a Response back to the ACS (HTTP-POST binding).
 //
+// The service provider holds its own signing key (saml_keys.go, V4-03): with it
+// the AuthnRequest is signed when the connection asks, and single logout
+// (saml_slo.go) works in both directions. The key is never used to decrypt:
+// encrypted assertions stay refused (D-15), and the metadata publishes no
+// encryption key.
+//
 // The XML, signature and condition checks are github.com/crewjam/saml
 // (BSD-2-Clause): a signed Response or a signed Assertion from a key in the
 // IdP's metadata, Destination and Recipient equal to the ACS, the audience
@@ -22,6 +28,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -62,14 +69,30 @@ var (
 type SAMLIdP struct {
 	EntityID string
 	// SSOURL is its SingleSignOnService for the HTTP-Redirect binding.
-	SSOURL   string
-	metadata *saml.EntityDescriptor
+	SSOURL string
+	// SLOURL is its SingleLogoutService for the HTTP-Redirect binding; "" when
+	// it offers no single logout.
+	SLOURL string
+	// WantsSignedRequests is the metadata's WantAuthnRequestsSigned.
+	WantsSignedRequests bool
+	metadata            *saml.EntityDescriptor
 }
 
 // SAMLServiceProvider is this side of a connection.
 type SAMLServiceProvider struct {
 	EntityID string
 	ACSURL   string
+	// SLOURL is this side's SingleLogoutService (HTTP-Redirect); "" offers none.
+	SLOURL string
+	// Key signs what this side sends (AuthnRequests when SignRequests, and
+	// every logout message); Cert is its certificate. NextCert, a key staged
+	// by a rotation and not yet signing, is published beside it so the IdP
+	// can learn it first. With no Key nothing is signed and there is no
+	// single logout.
+	Key          *rsa.PrivateKey
+	Cert         *x509.Certificate
+	NextCert     *x509.Certificate
+	SignRequests bool
 }
 
 const maxMetadata = 1 << 20
@@ -97,6 +120,14 @@ func (c *Client) ParseSAMLMetadata(raw []byte) (*SAMLIdP, error) {
 				idp.SSOURL = s.Location
 			}
 		}
+		for _, s := range d.SingleLogoutServices {
+			if s.Binding == saml.HTTPRedirectBinding && idp.SLOURL == "" && c.checkURL(s.Location) == nil {
+				idp.SLOURL = s.Location
+			}
+		}
+		if d.WantAuthnRequestsSigned != nil && *d.WantAuthnRequestsSigned {
+			idp.WantsSignedRequests = true
+		}
 		for _, k := range d.KeyDescriptors {
 			if k.Use != "" && k.Use != "signing" {
 				continue
@@ -121,14 +152,12 @@ func (c *Client) ParseSAMLMetadata(raw []byte) (*SAMLIdP, error) {
 }
 
 func parseCert(data string) (*x509.Certificate, error) {
-	data = strings.Join(strings.Fields(data), "")
-	b, err := base64.StdEncoding.DecodeString(data)
+	if blk, _ := pem.Decode([]byte(strings.TrimSpace(data))); blk != nil {
+		return x509.ParseCertificate(blk.Bytes)
+	}
+	b, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(data), ""))
 	if err != nil {
-		if blk, _ := pem.Decode([]byte(data)); blk != nil {
-			b = blk.Bytes
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 	return x509.ParseCertificate(b)
 }
@@ -174,11 +203,22 @@ func (c *Client) FetchSAMLMetadata(ctx context.Context, raw string, fresh bool) 
 	return b, nil
 }
 
-func (c *Client) serviceProvider(sp SAMLServiceProvider, idp *SAMLIdP, replay saml.AssertionReplayCache) (*saml.ServiceProvider, error) {
+// serviceProvider builds the library's service provider. signing gives it the
+// key: only for what this side sends, never to read a response (a key would let
+// the library decrypt an encrypted assertion, which D-15 refuses).
+func (c *Client) serviceProvider(sp SAMLServiceProvider, idp *SAMLIdP, replay saml.AssertionReplayCache, signing ...bool) (*saml.ServiceProvider, error) {
 	ent, err1 := url.Parse(sp.EntityID)
 	acs, err2 := url.Parse(sp.ACSURL)
 	if err1 != nil || err2 != nil || sp.EntityID == "" || sp.ACSURL == "" {
 		return nil, fmt.Errorf("sso: bad service provider URLs")
+	}
+	var slo *url.URL
+	if sp.SLOURL != "" {
+		u, err := url.Parse(sp.SLOURL)
+		if err != nil {
+			return nil, fmt.Errorf("sso: bad service provider URLs")
+		}
+		slo = u
 	}
 	s := &saml.ServiceProvider{
 		EntityID:                         sp.EntityID,
@@ -192,6 +232,17 @@ func (c *Client) serviceProvider(sp SAMLServiceProvider, idp *SAMLIdP, replay sa
 	if idp != nil {
 		s.IDPMetadata = idp.metadata
 	}
+	if slo != nil {
+		s.SloURL = *slo
+		s.LogoutBindings = []string{saml.HTTPRedirectBinding}
+	}
+	if len(signing) > 0 && signing[0] && sp.Key != nil && sp.Cert != nil {
+		s.Key, s.Certificate = sp.Key, sp.Cert
+		s.LogoutSignatureMethod = dsig.RSASHA256SignatureMethod
+		if sp.SignRequests {
+			s.SignatureMethod = dsig.RSASHA256SignatureMethod
+		}
+	}
 	if c.Now != nil {
 		s.Clock = dsig.NewFakeClockAt(c.Now())
 	}
@@ -200,8 +251,11 @@ func (c *Client) serviceProvider(sp SAMLServiceProvider, idp *SAMLIdP, replay sa
 
 // SAMLAuthnRequest builds the HTTP-Redirect URL that sends the browser to the
 // IdP, and returns the request's id: the response must answer it.
+//
+// With the service provider's key and SignRequests, the query string is signed
+// (RSA-SHA256, saml-bindings-2.0 §3.4.4.1).
 func (c *Client) SAMLAuthnRequest(sp SAMLServiceProvider, idp *SAMLIdP, relayState string) (redirect, requestID string, err error) {
-	s, err := c.serviceProvider(sp, idp, nil)
+	s, err := c.serviceProvider(sp, idp, nil, true)
 	if err != nil {
 		return "", "", err
 	}
@@ -216,13 +270,32 @@ func (c *Client) SAMLAuthnRequest(sp SAMLServiceProvider, idp *SAMLIdP, relaySta
 	return u.String(), req.ID, nil
 }
 
-// SAMLMetadata is this service provider's metadata, for the IdP's admin.
+// SAMLMetadata is this service provider's metadata, for the IdP's admin: its
+// entity id and ACS, its single logout service, and its signing certificate(s)
+// (the current one, and one staged by a rotation). No encryption key is ever
+// published, so no IdP encrypts to this side (D-15).
 func (c *Client) SAMLMetadata(sp SAMLServiceProvider) ([]byte, error) {
-	s, err := c.serviceProvider(sp, nil, nil)
+	s, err := c.serviceProvider(sp, nil, nil, true)
 	if err != nil {
 		return nil, err
 	}
-	b, err := xml.MarshalIndent(s.Metadata(), "", "  ")
+	ed := s.Metadata()
+	for i := range ed.SPSSODescriptors {
+		d := &ed.SPSSODescriptors[i]
+		kept := d.KeyDescriptors[:0]
+		for _, kd := range d.KeyDescriptors {
+			if kd.Use == "signing" {
+				kept = append(kept, kd)
+			}
+		}
+		d.KeyDescriptors = kept
+		if sp.NextCert != nil && s.Certificate != nil {
+			d.KeyDescriptors = append(d.KeyDescriptors, saml.KeyDescriptor{Use: "signing", KeyInfo: saml.KeyInfo{
+				X509Data: saml.X509Data{X509Certificates: []saml.X509Certificate{{Data: base64.StdEncoding.EncodeToString(sp.NextCert.Raw)}}},
+			}})
+		}
+	}
+	b, err := xml.MarshalIndent(ed, "", "  ")
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +312,10 @@ func (c *Client) SAMLVerify(sp SAMLServiceProvider, idp *SAMLIdP, samlResponse, 
 	raw, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(samlResponse), ""))
 	if err != nil || len(raw) == 0 {
 		return nil, fmt.Errorf("%w: not base64", ErrSAMLResponse)
+	}
+	// D-15: an IdP that encrypts is refused, whatever key this side holds.
+	if bytes.Contains(raw, []byte("EncryptedAssertion")) || bytes.Contains(raw, []byte("EncryptedID")) || bytes.Contains(raw, []byte("EncryptedAttribute")) {
+		return nil, fmt.Errorf("%w: encrypted assertions are not accepted; turn assertion encryption off at the identity provider", ErrSAMLResponse)
 	}
 	s, err := c.serviceProvider(sp, idp, replay)
 	if err != nil {
@@ -348,6 +425,12 @@ func samlClaims(a *saml.Assertion) *Claims {
 	cl := &Claims{EmailVerified: true} // the company's own IdP vouches; the caller checks the domain
 	if a.Subject != nil && a.Subject.NameID != nil {
 		cl.Subject = a.Subject.NameID.Value
+	}
+	for _, st := range a.AuthnStatements {
+		if st.SessionIndex != "" {
+			cl.SessionIndex = st.SessionIndex
+			break
+		}
 	}
 	email := attr(samlEmailAttrs)
 	if email == "" && strings.Contains(cl.Subject, "@") {

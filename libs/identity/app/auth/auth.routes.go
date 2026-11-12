@@ -31,11 +31,13 @@ var ROUTES = router.ForRoutes(
 	router.Post("/sso/exchange", []any{AuthController{}, "SsoExchange"}, requestInfo()...),
 	router.Get("/sso/saml/:workspace", []any{AuthController{}, "SsoSamlMetadata"}),
 	router.Post("/sso/saml/:workspace/acs", []any{AuthController{}, "SsoSamlAcs"}),
+	router.Get("/sso/saml/:workspace/slo", []any{AuthController{}, "SsoSamlSlo"}),
 	router.Post("/sso/recovery/start", []any{AuthController{}, "SsoRecoveryStart"}),
 	router.Post("/sso/recovery/verify", []any{AuthController{}, "SsoRecoveryVerify"}),
 	router.Get("/sso/connection", []any{AuthController{}, "SsoGetConnection"}, requireUser()...),
 	router.Put("/sso/connection", []any{AuthController{}, "SsoPutConnection"}, requireUser()...),
 	router.Delete("/sso/connection", []any{AuthController{}, "SsoDeleteConnection"}, requireUser()...),
+	router.Post("/sso/connection/sp-key", []any{AuthController{}, "SsoSpKey"}, requireUser()...),
 	router.Post("/secret/change", []any{AuthController{}, "ChangeSecret"}, requireUser()...),
 	// Two-factor sign-in (U-S20, mfa.go): the second step, then the person's own setup and the policy.
 	router.Post("/mfa/verify", []any{AuthController{}, "MfaVerify"}, requestInfo()...),

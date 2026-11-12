@@ -124,7 +124,10 @@ func mfaError(title string, err error) types.Output {
 // secondStep stops a sign-in whose first factor passed when the person has
 // 2FA: it answers with a challenge and the methods they can use. The bool is
 // false when there is no second step.
-func (c *AuthController) secondStep(u *identityuser.User, clientID, userAgent string, pref map[string]any) (types.Output, bool) {
+//
+// onChallenge, when given, is told the challenge the second step will answer (SSO keeps its
+// SAML session for the device session made then).
+func (c *AuthController) secondStep(u *identityuser.User, clientID, userAgent string, pref map[string]any, onChallenge ...func(challenge string)) (types.Output, bool) {
 	if c.mfa == nil {
 		return nil, false
 	}
@@ -139,6 +142,9 @@ func (c *AuthController) secondStep(u *identityuser.User, clientID, userAgent st
 	p, err := c.mfa.StartSignIn(context.Background(), u.Id, clientID, userAgent)
 	if err != nil {
 		return response.InternalServerError(title, "the sign-in could not be completed"), true
+	}
+	for _, fn := range onChallenge {
+		fn(p.Challenge)
 	}
 	return response.Success(map[string]any{
 		"mfaRequired": true,
@@ -170,6 +176,18 @@ func (c *AuthController) MfaVerify(dto *MfaVerifyDto) types.Output {
 		workspaceID = workspaces[0].Id
 	}
 	deviceID, sessionID := c.bootstrapDevice(u.Id, done.ClientID, done.UserAgent, cookieValue(dto.Cookie, DeviceCookie))
+	// An SSO sign-in that needed the second factor: its SAML session, for single logout.
+	var saml *ssoSession
+	if c.cache != nil {
+		if raw, ok := c.cache.Get(ssoMfaPrefix + dto.Challenge); ok {
+			c.cache.Del(ssoMfaPrefix + dto.Challenge)
+			var s ssoSession
+			if json.Unmarshal([]byte(raw), &s) == nil {
+				saml = &s
+			}
+		}
+	}
+	c.linkSSOSession(sessionID, saml)
 	access, refresh, err := c.auth.IssueTokens(u, done.ClientID, workspaceID, sessionID)
 	if err != nil {
 		return response.Unauthorized(title, "the sign-in could not be completed")

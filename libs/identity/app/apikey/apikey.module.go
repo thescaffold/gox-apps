@@ -25,7 +25,8 @@ func (m *ApiKeyModule) Declarations() []any {
 
 // ApiKeyService owns the key service for the process. The brand comes from
 // IDENTITY_KEY_BRAND (for example "lgr"); the host may set LiveAllowed to gate
-// live keys behind a go-live review.
+// live keys behind a go-live review. IDENTITY_KEY_EXPIRY_REQUIRED=true makes every
+// key expire, within the workspace's maximum (V0-14, pkg/apikey expiry.go).
 type ApiKeyService struct {
 	db *sql.Db `inject:""`
 
@@ -39,6 +40,9 @@ type ApiKeyService struct {
 func (s *ApiKeyService) Keys() *apikey.Service {
 	s.once.Do(func() {
 		s.svc = &apikey.Service{DB: s.db.DB, Brand: os.Getenv("IDENTITY_KEY_BRAND"), LiveAllowed: s.LiveAllowed}
+		if os.Getenv("IDENTITY_KEY_EXPIRY_REQUIRED") == "true" {
+			s.svc.MaxTTL = apikey.WorkspaceMaxTTL(s.db.DB)
+		}
 	})
 	return s.svc
 }

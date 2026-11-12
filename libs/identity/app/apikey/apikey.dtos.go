@@ -20,3 +20,8 @@ type IDReq struct {
 	Grace string            `query:"grace_seconds"`
 	Ctx   ntxctx.NTXContext `context:"ntx"`
 }
+
+type PolicyReq struct {
+	MaxDays int               `json:"maxDays" binding:"required"`
+	Ctx     ntxctx.NTXContext `context:"ntx"`
+}

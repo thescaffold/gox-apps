@@ -80,6 +80,10 @@ Role and permission writes need a platform admin: the role-type, permission-type
 
 `/keys` works on the keys it issues (those with `IDENTITY_KEY_BRAND`). A person lists, revokes and rotates their own. Owners and admins (`org.tokens.manage`) also list and revoke other people's keys in the workspace, never rotate them, so nobody sees a secret of someone else's key. Keys a host issues under another brand (its machine credentials) are its own to manage.
 
+## API keys expire (`IDENTITY_KEY_EXPIRY_REQUIRED`)
+
+With `IDENTITY_KEY_EXPIRY_REQUIRED=true`, `POST /keys` refuses a key with no `expires_in_seconds`, or one past the workspace's maximum, with 422 (`expiry_required`, `expiry_too_long`; `details.maxDays`). The maximum is a year unless an owner or admin (`org.security.manage`) sets a shorter one with `PUT /keys/policy {maxDays}` (1 to 365); `GET /keys/policy` reads it. A rotated key lives as long as the one it replaces, within the maximum. A host issuing keys itself sets `apikey.Service.MaxTTL` (`apikey.WorkspaceMaxTTL(db)`). Without the setting nothing changes.
+
 ## Account
 
 `PATCH /account {name}` renames the signed-in person. `POST /account/email {email}` sends a code to the new address; `POST /account/email/verify {email, code}` changes the sign-in email and tells the old address (templates `email-change` and `email-changed`). The time zone stays editable through `PATCH /attributes/preference`; country and currency are set once.

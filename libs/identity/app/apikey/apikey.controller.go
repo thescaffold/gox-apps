@@ -3,6 +3,8 @@ package apikey
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -33,6 +35,22 @@ func fail(err error) types.Output {
 	return response.InternalServerError(title, "the key could not be changed")
 }
 
+// expiryFail answers a key refused for its expiry: 422, with the workspace's maximum.
+func (c *ApiKeyController) expiryFail(ws string, err error) (types.Output, bool) {
+	code := ""
+	switch {
+	case errors.Is(err, apikey.ErrExpiryRequired):
+		code = "expiry_required"
+	case errors.Is(err, apikey.ErrExpiryTooLong):
+		code = "expiry_too_long"
+	default:
+		return nil, false
+	}
+	max, _ := apikey.MaxDays(context.Background(), c.svc.Keys().DB, ws)
+	msg := fmt.Sprintf("Every token expires: choose an expiry of at most %d days.", max)
+	return response.ErrorDetails(title, msg, http.StatusUnprocessableEntity, code, map[string]any{"maxDays": max}), true
+}
+
 func (c *ApiKeyController) Issue(dto *IssueReq) types.Output {
 	kind := dto.Kind
 	if kind == "" {
@@ -47,6 +65,9 @@ func (c *ApiKeyController) Issue(dto *IssueReq) types.Output {
 		ttl = time.Duration(dto.ExpiresIn) * time.Second
 	}
 	k, err := c.svc.Keys().Issue(context.Background(), dto.Ctx.UserID, dto.Ctx.ClientID, dto.Ctx.WorkspaceID, dto.Name, kind, env, dto.Scopes, ttl)
+	if out, ok := c.expiryFail(dto.Ctx.WorkspaceID, err); ok {
+		return out
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -118,4 +139,48 @@ func (c *ApiKeyController) Rotate(dto *IDReq) types.Output {
 		return fail(err)
 	}
 	return response.Created(k, title, "key rotated; copy the new key now")
+}
+
+// Policy is GET /keys/policy: the workspace's maximum key life, whether keys must expire, and
+// whether the caller may change it (org.security.manage).
+func (c *ApiKeyController) Policy(dto *ListReq) types.Output {
+	if dto.Ctx.WorkspaceID == "" {
+		return fail(apikey.ErrScopeRequired)
+	}
+	ctx := context.Background()
+	max, err := apikey.MaxDays(ctx, c.svc.Keys().DB, dto.Ctx.WorkspaceID)
+	if err != nil {
+		return fail(err)
+	}
+	can, err := orgsvc.New(c.svc.Keys().DB).Allowed(ctx, dto.Ctx.WorkspaceID, dto.Ctx.UserID, orgsvc.ManageSecurity)
+	if err != nil {
+		return fail(err)
+	}
+	return response.Success(map[string]any{
+		"maxDays": max, "defaultMaxDays": apikey.DefaultMaxDays, "required": c.svc.Keys().MaxTTL != nil, "canManage": can,
+	}, title, "key policy", nil)
+}
+
+// SetPolicy is PUT /keys/policy {maxDays}: owners and admins (org.security.manage) set the
+// longest a new key may live, 1 to 365 days. Keys already issued keep their expiry.
+func (c *ApiKeyController) SetPolicy(dto *PolicyReq) types.Output {
+	if dto.Ctx.WorkspaceID == "" {
+		return fail(apikey.ErrScopeRequired)
+	}
+	ctx := context.Background()
+	db := c.svc.Keys().DB
+	can, err := orgsvc.New(db).Allowed(ctx, dto.Ctx.WorkspaceID, dto.Ctx.UserID, orgsvc.ManageSecurity)
+	if err != nil {
+		return fail(err)
+	}
+	if !can {
+		return response.Forbidden(title, "only organization owners and admins set how long tokens may live")
+	}
+	if err := apikey.SetMaxDays(ctx, db, dto.Ctx.WorkspaceID, dto.Ctx.UserID, dto.MaxDays); err != nil {
+		if errors.Is(err, apikey.ErrInvalid) {
+			return response.ErrorDetails(title, fmt.Sprintf("Choose 1 to %d days.", apikey.DefaultMaxDays), http.StatusUnprocessableEntity, "invalid_max_days", map[string]any{"maxDays": apikey.DefaultMaxDays})
+		}
+		return fail(err)
+	}
+	return c.Policy(&ListReq{Ctx: dto.Ctx})
 }

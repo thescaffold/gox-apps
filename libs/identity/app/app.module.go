@@ -79,6 +79,8 @@ var Migrations = []sql.Migration{
 	&migrations.SsoSaml{},
 	// U5: an app install's push token (pkg/pushtoken).
 	&migrations.CreateIdentityPushTokens{},
+	// V0-14: a workspace's maximum API key life (pkg/apikey expiry.go).
+	&migrations.CreateIdentityKeyPolicies{},
 }
 
 type AppModule struct{}

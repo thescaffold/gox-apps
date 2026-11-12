@@ -8,6 +8,7 @@ import (
 	"github.com/thescaffold/gox-apps/libs/identity/pkg/revocation"
 	coreauth "github.com/thescaffold/gox-packages/libs/core/auth"
 	ntxctx "github.com/thescaffold/gox-packages/libs/core/context"
+	"github.com/thescaffold/gox-packages/libs/core/utils"
 )
 
 // jwtSecret mirrors identity/pkg's AuthService.jwtSecret() exactly (same env
@@ -49,10 +50,26 @@ func (m *claimsToContext) Handle(ctx types.Context) error {
 		if v, ok := claims["workspaceId"].(string); ok {
 			ntx.WorkspaceID = v
 		}
+		// The device session the token belongs to (V0-15): "this session" in Account › Sessions.
+		if v, ok := claims["sid"].(string); ok && v != "" {
+			ntx.User = utils.KeyValue{"sid": v}
+		}
 	}
+	ntx.IP = ntxctx.ClientIP(ctx)
 	ntxctx.Set(ctx, ntx)
 	return nil
 }
+
+// sessionOf is the device session id a verified token named ("" for none).
+func sessionOf(ntx ntxctx.NTXContext) string {
+	s, _ := ntx.User["sid"].(string)
+	return s
+}
+
+// requestInfo gives a public route the request's own facts (the client's address) in its
+// NTXContext, nothing from headers a client could forge (ntxctx.RequestInfo): sign-ins record
+// where a session was opened.
+func requestInfo() []types.Middleware { return []types.Middleware{&ntxctx.RequestInfo{}} }
 
 // RequireUser is requireUser for routes outside this package (the keys routes).
 func RequireUser() []types.Middleware { return requireUser() }
@@ -89,6 +106,9 @@ func (m *optionalClaimsToContext) Handle(ctx types.Context) error {
 				}
 				if v, ok := claims["workspaceId"].(string); ok {
 					ntx.WorkspaceID = v
+				}
+				if v, ok := claims["sid"].(string); ok && v != "" {
+					ntx.User = utils.KeyValue{"sid": v}
 				}
 			}
 		}

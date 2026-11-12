@@ -15,6 +15,14 @@ type DeviceSession struct {
 	// ClientId is the client the session signed in to (nil for sessions made
 	// before PLAN M1-40).
 	ClientId *string `gorm:"column:client_id;type:varchar(255)" json:"clientId,omitempty"`
+	// Where it was last used from and when (V0-15, Account › Sessions).
+	IP         string     `gorm:"column:ip;type:varchar(64);default:''"       json:"ip"`
+	Place      string     `gorm:"column:place;type:varchar(255);default:''"   json:"place"`
+	LastSeenAt *time.Time `gorm:"column:last_seen_at;type:timestamp"          json:"lastSeenAt,omitempty"`
+	// A session opened through SAML (V4-03): what single logout names it by.
+	SsoConnectionId string `gorm:"column:sso_connection_id;type:varchar(36);default:''" json:"-"`
+	SsoNameId       string `gorm:"column:sso_name_id;type:text;default:''"              json:"-"`
+	SsoSessionIndex string `gorm:"column:sso_session_index;type:text;default:''"        json:"-"`
 }
 
 func (DeviceSession) TableName() string { return "IdentityDeviceSessions" }

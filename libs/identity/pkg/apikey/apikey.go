@@ -82,6 +82,9 @@ type Service struct {
 	// TouchEvery bounds how often last_used_at is written per key (default 1m).
 	TouchEvery time.Duration
 	Now        func() time.Time
+	// MaxTTL, when set, requires every key issued to expire no later than it answers (see
+	// expiry.go); nil lets a key have no expiry.
+	MaxTTL MaxTTL
 }
 
 func (s *Service) now() time.Time {
@@ -128,6 +131,9 @@ func (s *Service) Issue(ctx context.Context, userID, clientID, workspaceID, name
 	}
 	if environment == Live && s.LiveAllowed != nil && !s.LiveAllowed(ctx, clientID, workspaceID) {
 		return Key{}, ErrLiveLocked
+	}
+	if err := s.checkExpiry(ctx, clientID, workspaceID, ttl); err != nil {
+		return Key{}, err
 	}
 	if len(scopes) == 0 {
 		scopes = []string{"*"}
@@ -264,9 +270,10 @@ func (s *Service) Rotate(ctx context.Context, userID, clientID, id string, grace
 	var r struct {
 		WorkspaceID, Name, Kind, Environment string
 		Scopes                               []byte
-		RevokedAt                            *time.Time
+		CreatedAt                            time.Time
+		ExpiresAt, RevokedAt                 *time.Time
 	}
-	res := s.DB.WithContext(ctx).Raw(`SELECT workspace_id, name, kind, environment, scopes, revoked_at FROM "IdentityApiKeys" WHERE id = ? AND client_id = ?`, id, clientID).Scan(&r)
+	res := s.DB.WithContext(ctx).Raw(`SELECT workspace_id, name, kind, environment, scopes, created_at, expires_at, revoked_at FROM "IdentityApiKeys" WHERE id = ? AND client_id = ?`, id, clientID).Scan(&r)
 	if res.Error != nil {
 		return Key{}, res.Error
 	}
@@ -275,7 +282,18 @@ func (s *Service) Rotate(ctx context.Context, userID, clientID, id string, grace
 	}
 	var sc []string
 	_ = json.Unmarshal(r.Scopes, &sc)
-	nk, err := s.Issue(ctx, userID, clientID, r.WorkspaceID, r.Name, r.Kind, r.Environment, sc, 0)
+	// The new key lives as long as the old one was issued for; with an expiry required, a key
+	// that had none (or outlived today's maximum) gets the maximum.
+	var life time.Duration
+	if r.ExpiresAt != nil && r.ExpiresAt.After(r.CreatedAt) {
+		life = r.ExpiresAt.Sub(r.CreatedAt).Round(time.Second)
+	}
+	if s.MaxTTL != nil {
+		if max, err := s.MaxTTL(ctx, clientID, r.WorkspaceID); err == nil && max > 0 && (life <= 0 || life > max) {
+			life = max
+		}
+	}
+	nk, err := s.Issue(ctx, userID, clientID, r.WorkspaceID, r.Name, r.Kind, r.Environment, sc, life)
 	if err != nil {
 		return Key{}, err
 	}

@@ -99,6 +99,7 @@ func (c *AuthController) bootstrapDevice(userId, clientId, userAgent, wantDevice
 	if existing, _ := c.deviceSessionEntity.First(`"device_id" = ? AND "user_id" = ?`, dev.Id, userId); existing != nil {
 		// signing in again renews the session (and its updated time, which orders the list)
 		_, _ = c.deviceSessionEntity.Update(&identitydevicesession.DeviceSession{ExpiresAt: &exp, ClientId: cp}, `"id" = ?`, existing.Id)
+		c.linkSSOSession(existing.Id, nil) // a single sign-on sign-in links it again
 		return dev.Id, existing.Id
 	}
 	sess := &identitydevicesession.DeviceSession{DeviceId: dev.Id, UserId: userId, Token: utils.Reference("SES", 32), ExpiresAt: &exp, ClientId: cp}
@@ -158,6 +159,8 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 	}
 	var sessions []session
 	for _, row := range rows {
+		// The shell re-mints here every few minutes: that is the session being used.
+		c.touchSession(&row, dto.Ctx.IP)
 		u, _ := c.userEntity.First(`"id" = ?`, row.UserId)
 		if u == nil || !c.usable(u.Id) {
 			continue
@@ -170,7 +173,7 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 			updated: stamp(row.UpdatedAt),
 			out: map[string]any{
 				"id": row.Id, "deviceId": row.DeviceId, "userId": row.UserId, "clientId": clientID,
-				"updatedAt": row.UpdatedAt, "user": c.sessionUser(u, clientID),
+				"updatedAt": row.UpdatedAt, "user": c.sessionUser(u, clientID, row.Id),
 			},
 		})
 	}
@@ -185,7 +188,9 @@ func (c *AuthController) Sessions(dto *SessionsDto) types.Output {
 // sessionUser is one account as the shell shows it: who they are, their
 // workspaces each with a token for that workspace, their attributes, and their
 // roles and permissions in the first workspace.
-func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[string]any {
+//
+// sid is the device session the tokens belong to ("" for none): signing it out ends them.
+func (c *AuthController) sessionUser(u *identityuser.User, clientID, sid string) map[string]any {
 	user := maskUser(u)
 	var links []any
 	firstWorkspace := ""
@@ -200,7 +205,7 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		ws := map[string]any{}
 		raw, _ := json.Marshal(w)
 		_ = json.Unmarshal(raw, &ws)
-		if t, err := c.auth.IssueAccessToken(u, clientID, w.Id); err == nil {
+		if t, err := c.auth.IssueAccessToken(u, clientID, w.Id, sid); err == nil {
 			ws["token"] = t
 		}
 		link := map[string]any{
@@ -235,7 +240,7 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 		}
 	}
 	user["roles"], user["permissions"] = roles, permissions
-	if t, err := c.auth.IssueAccessToken(u, clientID, firstWorkspace); err == nil {
+	if t, err := c.auth.IssueAccessToken(u, clientID, firstWorkspace, sid); err == nil {
 		user["token"] = t
 	}
 	return user
@@ -246,8 +251,8 @@ func (c *AuthController) sessionUser(u *identityuser.User, clientID string) map[
 // permissions, and a token for the first workspace). The shell's USER_LOGIN effect takes this
 // response whole and reads `id` and `workspaces[].workspace.token` from it; without them it signs
 // in with no token and the next request is refused.
-func (c *AuthController) sessionPayload(u *identityuser.User, clientID string, base map[string]any) map[string]any {
-	for k, v := range c.sessionUser(u, clientID) {
+func (c *AuthController) sessionPayload(u *identityuser.User, clientID, sid string, base map[string]any) map[string]any {
+	for k, v := range c.sessionUser(u, clientID, sid) {
 		base[k] = v
 	}
 	return base
@@ -318,7 +323,22 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 	default:
 		return response.Unauthorized(title, c.lang.Translate("apps.identity.app.post.logout.error.unauthorized", nil, pref))
 	}
+	// A browser signing itself out of a session that came through SAML goes on to the IdP, so its
+	// session there ends too (SP-initiated single logout, V4-03).
+	logoutURL := ""
 	if c.deviceSessionEntity != nil {
+		if fromCookie {
+			if rows, err := c.deviceSessionEntity.Find(0, 0, where+` AND "sso_connection_id" <> ''`, args...); err == nil {
+				for _, r := range rows {
+					if dto.Ctx.UserID == "" || r.UserId == dto.Ctx.UserID {
+						if u := c.samlLogoutStart(r.SsoConnectionId, r.SsoNameId, r.SsoSessionIndex); u != "" {
+							logoutURL = u
+							break
+						}
+					}
+				}
+			}
+		}
 		if _, err := c.deviceSessionEntity.Delete(where, args...); err != nil {
 			return response.InternalServerError(title, err.Error())
 		}
@@ -344,7 +364,11 @@ func (c *AuthController) Logout(dto *LogoutDto) types.Output {
 			return response.InternalServerError(title, "could not end your sessions")
 		}
 	}
-	out := response.Success(map[string]any{"deviceId": device}, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
+	data := map[string]any{"deviceId": device}
+	if logoutURL != "" {
+		data["logoutUrl"] = logoutURL
+	}
+	out := response.Success(data, title, c.lang.Translate("apps.identity.app.post.logout.success", nil, pref), nil)
 	if fromCookie && dto.UserId == "" {
 		out.Headers()["Set-Cookie"] = deviceCookie("", 0)
 	}

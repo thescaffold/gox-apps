@@ -50,10 +50,18 @@ type IdP struct {
 	Server   *httptest.Server
 	EntityID string
 
-	mu   sync.Mutex
-	user Options        // who /sso signs in
-	next func(*Options) // a change to the next response /sso makes
-	seen []Request      // requests /sso received
+	// WantSigned makes /sso refuse an AuthnRequest that carries no valid
+	// signature by the trusted service provider's key (TrustSP); the metadata
+	// says WantAuthnRequestsSigned.
+	WantSigned bool
+
+	mu      sync.Mutex
+	user    Options        // who /sso signs in
+	next    func(*Options) // a change to the next response /sso makes
+	seen    []Request      // requests /sso received
+	spCerts []*x509.Certificate
+	spSLO   string
+	logouts []Logout // logout messages /slo received
 }
 
 // New starts an IdP: metadata at /metadata, sign-on at /sso.
@@ -67,6 +75,7 @@ func New(t testing.TB) *IdP {
 		_, _ = w.Write([]byte(p.Metadata()))
 	})
 	mux.HandleFunc("/sso", p.sso)
+	mux.HandleFunc("/slo", p.slo)
 	p.Server = httptest.NewServer(mux)
 	p.EntityID = p.Server.URL + "/metadata"
 	t.Cleanup(p.Server.Close)
@@ -102,14 +111,15 @@ func KeyPair(t testing.TB) (*rsa.PrivateKey, *x509.Certificate) {
 func (p *IdP) Metadata() string {
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="%s">
-  <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="%t" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     <md:KeyDescriptor use="signing">
       <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>%s</ds:X509Certificate></ds:X509Data></ds:KeyInfo>
     </md:KeyDescriptor>
     <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
     <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="%s/sso"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="%s/slo"/>
   </md:IDPSSODescriptor>
-</md:EntityDescriptor>`, html.EscapeString(p.EntityID), base64.StdEncoding.EncodeToString(p.Cert.Raw), p.Server.URL)
+</md:EntityDescriptor>`, html.EscapeString(p.EntityID), p.WantSigned, base64.StdEncoding.EncodeToString(p.Cert.Raw), p.Server.URL, p.Server.URL)
 }
 
 // SignIn sets who /sso signs in from now on.
@@ -139,6 +149,16 @@ func (p *IdP) sso(w http.ResponseWriter, r *http.Request) {
 	req, err := ParseRequest(r.URL.Query().Get("SAMLRequest"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.URL.Query().Get("Signature") != "" {
+		if err := VerifyRedirect(r.URL.RawQuery, p.trusted()...); err != nil {
+			http.Error(w, "bad signature: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		req.Signed = true
+	} else if p.WantSigned {
+		http.Error(w, "the AuthnRequest must be signed", http.StatusBadRequest)
 		return
 	}
 	p.mu.Lock()
@@ -188,6 +208,8 @@ type Request struct {
 	ID     string
 	ACS    string
 	Issuer string // the SP's entity id
+	// Signed: the HTTP-Redirect query carried a valid signature (set by /sso).
+	Signed bool
 }
 
 // ParseRequest decodes an HTTP-Redirect SAMLRequest.
@@ -229,6 +251,8 @@ type Options struct {
 	// Issuer defaults to the IdP's entity id.
 	Issuer      string
 	AssertionID string
+	// SessionIndex defaults to a fresh one.
+	SessionIndex string
 	// Times default to now, now-1m and now+5m.
 	IssueInstant, NotBefore, NotOnOrAfter time.Time
 	// Sign defaults to SignAssertion.
@@ -326,7 +350,7 @@ func (p *IdP) Response(req Request, o Options) (string, error) {
 		}
 		as := a.CreateElement("saml:AuthnStatement")
 		as.CreateAttr("AuthnInstant", ts(o.IssueInstant))
-		as.CreateAttr("SessionIndex", id())
+		as.CreateAttr("SessionIndex", or(o.SessionIndex, id()))
 		as.CreateElement("saml:AuthnContext").CreateElement("saml:AuthnContextClassRef").SetText("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport")
 		st := a.CreateElement("saml:AttributeStatement")
 		for name, v := range map[string]string{"email": or(o.Email, ""), "displayName": or(o.Name, "")} {

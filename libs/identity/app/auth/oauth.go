@@ -170,7 +170,7 @@ func (c *AuthController) OAuthAccessToken(dto *OAuthAccessTokenDto) types.Output
 	if err != nil {
 		return response.Unauthorized(title, "invalid or expired auth-code")
 	}
-	return response.Success(c.sessionPayload(u, redeemed.ClientId, map[string]any{
+	return response.Success(c.sessionPayload(u, redeemed.ClientId, "", map[string]any{
 		"user":         maskUser(u),
 		"accessToken":  access,
 		"refreshToken": refresh,

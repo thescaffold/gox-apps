@@ -53,7 +53,9 @@ type Connection struct {
 	// SAML only.
 	SAMLMetadataURL string    `gorm:"column:saml_metadata_url" json:"metadataUrl"`
 	SAMLMetadata    string    `gorm:"column:saml_metadata" json:"-"`
-	CreatedAt       time.Time `gorm:"column:created_at" json:"createdAt"`
+	// SignRequests signs this connection's AuthnRequests with the service provider's key (V4-03).
+	SignRequests bool      `gorm:"column:sign_requests" json:"signRequests"`
+	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
@@ -148,6 +150,73 @@ func (s *Store) Save(ctx context.Context, c *Connection) error {
 // Delete removes a workspace's connection (and with it any enforcement).
 func (s *Store) Delete(ctx context.Context, workspaceID string) error {
 	return s.DB.WithContext(ctx).Where("workspace_id = ?", workspaceID).Delete(&Connection{}).Error
+}
+
+// SPKeys is a workspace's SAML service-provider signing key (V4-03): the current
+// one, and the next one a rotation staged, each a sealed PKCS#8 PEM key and its
+// certificate (base64 DER). Sealing is the caller's (identity seals it like a
+// provider secret).
+type SPKeys struct {
+	WorkspaceID   string     `gorm:"column:workspace_id;primaryKey"`
+	KeySealed     string     `gorm:"column:key_sealed"`
+	Cert          string     `gorm:"column:cert"`
+	NextKeySealed string     `gorm:"column:next_key_sealed"`
+	NextCert      string     `gorm:"column:next_cert"`
+	CreatedAt     time.Time  `gorm:"column:created_at"`
+	UpdatedAt     time.Time  `gorm:"column:updated_at"`
+	RotatedAt     *time.Time `gorm:"column:rotated_at"`
+}
+
+// TableName is the service-provider keys table.
+func (SPKeys) TableName() string { return "IdentitySsoSpKeys" }
+
+// SPKeysFor returns a workspace's service-provider keys, or ErrNotFound.
+func (s *Store) SPKeysFor(ctx context.Context, workspaceID string) (*SPKeys, error) {
+	var k SPKeys
+	err := s.DB.WithContext(ctx).Where("workspace_id = ?", workspaceID).Take(&k).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
+	return &k, err
+}
+
+// CreateSPKeys stores a workspace's first key; when one exists already (a
+// concurrent first use), that one is kept and returned.
+func (s *Store) CreateSPKeys(ctx context.Context, k *SPKeys) (*SPKeys, error) {
+	now := time.Now().UTC()
+	k.CreatedAt, k.UpdatedAt = now, now
+	if err := s.DB.WithContext(ctx).Exec(`INSERT INTO "IdentitySsoSpKeys" ("workspace_id","key_sealed","cert","created_at","updated_at") VALUES (?,?,?,?,?) ON CONFLICT ("workspace_id") DO NOTHING`,
+		k.WorkspaceID, k.KeySealed, k.Cert, now, now).Error; err != nil {
+		return nil, err
+	}
+	return s.SPKeysFor(ctx, k.WorkspaceID)
+}
+
+// StageSPKey records the next key (replacing one staged and not activated).
+func (s *Store) StageSPKey(ctx context.Context, workspaceID, keySealed, cert string) error {
+	res := s.DB.WithContext(ctx).Exec(`UPDATE "IdentitySsoSpKeys" SET "next_key_sealed" = ?, "next_cert" = ?, "updated_at" = ? WHERE "workspace_id" = ?`,
+		keySealed, cert, time.Now().UTC(), workspaceID)
+	if res.Error == nil && res.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return res.Error
+}
+
+// ActivateSPKey makes the staged key the one that signs; the old one is dropped.
+func (s *Store) ActivateSPKey(ctx context.Context, workspaceID string) error {
+	now := time.Now().UTC()
+	res := s.DB.WithContext(ctx).Exec(`UPDATE "IdentitySsoSpKeys" SET "key_sealed" = "next_key_sealed", "cert" = "next_cert",
+		"next_key_sealed" = '', "next_cert" = '', "rotated_at" = ?, "updated_at" = ? WHERE "workspace_id" = ? AND "next_cert" <> ''`, now, now, workspaceID)
+	if res.Error == nil && res.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return res.Error
+}
+
+// DropNextSPKey discards a staged key.
+func (s *Store) DropNextSPKey(ctx context.Context, workspaceID string) error {
+	return s.DB.WithContext(ctx).Exec(`UPDATE "IdentitySsoSpKeys" SET "next_key_sealed" = '', "next_cert" = '', "updated_at" = ? WHERE "workspace_id" = ?`,
+		time.Now().UTC(), workspaceID).Error
 }
 
 // ReplayCache records the SAML assertions a connection accepts, so that each

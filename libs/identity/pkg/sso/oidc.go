@@ -49,6 +49,9 @@ type Claims struct {
 	Email         string
 	EmailVerified bool
 	Name          string
+	// SessionIndex is the IdP's name for the session (SAML's AuthnStatement), which single
+	// logout names it by; "" for OpenID Connect.
+	SessionIndex string
 }
 
 // Client talks to identity providers. Zero value is not usable; use New.

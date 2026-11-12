@@ -79,6 +79,12 @@ var Migrations = []sql.Migration{
 	&migrations.SsoSaml{},
 	// U5: an app install's push token (pkg/pushtoken).
 	&migrations.CreateIdentityPushTokens{},
+	// V0-14: a workspace's maximum API key life (pkg/apikey expiry.go).
+	&migrations.CreateIdentityKeyPolicies{},
+	// V0-15, V4-03: a device session's address, last use and SAML session.
+	&migrations.DeviceSessionDetails{},
+	// V4-03: the SAML service provider's signing key, and signed AuthnRequests per connection.
+	&migrations.SsoSamlSigning{},
 }
 
 type AppModule struct{}

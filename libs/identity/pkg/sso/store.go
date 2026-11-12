@@ -25,8 +25,23 @@ type Directory interface {
 	// member of) the workspace. SSO never admits anyone who is not.
 	Invited(ctx context.Context, workspaceID, email string) (bool, error)
 	// Joined is called after a successful SSO sign-in, to complete the
-	// membership (accept the invitation, grant the mailbox). Idempotent.
+	// membership (accept the invitation, grant the mailbox). Idempotent. ctx
+	// carries the client the person signs in with (ClientIDFrom): a new
+	// membership belongs to it.
 	Joined(ctx context.Context, workspaceID, userID, email string) error
+}
+
+type clientKey struct{}
+
+// WithClientID puts the client a sign-in is for on ctx, for Directory.Joined.
+func WithClientID(ctx context.Context, clientID string) context.Context {
+	return context.WithValue(ctx, clientKey{}, clientID)
+}
+
+// ClientIDFrom is the client a sign-in is for ("" when ctx carries none).
+func ClientIDFrom(ctx context.Context) string {
+	v, _ := ctx.Value(clientKey{}).(string)
+	return v
 }
 
 var directory Directory
@@ -51,12 +66,12 @@ type Connection struct {
 	DomainsJSON  json.RawMessage `gorm:"column:domains;type:jsonb" json:"-"`
 	Enforce      bool            `gorm:"column:enforce" json:"enforce"`
 	// SAML only.
-	SAMLMetadataURL string    `gorm:"column:saml_metadata_url" json:"metadataUrl"`
-	SAMLMetadata    string    `gorm:"column:saml_metadata" json:"-"`
+	SAMLMetadataURL string `gorm:"column:saml_metadata_url" json:"metadataUrl"`
+	SAMLMetadata    string `gorm:"column:saml_metadata" json:"-"`
 	// SignRequests signs this connection's AuthnRequests with the service provider's key (V4-03).
 	SignRequests bool      `gorm:"column:sign_requests" json:"signRequests"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
-	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updatedAt"`
+	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // TableName is the connections table.

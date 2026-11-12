@@ -527,7 +527,7 @@ func (c *AuthController) ssoAdmit(ctx context.Context, conn *sso.Connection, st 
 			return ssoFail(st.ReturnTo, "suspended")
 		}
 	}
-	if err := dir.Joined(ctx, conn.WorkspaceID, u.Id, claims.Email); err != nil {
+	if err := dir.Joined(sso.WithClientID(ctx, st.ClientID), conn.WorkspaceID, u.Id, claims.Email); err != nil {
 		return ssoFail(st.ReturnTo, "error")
 	}
 

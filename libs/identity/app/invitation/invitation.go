@@ -255,7 +255,8 @@ func (c *InvitationController) Accept(dto *TokenReq) types.Output {
 	}
 	var email string
 	_ = c.service().DB.Raw(`SELECT "email" FROM "IdentityUsers" WHERE "id" = ?`, dto.Ctx.UserID).Scan(&email).Error
-	ws, err := c.service().Accept(context.Background(), dto.Token, dto.Ctx.UserID, email)
+	// The membership is the accepting client's: the organization appears where they signed in.
+	ws, err := c.service().AcceptAs(context.Background(), dto.Token, dto.Ctx.UserID, email, dto.Ctx.ClientID)
 	if err != nil {
 		return fail(err)
 	}

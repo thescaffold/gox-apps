@@ -399,8 +399,18 @@ func (s *Service) Look(ctx context.Context, token string) (Preview, error) {
 
 // Accept joins userID (whose address is email) to the invitation's workspace
 // with its role and returns the workspace. Someone already in the workspace
-// keeps their seat; the invitation is still used up.
+// keeps their seat; the invitation is still used up. The membership is recorded
+// under the invitation's client; AcceptAs records it under the client the person
+// signs in with.
 func (s *Service) Accept(ctx context.Context, token, userID, email string) (string, error) {
+	return s.AcceptAs(ctx, token, userID, email, "")
+}
+
+// AcceptAs is Accept with the client the person accepts from: the membership is
+// recorded under clientID, so the organization is listed where they sign in (an
+// invitation sent from one client and accepted in another). With clientID ""
+// the invitation's client is used.
+func (s *Service) AcceptAs(ctx context.Context, token, userID, email, clientID string) (string, error) {
 	var ws string
 	var accepted Invitation
 	joined := false
@@ -424,8 +434,12 @@ func (s *Service) Accept(ctx context.Context, token, userID, email string) (stri
 				}
 			}
 			now := s.now()
+			client := clientID
+			if client == "" {
+				client = inv.ClientID
+			}
 			if err := tx.Exec(`INSERT INTO "IdentityUserClientWorkspaces" ("id", "created_at", "updated_at", "user_id", "client_id", "workspace_id", "status")
-				VALUES (?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), now, now, userID, inv.ClientID, ws, inv.Seat).Error; err != nil {
+				VALUES (?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), now, now, userID, client, ws, inv.Seat).Error; err != nil {
 				return err
 			}
 			joined = true

@@ -159,11 +159,18 @@ func TestInvitations(t *testing.T) {
 		t.Fatalf("over the seat limit: %d %v", out.code, out.body)
 	}
 	invitation.SetJoinGuard(nil)
-	if out := decode(t, c.Accept(&appinvitation.TokenReq{Ctx: ntxctx.NTXContext{UserID: dana.Id}, Token: tok})); out.code != 200 || out.data()["workspaceId"] != ws {
+	// Dana accepts from another client than the inviter's: the membership is the client she signs
+	// in with, so the workspace is listed there (D-66).
+	if out := decode(t, c.Accept(&appinvitation.TokenReq{Ctx: ntxctx.NTXContext{UserID: dana.Id, ClientID: "other-client"}, Token: tok})); out.code != 200 || out.data()["workspaceId"] != ws {
 		t.Fatalf("accept: %d %v", out.code, out.body)
 	}
 	if seat, _ := org.New(r.db).Seat(context.Background(), ws, dana.Id); seat != "member" {
 		t.Fatalf("dana's seat: %q", seat)
+	}
+	var danaClient string
+	r.db.Raw(`SELECT "client_id" FROM "IdentityUserClientWorkspaces" WHERE "workspace_id" = ? AND "user_id" = ? AND "deleted_at" IS NULL`, ws, dana.Id).Scan(&danaClient)
+	if danaClient != "other-client" {
+		t.Fatalf("dana's membership is under client %q, want the one she accepted from", danaClient)
 	}
 	if out := decode(t, c.Accept(&appinvitation.TokenReq{Ctx: ntxctx.NTXContext{UserID: dana.Id}, Token: tok})); out.code != 410 {
 		t.Fatalf("used twice: %d", out.code)
@@ -189,6 +196,12 @@ func TestInvitations(t *testing.T) {
 		}
 		if seat, _ := org.New(r.db).Seat(context.Background(), ws, u.Id); seat != "guest" {
 			t.Fatalf("link seat: %q", seat)
+		}
+		// No client on the request: the invitation's.
+		var cl string
+		r.db.Raw(`SELECT "client_id" FROM "IdentityUserClientWorkspaces" WHERE "workspace_id" = ? AND "user_id" = ? AND "deleted_at" IS NULL`, ws, u.Id).Scan(&cl)
+		if cl != r.client {
+			t.Fatalf("link membership client %q, want %q", cl, r.client)
 		}
 	}
 	// A new link replaces the old; a revoked or expired one opens nothing.

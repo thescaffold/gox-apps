@@ -442,6 +442,14 @@ func (s *Service) AcceptAs(ctx context.Context, token, userID, email, clientID s
 				VALUES (?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), now, now, userID, client, ws, inv.Seat).Error; err != nil {
 				return err
 			}
+			// The seat was granted by whoever sent the invitation (the host's seat observer).
+			by := inv.InvitedBy
+			if by == "" {
+				by = userID
+			}
+			if err := org.ObserveSeat(ctx, tx, org.SeatChange{WorkspaceID: ws, ActorID: by, UserID: userID, To: strings.ToLower(inv.Seat), Via: org.ViaInvitation}); err != nil {
+				return err
+			}
 			joined = true
 		}
 		upd := map[string]any{"uses": gorm.Expr(`"uses" + 1`)}

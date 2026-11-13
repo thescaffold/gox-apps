@@ -128,7 +128,8 @@ func (s *Service) checkSeatChange(ctx context.Context, ws, actorID, userID, to s
 	return from, nil
 }
 
-// SetSeat changes userID's seat in the workspace to role, acting as actorID.
+// SetSeat changes userID's seat in the workspace to role, acting as actorID. The host's seat
+// observer (SetSeatObserver) runs in the same transaction.
 func (s *Service) SetSeat(ctx context.Context, ws, actorID, userID, role string) error {
 	role = strings.ToLower(strings.TrimSpace(role))
 	if seatRank(role) == 0 {
@@ -141,8 +142,14 @@ func (s *Service) SetSeat(ctx context.Context, ws, actorID, userID, role string)
 	if from == role {
 		return nil
 	}
-	if err := s.DB.WithContext(ctx).Exec(`UPDATE "IdentityUserClientWorkspaces" SET status = ?, updated_at = now()
-		WHERE workspace_id = ? AND user_id = ? AND deleted_at IS NULL`, role, ws, userID).Error; err != nil {
+	err = s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE "IdentityUserClientWorkspaces" SET status = ?, updated_at = now()
+			WHERE workspace_id = ? AND user_id = ? AND deleted_at IS NULL`, role, ws, userID).Error; err != nil {
+			return err
+		}
+		return ObserveSeat(ctx, tx, SeatChange{WorkspaceID: ws, ActorID: actorID, UserID: userID, From: from, To: role, Via: ViaMembers})
+	})
+	if err != nil {
 		return err
 	}
 	s.log(ctx, ws, "member.seat.changed", "user", userID, map[string]any{"from": from, "to": role})
@@ -151,7 +158,7 @@ func (s *Service) SetSeat(ctx context.Context, ws, actorID, userID, role string)
 }
 
 // RemoveSeat takes userID out of the workspace (and its teams), acting as actorID. The host's
-// clean-up (OnSeatRemoved) runs in the same transaction.
+// clean-up (OnSeatRemoved), then its seat observer (SetSeatObserver), run in the same transaction.
 func (s *Service) RemoveSeat(ctx context.Context, ws, actorID, userID string) error {
 	from, err := s.checkSeatChange(ctx, ws, actorID, userID, "")
 	if err != nil {
@@ -169,9 +176,11 @@ func (s *Service) RemoveSeat(ctx context.Context, ws, actorID, userID string) er
 		}
 		teams = res.RowsAffected
 		if fn := SeatRemovedHook(); fn != nil {
-			return fn(ctx, tx, ws, userID, actorID)
+			if err := fn(ctx, tx, ws, userID, actorID); err != nil {
+				return err
+			}
 		}
-		return nil
+		return ObserveSeat(ctx, tx, SeatChange{WorkspaceID: ws, ActorID: actorID, UserID: userID, From: from, Via: ViaMembers, Teams: teams})
 	})
 	if err != nil {
 		return err
